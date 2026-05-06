@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gumba Soluções — Painel de Gestão</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg: #080B12;
@@ -479,6 +479,129 @@ textarea { resize: vertical; min-height: 70px; }
   border-color: var(--success) !important;
   box-shadow: 0 0 0 3px rgba(16,185,129,.15) !important;
 }
+
+/* ─── GUMBA BRAND ─── */
+:root {
+  --gs-primary: #006096;
+  --gs-primary-dark: #004a75;
+  --gs-primary-container: #077abc;
+  --gs-secondary: #2d638b;
+  --gs-bg: #f8f9ff;
+  --gs-surface: #ffffff;
+  --gs-surface-low: #eff4ff;
+  --gs-border: #bfc7d2;
+  --gs-text: #0d1c2e;
+  --gs-text-muted: #404850;
+  --gs-outline: #707881;
+  --font-brand: 'Manrope', sans-serif;
+  --font-ui: 'Inter', sans-serif;
+}
+
+/* ─── LOGIN SCREEN ─── */
+#login-screen {
+  position: fixed; inset: 0; z-index: 10000;
+  background: var(--gs-bg);
+  display: flex; flex-direction: column;
+  font-family: var(--font-brand);
+  color: var(--gs-text);
+}
+#login-screen header {
+  background: #fff;
+  border-bottom: 1px solid var(--gs-border);
+  padding: 0 24px;
+  height: 64px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,96,150,0.06);
+}
+#login-screen header span {
+  font-size: 1.25rem; font-weight: 700;
+  color: var(--gs-primary); letter-spacing: -0.01em;
+}
+#login-screen main {
+  flex: 1; display: flex;
+  align-items: center; justify-content: center;
+  padding: 32px 16px;
+}
+.login-card {
+  background: #fff;
+  border: 1px solid var(--gs-border);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(29,130,196,0.08);
+  padding: 40px 36px;
+  width: 100%; max-width: 420px;
+  display: flex; flex-direction: column; gap: 24px;
+}
+.login-brand {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 12px;
+}
+.login-brand img {
+  height: 72px; width: 72px;
+  object-fit: contain;
+}
+.login-brand h1 {
+  font-size: 1.75rem; font-weight: 700;
+  color: var(--gs-primary); letter-spacing: -0.02em;
+  margin: 0;
+}
+.login-brand p {
+  font-size: .875rem; color: var(--gs-text-muted);
+  margin: 0; text-align: center;
+}
+.login-form { display: flex; flex-direction: column; gap: 16px; }
+.login-field { display: flex; flex-direction: column; gap: 6px; }
+.login-field label {
+  font-family: var(--font-ui);
+  font-size: .7rem; font-weight: 600;
+  letter-spacing: .05em; text-transform: uppercase;
+  color: var(--gs-text);
+}
+.login-field input {
+  font-family: var(--font-brand);
+  font-size: .875rem;
+  width: 100%; padding: 10px 14px;
+  background: var(--gs-bg);
+  border: 1px solid var(--gs-border);
+  border-radius: 4px; color: var(--gs-text);
+  outline: none; transition: border-color .15s, box-shadow .15s;
+  box-sizing: border-box;
+}
+.login-field input:focus {
+  border-color: var(--gs-primary);
+  box-shadow: 0 0 0 2px rgba(0,96,150,0.15);
+}
+.login-field input::placeholder { color: var(--gs-outline); }
+.login-btn {
+  width: 100%; padding: 12px;
+  background: var(--gs-primary);
+  color: #fff; border: none; border-radius: 6px;
+  font-family: var(--font-ui);
+  font-size: .75rem; font-weight: 600;
+  letter-spacing: .05em; text-transform: uppercase;
+  cursor: pointer; transition: background .15s, opacity .15s;
+  margin-top: 4px;
+}
+.login-btn:hover { background: var(--gs-primary-container); }
+.login-btn:disabled { opacity: .6; cursor: not-allowed; }
+.login-error {
+  background: #ffdad6; color: #93000a;
+  border-radius: 6px; padding: 10px 14px;
+  font-size: .82rem; display: none;
+}
+#login-screen footer {
+  background: var(--gs-surface-low);
+  border-top: 1px solid var(--gs-border);
+  padding: 20px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px;
+}
+#login-screen footer span {
+  font-size: .78rem; color: var(--gs-secondary); font-weight: 600;
+}
+#login-screen footer p {
+  font-size: .75rem; color: var(--gs-text-muted); margin: 0;
+}
+
 /* ─── LOADING ─── */
 #loading-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
 #loading-screen h2{font-family:var(--font-display);font-size:1.4rem;font-weight:800;}
@@ -540,6 +663,14 @@ textarea { resize: vertical; min-height: 70px; }
   </div>
 
   <div class="sidebar-footer">
+  <div style="padding:10px 12px;border-top:1px solid var(--border);margin-bottom:8px">
+    <div style="font-size:.78rem;font-weight:600;color:var(--text)" id="user-name">—</div>
+    <div style="font-size:.7rem;color:var(--text-muted)" id="user-role">—</div>
+  </div>
+  <button onclick="doLogout()" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);padding:8px 12px;border-radius:6px;cursor:pointer;font-size:.78rem;text-align:left;display:flex;align-items:center;gap:8px;transition:all .15s" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-muted)'">
+    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+    Terminar sessão
+  </button>
     <strong id="sf-market">Sumbe + Benguela</strong>
     <span id="sf-date"></span>
     <span style="display:block;margin-top:8px;font-size:.65rem;color:var(--text-muted);opacity:.6;line-height:1.5">
@@ -2051,27 +2182,104 @@ async function deleteImportacao(id){
 // ═══════════════════════════════════════════════════════════════════
 //  INIT — Carrega tudo do Supabase
 // ═══════════════════════════════════════════════════════════════════
-async function init(){
+// ─── AUTH STATE ───
+let CURRENT_USER = null;
+let CURRENT_ROLE = null;
+
+async function doLogin(){
+  const email=document.getElementById('l-email').value.trim();
+  const pass=document.getElementById('l-pass').value;
+  const btn=document.getElementById('login-btn');
+  const err=document.getElementById('login-error');
+  err.style.display='none';
+  if(!email||!pass){err.textContent='Preencha email e password.';err.style.display='block';return;}
+  btn.disabled=true;btn.textContent='A entrar...';
   try{
-    // Carregar tabelas base
+    const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+    if(error)throw error;
+    CURRENT_USER=data.user;
+    await loadApp();
+  }catch(e){
+    err.textContent='Email ou password incorrectos.';
+    err.style.display='block';
+    btn.disabled=false;btn.textContent='Entrar';
+  }
+}
+
+// Enter key on password field
+document.getElementById('l-pass')?.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('l-email')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('l-pass').focus();});
+
+async function loadApp(){
+  // Buscar role do utilizador
+  try{
+    const {data}=await sb.from('perfis').select('role,nome').eq('id',CURRENT_USER.id).single();
+    CURRENT_ROLE=data?.role||'comercial';
+    // Mostrar nome no header
+    const uname=document.getElementById('user-name');
+    if(uname)uname.textContent=data?.nome||CURRENT_USER.email;
+    const urole=document.getElementById('user-role');
+    if(urole)urole.textContent=CURRENT_ROLE==='admin'?'Administrador':'Comercial';
+  }catch(e){CURRENT_ROLE='comercial';}
+
+  // Aplicar permissões
+  applyPermissions();
+
+  // Carregar dados
+  try{
     const [produtos,clientes,fornecedores,vendas,venda_itens,cobrancas,prestacoes,importacoes]=await Promise.all([
       sbGet('produtos'),sbGet('clientes'),sbGet('fornecedores'),
       sbGet('vendas'),sbGet('venda_itens','*'),
       sbGet('cobrancas'),sbGet('prestacoes'),sbGet('importacoes')
     ]);
-    // Embutir itens nas vendas
     vendas.forEach(v=>{v.itens=venda_itens.filter(it=>it.venda_id===v.id);});
-    // Embutir prestações nas cobranças
     cobrancas.forEach(c=>{c.prestacoes=prestacoes.filter(p=>p.cobranca_id===c.id).sort((a,b)=>a.numero-b.numero);});
     CACHE.produtos=produtos;CACHE.clientes=clientes;CACHE.fornecedores=fornecedores;
     CACHE.vendas=vendas;CACHE.cobrancas=cobrancas;CACHE.importacoes=importacoes;
-  }catch(e){console.warn('Erro init:',e.message);}
+  }catch(e){console.warn('Erro ao carregar dados:',e.message);}
 
+  // Esconder login e loading, mostrar app
+  document.getElementById('login-screen').style.display='none';
   document.getElementById('loading-screen').style.display='none';
   const mesInput=document.getElementById('filtro-mes');
   if(mesInput){const n=new Date();mesInput.value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;}
   document.getElementById('sf-date').textContent=new Date().toLocaleDateString('pt-AO',{day:'2-digit',month:'short',year:'numeric'});
   renderDashboard();
+}
+
+function applyPermissions(){
+  // Comercial não vê: Análise, Fornecedores, Importações
+  const adminOnly=['nav-analise','nav-fornecedores','nav-importacoes','s-analise','s-fornecedores','s-importacoes'];
+  adminOnly.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.style.display=CURRENT_ROLE==='admin'?'':'none';
+  });
+  // Comercial não vê preços de custo
+  document.querySelectorAll('.admin-only').forEach(el=>{
+    el.style.display=CURRENT_ROLE==='admin'?'':'none';
+  });
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  CURRENT_USER=null;CURRENT_ROLE=null;
+  Object.keys(CACHE).forEach(k=>CACHE[k]=[]);
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('l-email').value='';
+  document.getElementById('l-pass').value='';
+}
+
+async function init(){
+  // Verificar sessão activa
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){
+    CURRENT_USER=session.user;
+    document.getElementById('login-screen').style.display='none';
+    await loadApp();
+  }else{
+    document.getElementById('loading-screen').style.display='none';
+    // Login screen já está visível
+  }
 }
 init();
 </script>
