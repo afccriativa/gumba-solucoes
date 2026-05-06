@@ -183,9 +183,44 @@ body {
   padding: 20px;
   position: relative;
   overflow: hidden;
-  transition: border-color .2s;
+  transition: border-color .2s, transform .22s cubic-bezier(.22,1,.36,1), box-shadow .22s;
 }
 .kpi-card:hover { border-color: var(--border2); }
+
+/* ─── KPI DRILL-DOWN ─── */
+.kpi-card[data-nav] { cursor: pointer; }
+.kpi-card[data-nav]:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(0,0,0,.32);
+  border-color: rgba(var(--kpi-rgb, 37,99,235), .45);
+}
+.kpi-card[data-nav]:active { transform: translateY(-1px); transition-duration: .08s; }
+.kpi-drill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 10px;
+  font-size: .69rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: .25px;
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: opacity .2s ease, transform .2s ease;
+  pointer-events: none;
+}
+.kpi-card[data-nav]:hover .kpi-drill {
+  opacity: 1;
+  transform: translateX(0);
+}
+.kpi-drill svg { transition: transform .18s ease; }
+.kpi-card[data-nav]:hover .kpi-drill svg { transform: translateX(2px); }
+/* Card de cobranças urgente */
+.kpi-card.kpi-urgent {
+  border-color: rgba(239,68,68,.3);
+  background: linear-gradient(135deg, var(--surface) 85%, rgba(239,68,68,.04) 100%);
+}
+.kpi-card.kpi-urgent:hover { border-color: rgba(239,68,68,.55); }
 .kpi-card::before {
   content: '';
   position: absolute;
@@ -1727,6 +1762,22 @@ function selectProdutoTypeahead(id, nome, preco) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  KPI DRILL-DOWN — navega para a secção correcta com pré-filtros
+// ═══════════════════════════════════════════════════════════════════
+function kpiDrillDown(section, opts={}) {
+  // Pré-aplicar filtros antes de navegar
+  if(opts.mes) {
+    const mesInput = document.getElementById('filtro-mes');
+    if(mesInput) mesInput.value = opts.mes;
+  }
+  // Encontrar o nav-item correspondente para o activar visualmente
+  const navEl = Array.from(document.querySelectorAll('.nav-item')).find(
+    el => el.getAttribute('onclick') === `showSection('${section}', this)`
+  );
+  showSection(section, navEl || null);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  DASHBOARD
 // ═══════════════════════════════════════════════════════════════════
 function renderDashboard() {
@@ -1750,35 +1801,57 @@ function renderDashboard() {
   const badgeCount = document.getElementById('badge-cobr-count');
   if(vencidas.length>0){badge.style.display='';badge.textContent=vencidas.length;}else{badge.style.display='none';}
   if(badgeCount) badgeCount.textContent=pendentes.length+' pendente'+(pendentes.length!==1?'s':'');
+  const _drillArrow = `<svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>`;
+  const cobrUrgente = vencidas.length > 0;
   document.getElementById('kpi-grid').innerHTML=`
-    <div class="kpi-card" style="--kpi-color:var(--accent2)">
+    <div class="kpi-card" style="--kpi-color:var(--accent2)"
+         data-nav="vendas" role="button" tabindex="0" aria-label="Ver vendas do mês"
+         onclick="kpiDrillDown('vendas',{mes:'${mesAtual}'})"
+         onkeydown="if(event.key==='Enter'||event.key===' ')kpiDrillDown('vendas',{mes:'${mesAtual}'})">
       <div class="kpi-label">Faturação do Mês</div>
       <div class="kpi-value">${fmtN(faturacaoMes)}<small>Kz</small></div>
       <div class="kpi-sub">${vendasMes.length} venda(s) em ${mesAtual}</div>
+      <div class="kpi-drill">Ver vendas ${_drillArrow}</div>
       <div class="kpi-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div>
     </div>
-    <div class="kpi-card" style="--kpi-color:var(--success)">
+    <div class="kpi-card" style="--kpi-color:var(--success)"
+         data-nav="vendas" role="button" tabindex="0" aria-label="Ver todas as vendas"
+         onclick="kpiDrillDown('vendas')"
+         onkeydown="if(event.key==='Enter'||event.key===' ')kpiDrillDown('vendas')">
       <div class="kpi-label">Faturação Total</div>
       <div class="kpi-value">${fmtN(faturacaoTotal)}<small>Kz</small></div>
       <div class="kpi-sub">${vendas.length} venda(s) no total</div>
+      <div class="kpi-drill">Ver vendas ${_drillArrow}</div>
       <div class="kpi-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
     </div>
-    <div class="kpi-card" style="--kpi-color:var(--warning)">
+    <div class="kpi-card ${cobrUrgente?'kpi-urgent':''}" style="--kpi-color:${cobrUrgente?'var(--danger)':'var(--warning)'}"
+         data-nav="cobranças" role="button" tabindex="0" aria-label="Ver cobranças pendentes"
+         onclick="kpiDrillDown('cobranças')"
+         onkeydown="if(event.key==='Enter'||event.key===' ')kpiDrillDown('cobranças')">
       <div class="kpi-label">Cobranças Pendentes</div>
       <div class="kpi-value">${pendentes.length}<small> activas</small></div>
-      <div class="kpi-sub">${vencidas.length} vencida(s)${vencidas.length>0?' ⚠️':''}</div>
+      <div class="kpi-sub">${cobrUrgente?`<span style="color:var(--danger);font-weight:600">⚠ ${vencidas.length} vencida(s)</span>`:'Todas dentro do prazo'}</div>
+      <div class="kpi-drill">Ver cobranças ${_drillArrow}</div>
       <div class="kpi-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
     </div>
-    <div class="kpi-card" style="--kpi-color:var(--accent)">
+    <div class="kpi-card" style="--kpi-color:var(--accent)"
+         data-nav="stock" role="button" tabindex="0" aria-label="Ver stock de produtos"
+         onclick="kpiDrillDown('stock')"
+         onkeydown="if(event.key==='Enter'||event.key===' ')kpiDrillDown('stock')">
       <div class="kpi-label">Valor em Stock</div>
       <div class="kpi-value">${fmtN(stockValor)}<small>Kz</small></div>
       <div class="kpi-sub">${produtos.length} produto(s) cadastrado(s)</div>
+      <div class="kpi-drill">Ver produtos ${_drillArrow}</div>
       <div class="kpi-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></div>
     </div>
-    <div class="kpi-card" style="--kpi-color:#A78BFA">
+    <div class="kpi-card" style="--kpi-color:#A78BFA"
+         data-nav="clientes" role="button" tabindex="0" aria-label="Ver base de clientes"
+         onclick="kpiDrillDown('clientes')"
+         onkeydown="if(event.key==='Enter'||event.key===' ')kpiDrillDown('clientes')">
       <div class="kpi-label">Total de Clientes</div>
       <div class="kpi-value">${CACHE.clientes.length}</div>
       <div class="kpi-sub">${CACHE.clientes.filter(c=>c.credito==='confianca').length} com perfil de crédito</div>
+      <div class="kpi-drill">Ver clientes ${_drillArrow}</div>
       <div class="kpi-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
     </div>
     <div class="kpi-card" style="--kpi-color:#F472B6">
