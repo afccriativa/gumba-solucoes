@@ -147,6 +147,105 @@ body {
   font-weight: 700;
 }
 .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+/* ─── FILTRO DE MERCADO — controlo rotulado com estado activo ─── */
+.market-filter {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  transition: border-color .2s, box-shadow .2s;
+  cursor: pointer;
+  position: relative;
+}
+.market-filter:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.market-filter.is-filtered {
+  border-color: rgba(56,189,248,.4);
+  box-shadow: 0 0 0 3px rgba(56,189,248,.08);
+}
+.market-filter-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: color .2s;
+}
+.market-filter.is-filtered .market-filter-icon { color: var(--accent2); }
+.market-filter-label {
+  font-size: .64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .9px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  transition: color .2s;
+  user-select: none;
+  line-height: 1;
+  padding-right: 4px;
+  border-right: 1px solid var(--border2);
+}
+.market-filter.is-filtered .market-filter-label { color: var(--accent2); }
+.market-filter select {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: .83rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  padding: 0;
+  width: auto;
+  box-shadow: none;
+}
+.market-filter.is-filtered select { color: var(--accent2); }
+/* Indicador de filtro activo */
+.market-filter-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent2);
+  flex-shrink: 0;
+  display: none;
+  animation: dotPulse 1.8s ease-in-out infinite;
+}
+.market-filter.is-filtered .market-filter-dot { display: block; }
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .5; transform: scale(.75); }
+}
+/* Tooltip de âmbito */
+.market-filter::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  color: var(--text-dim);
+  font-size: .7rem;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 7px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity .18s, transform .18s;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35);
+  z-index: 200;
+}
+.market-filter:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (max-width: 768px) {
+  .market-filter-label { display: none; }
+  .market-filter::after { right: 0; left: auto; }
+}
 .btn {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 16px;
@@ -948,11 +1047,22 @@ textarea { resize: vertical; min-height: 70px; }
     </button>
     <span class="topbar-title" id="page-title">Dashboard</span>
     <div class="topbar-right">
-      <select id="filtro-mercado" class="search-bar" style="width:160px" onchange="renderAll()">
-        <option value="todos">Todos os Mercados</option>
-        <option value="Sumbe">Sumbe</option>
-        <option value="Benguela">Benguela</option>
-      </select>
+      <div class="market-filter" id="market-filter-wrap"
+           data-tip="Filtra dados em todas as secções da aplicação">
+        <!-- Ícone de localização -->
+        <svg class="market-filter-icon" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        <span class="market-filter-label">Mercado</span>
+        <select id="filtro-mercado" onchange="onMercadoChange(this)">
+          <option value="todos">Todos</option>
+          <option value="Sumbe">Sumbe</option>
+          <option value="Benguela">Benguela</option>
+        </select>
+        <!-- Ponto pulsante — visível apenas quando filtro está activo -->
+        <div class="market-filter-dot" title="Filtro activo"></div>
+      </div>
     </div>
   </div>
 
@@ -1696,6 +1806,17 @@ function renderSection(name) {
   if(name==='importacoes')  renderImportacoes();
 }
 function renderAll() { renderSection(document.querySelector('.section.active')?.id.replace('s-','')||'dashboard'); }
+
+// Actualiza o estado visual do filtro de mercado e re-renderiza tudo
+function onMercadoChange(sel) {
+  _syncMercadoFilter();
+  renderAll();
+}
+function _syncMercadoFilter() {
+  const val = document.getElementById('filtro-mercado')?.value || 'todos';
+  const wrap = document.getElementById('market-filter-wrap');
+  if (wrap) wrap.classList.toggle('is-filtered', val !== 'todos');
+}
 
 // ─── MODAL ───
 let carrinho = [];
@@ -2701,6 +2822,7 @@ async function loadApp(){
     if(mesInput){const n=new Date();mesInput.value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;}
     const sfDate=document.getElementById('sf-date');
     if(sfDate)sfDate.textContent=new Date().toLocaleDateString('pt-AO',{day:'2-digit',month:'short',year:'numeric'});
+    _syncMercadoFilter();
     renderDashboard();
   }
 }
