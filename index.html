@@ -372,6 +372,14 @@ textarea { resize: vertical; min-height: 70px; }
 }
 .empty-state svg { margin: 0 auto 14px; opacity: .3; display: block; }
 .empty-state p { font-size: .9rem; }
+.empty-state .empty-cta { margin-top: 18px; }
+.empty-state .empty-hint {
+  font-size: .76rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  opacity: .7;
+  font-style: italic;
+}
 
 /* ─── SEARCH ─── */
 .search-bar {
@@ -997,7 +1005,11 @@ textarea { resize: vertical; min-height: 70px; }
         </table>
         <div id="empty-vendas" class="empty-state" style="display:none">
           <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          <p>Nenhuma venda registada ainda</p>
+          <p class="empty-msg" data-default="Nenhuma venda registada ainda">Nenhuma venda registada ainda</p>
+          <button class="btn btn-primary empty-cta" onclick="openModal('modal-venda')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Registar primeira venda
+          </button>
         </div>
         <div id="pg-vendas"></div>
       </div>
@@ -1026,7 +1038,11 @@ textarea { resize: vertical; min-height: 70px; }
         </table>
         <div id="empty-stock" class="empty-state" style="display:none">
           <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-          <p>Nenhum produto cadastrado ainda</p>
+          <p class="empty-msg" data-default="Nenhum produto cadastrado ainda">Nenhum produto cadastrado ainda</p>
+          <button class="btn btn-primary empty-cta" onclick="openModal('modal-produto')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Adicionar primeiro produto
+          </button>
         </div>
         <div id="pg-stock"></div>
       </div>
@@ -1054,7 +1070,11 @@ textarea { resize: vertical; min-height: 70px; }
         </table>
         <div id="empty-clientes" class="empty-state" style="display:none">
           <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-          <p>Nenhum cliente cadastrado ainda</p>
+          <p class="empty-msg" data-default="Nenhum cliente cadastrado ainda">Nenhum cliente cadastrado ainda</p>
+          <button class="btn btn-primary empty-cta" onclick="openModal('modal-cliente')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Adicionar primeiro cliente
+          </button>
         </div>
         <div id="pg-clientes"></div>
       </div>
@@ -1081,7 +1101,11 @@ textarea { resize: vertical; min-height: 70px; }
         </table>
         <div id="empty-cobr" class="empty-state" style="display:none">
           <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          <p>Nenhuma cobrança registada ainda</p>
+          <p class="empty-msg" data-default="Nenhuma cobrança registada ainda">Nenhuma cobrança registada ainda</p>
+          <button class="btn btn-primary empty-cta" onclick="openModal('modal-cobranca')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Criar primeira cobrança
+          </button>
         </div>
         <div id="pg-cobr"></div>
       </div>
@@ -1125,7 +1149,11 @@ textarea { resize: vertical; min-height: 70px; }
         </table>
         <div id="empty-forn" class="empty-state" style="display:none">
           <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          <p>Nenhum fornecedor cadastrado ainda</p>
+          <p class="empty-msg" data-default="Nenhum fornecedor cadastrado ainda">Nenhum fornecedor cadastrado ainda</p>
+          <button class="btn btn-primary empty-cta" onclick="openModal('modal-fornecedor')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Adicionar primeiro fornecedor
+          </button>
         </div>
         <div id="pg-forn"></div>
       </div>
@@ -1150,7 +1178,11 @@ textarea { resize: vertical; min-height: 70px; }
         </table>
         <div id="empty-imp" class="empty-state" style="display:none">
           <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
-          <p>Nenhuma importação registada ainda</p>
+          <p class="empty-msg" data-default="Nenhuma importação registada ainda">Nenhuma importação registada ainda</p>
+          <button class="btn btn-primary empty-cta" onclick="openModal('modal-importacao')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Registar primeira importação
+          </button>
         </div>
         <div id="pg-imp"></div>
       </div>
@@ -1762,6 +1794,20 @@ function selectProdutoTypeahead(id, nome, preco) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  EMPTY STATE — distingue vazio real de vazio por filtro/pesquisa
+// ═══════════════════════════════════════════════════════════════════
+function _showEmpty(elId, visible, isFiltered=false, filteredMsg='Sem resultados para o filtro aplicado.') {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.style.display = visible ? 'block' : 'none';
+  if (!visible) return;
+  const msgEl = el.querySelector('.empty-msg');
+  const ctaEl = el.querySelector('.empty-cta');
+  if (msgEl) msgEl.textContent = isFiltered ? filteredMsg : (msgEl.dataset.default || msgEl.textContent);
+  if (ctaEl) ctaEl.style.display = isFiltered ? 'none' : '';
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  KPI DRILL-DOWN — navega para a secção correcta com pré-filtros
 // ═══════════════════════════════════════════════════════════════════
 function kpiDrillDown(section, opts={}) {
@@ -1914,7 +1960,8 @@ function renderVendas(q='', _paged=false) {
   vendas=vendas.sort((a,b)=>b.data?.localeCompare(a.data));
   const total=vendas.length;
   const tbody=document.getElementById('tbody-vendas');
-  document.getElementById('empty-vendas').style.display=vendas.length?'none':'block';
+  const _isFiltered = !!(q || mes);
+  _showEmpty('empty-vendas', !vendas.length, _isFiltered && CACHE.vendas.length > 0, 'Sem vendas para o período ou pesquisa aplicada.');
   tbody.innerHTML=_slice(vendas,'vendas').map(v=>`<tr>
     <td class="mono">${v.data||'—'}</td>
     <td><strong>${nomeCliente(v.cliente_id)}</strong></td>
@@ -2032,7 +2079,7 @@ function renderStock(q='', _paged=false) {
   if(q) produtos=produtos.filter(p=>p.nome.toLowerCase().includes(q.toLowerCase())||(p.categoria||'').toLowerCase().includes(q.toLowerCase()));
   const total=produtos.length;
   const tbody=document.getElementById('tbody-stock');
-  document.getElementById('empty-stock').style.display=produtos.length?'none':'block';
+  _showEmpty('empty-stock', !produtos.length, !!q && CACHE.produtos.length > 0, 'Nenhum produto encontrado para a pesquisa.');
   tbody.innerHTML=_slice(produtos,'stock').map(p=>{
     const margem=p.preco_venda>0?Math.round((p.preco_venda-p.preco_custo)/p.preco_venda*100):0;
     const baixo=Number(p.stock||0)<=Number(p.stock_minimo||1);
@@ -2132,7 +2179,7 @@ function renderClientes(q='', _paged=false){
   const vendas=CACHE.vendas;
   const total=clientes.length;
   const tbody=document.getElementById('tbody-clientes');
-  document.getElementById('empty-clientes').style.display=clientes.length?'none':'block';
+  _showEmpty('empty-clientes', !clientes.length, !!q && CACHE.clientes.length > 0, 'Nenhum cliente encontrado para a pesquisa.');
   tbody.innerHTML=_slice(clientes,'clientes').map(c=>{
     const cVendas=vendas.filter(v=>v.cliente_id===c.id);
     const totalGasto=cVendas.reduce((s,v)=>s+Number(v.total||0),0);
@@ -2224,7 +2271,7 @@ function renderCobranças(_paged=false){
 
   const totalCount=comEstado.length;
   const tbody=document.getElementById('tbody-cobr');
-  document.getElementById('empty-cobr').style.display=comEstado.length?'none':'block';
+  _showEmpty('empty-cobr', !comEstado.length, filtro !== 'todos' && CACHE.cobrancas.length > 0, 'Sem cobranças para o mercado seleccionado.');
   tbody.innerHTML=_slice(comEstado,'cobr').map(c=>{
     const valPrest=c.prestacoes?.length?c.prestacoes[0].valor:0;
     const statusBadge=c._pago_total?'badge-success':c._vencidas>0?'badge-danger':'badge-warning';
@@ -2424,7 +2471,7 @@ function renderFornecedores(_paged=false){
   const forn=CACHE.fornecedores;
   const total=forn.length;
   const tbody=document.getElementById('tbody-forn');
-  document.getElementById('empty-forn').style.display=forn.length?'none':'block';
+  _showEmpty('empty-forn', !forn.length, false);
   tbody.innerHTML=_slice(forn,'forn').map(f=>{
     const ultImp=CACHE.importacoes.filter(i=>i.fornecedor_id===f.id).sort((a,b)=>b.data_encomenda?.localeCompare(a.data_encomenda))[0];
     return `<tr>
@@ -2474,7 +2521,7 @@ function renderImportacoes(_paged=false){
   const imp=CACHE.importacoes.sort((a,b)=>b.data_encomenda?.localeCompare(a.data_encomenda));
   const total=imp.length;
   const tbody=document.getElementById('tbody-imp');
-  document.getElementById('empty-imp').style.display=imp.length?'none':'block';
+  _showEmpty('empty-imp', !imp.length, false);
   tbody.innerHTML=_slice(imp,'imp').map((i,idx)=>{
     const _offset=(PG.imp-1)*PAGE_SIZE; // para manter numeração correcta
     const custUSD=(parseFloat(i.valor_produtos)||0)+(parseFloat(i.frete)||0);
