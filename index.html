@@ -1971,6 +1971,7 @@ async function ajustarStock(id){
   await sbUpdate('produtos',id,{stock:novo});
   await sbInsert('stock_movimentos',{produto_id:id,tipo:d>0?'entrada':'saida',quantidade:Math.abs(d),origem:'ajuste_manual'});
   p.stock=novo;renderStock();renderDashboard();
+  showToast(`Stock actualizado: ${d>0?'+':''}${d} unidade${Math.abs(d)!==1?'s':''}. Novo total: ${novo}`,'success');
 }
 async function saveProduto(){
   const nome=document.getElementById('p-nome').value.trim();
@@ -1990,13 +1991,15 @@ async function saveProduto(){
       await sbUpdate('produtos',editingProduto,data);
       const idx=CACHE.produtos.findIndex(x=>x.id===editingProduto);
       if(idx>=0) CACHE.produtos[idx]={...CACHE.produtos[idx],...data};
+      closeModal('modal-produto');renderStock();renderDashboard();
+      showToast(`Produto "${data.nome}" actualizado com sucesso.`,'success');
     }else{
       const novo=await sbInsert('produtos',data);
-      // Registar entrada de stock
       if(data.stock>0) await sbInsert('stock_movimentos',{produto_id:novo.id,tipo:'entrada',quantidade:data.stock,origem:'cadastro_inicial'});
       CACHE.produtos.unshift(novo);
+      closeModal('modal-produto');renderStock();renderDashboard();
+      showToast(`Produto "${data.nome}" criado com sucesso.`,'success');
     }
-    closeModal('modal-produto');renderStock();renderDashboard();
   }catch(e){showToast('Erro: '+e.message,'error');}
 }
 async function deleteProduto(id){
@@ -2048,6 +2051,7 @@ async function saveCliente(){
     });
     CACHE.clientes.unshift(novo);
     closeModal('modal-cliente');renderClientes();renderDashboard();
+    showToast(`Cliente "${nome}" adicionado com sucesso.`,'success');
   }catch(e){showToast('Erro: '+e.message,'error');}
 }
 async function deleteCliente(id){
@@ -2221,6 +2225,7 @@ async function saveCobranca(){
     CACHE.cobrancas.unshift(cob);
     closeModal('modal-cobranca');
     renderCobranças();renderDashboard();
+    showToast(`Cobrança criada com ${np} prestação${np!==1?'s':''}.`,'success');
   }catch(e){showToast('Erro: '+e.message,'error');}
 }
 async function pagarPrestacaoById(prestId, cobId){
@@ -2326,6 +2331,7 @@ async function saveFornecedor(){
     });
     CACHE.fornecedores.unshift(novo);
     closeModal('modal-fornecedor');renderFornecedores();
+    showToast(`Fornecedor "${nome}" adicionado com sucesso.`,'success');
   }catch(e){showToast('Erro: '+e.message,'error');}
 }
 async function deleteFornecedor(id){
@@ -2392,6 +2398,7 @@ async function saveImportacao(){
     });
     CACHE.importacoes.unshift(novo);
     closeModal('modal-importacao');renderImportacoes();
+    showToast('Importação registada com sucesso.','success');
   }catch(e){showToast('Erro: '+e.message,'error');}
 }
 async function deleteImportacao(id){
