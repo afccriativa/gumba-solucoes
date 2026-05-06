@@ -1793,6 +1793,7 @@ function showSection(name, el) {
   if (el) el.classList.add('active');
   document.getElementById('page-title').textContent = TITLES[name] || name;
   closeSidebar(); // fecha sidebar automaticamente em mobile
+  try { localStorage.setItem('gumba_last_section', name); } catch(_) {}
   renderSection(name);
 }
 function renderSection(name) {
@@ -2823,7 +2824,16 @@ async function loadApp(){
     const sfDate=document.getElementById('sf-date');
     if(sfDate)sfDate.textContent=new Date().toLocaleDateString('pt-AO',{day:'2-digit',month:'short',year:'numeric'});
     _syncMercadoFilter();
-    renderDashboard();
+    // Restaurar última secção — com guard de permissão por role
+    const adminOnlySections = ['analise','fornecedores','importacoes'];
+    let lastSection = 'dashboard';
+    try { lastSection = localStorage.getItem('gumba_last_section') || 'dashboard'; } catch(_) {}
+    if (!SECTIONS.includes(lastSection)) lastSection = 'dashboard';
+    if (CURRENT_ROLE !== 'admin' && adminOnlySections.includes(lastSection)) lastSection = 'dashboard';
+    const restoredNavEl = Array.from(document.querySelectorAll('.nav-item')).find(
+      el => el.getAttribute('onclick') === `showSection('${lastSection}', this)`
+    );
+    showSection(lastSection, restoredNavEl || null);
   }
 }
 
