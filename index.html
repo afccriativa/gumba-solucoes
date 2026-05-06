@@ -729,6 +729,31 @@ textarea { resize: vertical; min-height: 70px; }
 .spinner{width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--accent2);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 #loading-screen p{font-size:.8rem;color:var(--text-muted);}
+
+/* ─── PAGINAÇÃO ─── */
+.pg-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 0 0 var(--radius) var(--radius);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pg-info {
+  font-size: .72rem; color: var(--text-muted);
+  font-family: var(--font-mono); letter-spacing: .3px;
+}
+.pg-info strong { color: var(--text-dim); }
+.pg-ctrl { display: flex; align-items: center; gap: 6px; }
+.pg-num {
+  font-size: .75rem; color: var(--text-dim);
+  font-family: var(--font-mono);
+  min-width: 54px; text-align: center;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px; padding: 3px 8px;
+}
 </style>
 </head>
 <body>
@@ -939,6 +964,7 @@ textarea { resize: vertical; min-height: 70px; }
           <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
           <p>Nenhuma venda registada ainda</p>
         </div>
+        <div id="pg-vendas"></div>
       </div>
     </div>
 
@@ -967,6 +993,7 @@ textarea { resize: vertical; min-height: 70px; }
           <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
           <p>Nenhum produto cadastrado ainda</p>
         </div>
+        <div id="pg-stock"></div>
       </div>
     </div>
 
@@ -994,6 +1021,7 @@ textarea { resize: vertical; min-height: 70px; }
           <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           <p>Nenhum cliente cadastrado ainda</p>
         </div>
+        <div id="pg-clientes"></div>
       </div>
     </div>
 
@@ -1020,6 +1048,7 @@ textarea { resize: vertical; min-height: 70px; }
           <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           <p>Nenhuma cobrança registada ainda</p>
         </div>
+        <div id="pg-cobr"></div>
       </div>
     </div>
 
@@ -1033,6 +1062,7 @@ textarea { resize: vertical; min-height: 70px; }
             <thead><tr><th>Produto</th><th>Custo</th><th>Venda</th><th>Margem</th><th>%</th></tr></thead>
             <tbody id="tbody-analise"></tbody>
           </table>
+          <div id="pg-analise"></div>
         </div>
         <div class="card">
           <div class="card-header"><span class="card-title">Distribuição por Mercado</span></div>
@@ -1062,6 +1092,7 @@ textarea { resize: vertical; min-height: 70px; }
           <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           <p>Nenhum fornecedor cadastrado ainda</p>
         </div>
+        <div id="pg-forn"></div>
       </div>
     </div>
 
@@ -1086,6 +1117,7 @@ textarea { resize: vertical; min-height: 70px; }
           <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
           <p>Nenhuma importação registada ainda</p>
         </div>
+        <div id="pg-imp"></div>
       </div>
     </div>
 
@@ -1798,7 +1830,8 @@ function renderDashboard() {
 // ═══════════════════════════════════════════════════════════════════
 //  VENDAS
 // ═══════════════════════════════════════════════════════════════════
-function renderVendas(q='') {
+function renderVendas(q='', _paged=false) {
+  if(!_paged) PG.vendas=1;
   const filtro=getFilterMercado();
   const mes=document.getElementById('filtro-mes')?.value;
   let vendas=CACHE.vendas;
@@ -1806,9 +1839,10 @@ function renderVendas(q='') {
   if(mes) vendas=vendas.filter(v=>v.data?.startsWith(mes));
   if(q) vendas=vendas.filter(v=>nomeCliente(v.cliente_id).toLowerCase().includes(q.toLowerCase())||(v.itens||[]).some(i=>i.nome_snapshot?.toLowerCase().includes(q.toLowerCase())));
   vendas=vendas.sort((a,b)=>b.data?.localeCompare(a.data));
+  const total=vendas.length;
   const tbody=document.getElementById('tbody-vendas');
   document.getElementById('empty-vendas').style.display=vendas.length?'none':'block';
-  tbody.innerHTML=vendas.map(v=>`<tr>
+  tbody.innerHTML=_slice(vendas,'vendas').map(v=>`<tr>
     <td class="mono">${v.data||'—'}</td>
     <td><strong>${nomeCliente(v.cliente_id)}</strong></td>
     <td>${(v.itens||[]).map(i=>`<span class="prod-chip">${i.qty}x ${i.nome_snapshot}</span>`).join('')||'—'}</td>
@@ -1818,6 +1852,7 @@ function renderVendas(q='') {
     <td><span class="badge badge-info">${v.mercado||'—'}</span></td>
     <td><button class="btn btn-danger btn-sm" onclick="deleteVenda('${v.id}')">🗑</button></td>
   </tr>`).join('');
+  _renderPG('pg-vendas',total,'vendas',()=>renderVendas(q,true));
 }
 
 function addProdutoVenda() {
@@ -1918,12 +1953,14 @@ async function deleteVenda(id) {
 // ═══════════════════════════════════════════════════════════════════
 //  STOCK / PRODUTOS
 // ═══════════════════════════════════════════════════════════════════
-function renderStock(q='') {
+function renderStock(q='', _paged=false) {
+  if(!_paged) PG.stock=1;
   let produtos=CACHE.produtos;
   if(q) produtos=produtos.filter(p=>p.nome.toLowerCase().includes(q.toLowerCase())||(p.categoria||'').toLowerCase().includes(q.toLowerCase()));
+  const total=produtos.length;
   const tbody=document.getElementById('tbody-stock');
   document.getElementById('empty-stock').style.display=produtos.length?'none':'block';
-  tbody.innerHTML=produtos.map(p=>{
+  tbody.innerHTML=_slice(produtos,'stock').map(p=>{
     const margem=p.preco_venda>0?Math.round((p.preco_venda-p.preco_custo)/p.preco_venda*100):0;
     const baixo=Number(p.stock||0)<=Number(p.stock_minimo||1);
     const pct=p.stock>0?Math.min(100,Math.round(p.stock/(p.stock+5)*100)):0;
@@ -1946,6 +1983,7 @@ function renderStock(q='') {
       </td>
     </tr>`;
   }).join('');
+  _renderPG('pg-stock',total,'stock',()=>renderStock(q,true));
 }
 function clearProdutoForm(){['p-nome','p-custo','p-venda','p-stock','p-minimo','p-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});}
 function editProduto(id){
@@ -2014,13 +2052,15 @@ async function deleteProduto(id){
 // ═══════════════════════════════════════════════════════════════════
 //  CLIENTES
 // ═══════════════════════════════════════════════════════════════════
-function renderClientes(q=''){
+function renderClientes(q='', _paged=false){
+  if(!_paged) PG.clientes=1;
   let clientes=CACHE.clientes;
   if(q) clientes=clientes.filter(c=>c.nome.toLowerCase().includes(q.toLowerCase())||c.telefone?.includes(q));
   const vendas=CACHE.vendas;
+  const total=clientes.length;
   const tbody=document.getElementById('tbody-clientes');
   document.getElementById('empty-clientes').style.display=clientes.length?'none':'block';
-  tbody.innerHTML=clientes.map(c=>{
+  tbody.innerHTML=_slice(clientes,'clientes').map(c=>{
     const cVendas=vendas.filter(v=>v.cliente_id===c.id);
     const totalGasto=cVendas.reduce((s,v)=>s+Number(v.total||0),0);
     return `<tr>
@@ -2036,6 +2076,7 @@ function renderClientes(q=''){
       </td>
     </tr>`;
   }).join('');
+  _renderPG('pg-clientes',total,'clientes',()=>renderClientes(q,true));
 }
 async function saveCliente(){
   const nome=document.getElementById('c-nome').value.trim();
@@ -2088,7 +2129,8 @@ function verHistorico(clienteId){
 // ═══════════════════════════════════════════════════════════════════
 //  COBRANÇAS
 // ═══════════════════════════════════════════════════════════════════
-function renderCobranças(){
+function renderCobranças(_paged=false){
+  if(!_paged) PG.cobr=1;
   const filtro=getFilterMercado();
   let cobr=CACHE.cobrancas;
   if(filtro!=='todos') cobr=cobr.filter(c=>c.mercado===filtro);
@@ -2107,9 +2149,10 @@ function renderCobranças(){
   document.getElementById('alerta-vencidas').innerHTML=totalVencidas?
     `<div class="alert alert-danger"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg><span><strong>Atenção:</strong> ${totalVencidas} prestação(ões) com vencimento ultrapassado.</span></div>`:'';
 
+  const totalCount=comEstado.length;
   const tbody=document.getElementById('tbody-cobr');
   document.getElementById('empty-cobr').style.display=comEstado.length?'none':'block';
-  tbody.innerHTML=comEstado.map(c=>{
+  tbody.innerHTML=_slice(comEstado,'cobr').map(c=>{
     const valPrest=c.prestacoes?.length?c.prestacoes[0].valor:0;
     const statusBadge=c._pago_total?'badge-success':c._vencidas>0?'badge-danger':'badge-warning';
     const statusLabel=c._pago_total?'Pago Total':c._vencidas>0?'Vencida':'Pendente';
@@ -2133,6 +2176,7 @@ function renderCobranças(){
       </td>
     </tr>`;
   }).join('');
+  _renderPG('pg-cobr',totalCount,'cobr',()=>renderCobranças(true));
 }
 
 function verPrestacoes(cobId){
@@ -2254,7 +2298,8 @@ async function deleteCobranca(id){
 // ═══════════════════════════════════════════════════════════════════
 //  ANÁLISE
 // ═══════════════════════════════════════════════════════════════════
-function renderAnalise(){
+function renderAnalise(_paged=false){
+  if(!_paged) PG.analise=1;
   const filtro=getFilterMercado();
   let vendas=CACHE.vendas;
   if(filtro!=='todos')vendas=vendas.filter(v=>v.mercado===filtro);
@@ -2279,7 +2324,8 @@ function renderAnalise(){
     prodStats[it.nome_snapshot].qty+=it.qty;
   }));
   const rows=Object.entries(prodStats).sort((a,b)=>b[1].venda-a[1].venda);
-  document.getElementById('tbody-analise').innerHTML=rows.map(([nome,s])=>{
+  const totalRows=rows.length;
+  document.getElementById('tbody-analise').innerHTML=_slice(rows,'analise').map(([nome,s])=>{
     const m=s.venda>0?Math.round((s.venda-s.custo)/s.venda*100):0;
     return `<tr><td><strong>${nome}</strong><br><span class="text-xs text-muted">${s.qty}x vendido(s)</span></td>
       <td class="mono">${fmt(s.custo)}</td><td class="mono text-success">${fmt(s.venda)}</td>
@@ -2287,6 +2333,7 @@ function renderAnalise(){
       <td><div class="margin-bar"><div class="margin-fill" style="width:${m}%;height:6px;border-radius:3px;background:${m>30?'var(--success)':m>15?'var(--warning)':'var(--danger)'}"></div><span class="mono text-xs" style="margin-left:6px">${m}%</span></div></td>
     </tr>`;
   }).join('')||'<tr><td colspan="5" class="text-muted text-sm" style="text-align:center;padding:20px">Sem dados de vendas para análise</td></tr>';
+  _renderPG('pg-analise',totalRows,'analise',()=>renderAnalise(true));
   const mercados={};
   CACHE.vendas.forEach(v=>{mercados[v.mercado||'—']=(mercados[v.mercado||'—']||0)+Number(v.total||0);});
   const mercTotal=Object.values(mercados).reduce((s,v)=>s+v,0);
@@ -2299,11 +2346,13 @@ function renderAnalise(){
 // ═══════════════════════════════════════════════════════════════════
 //  FORNECEDORES
 // ═══════════════════════════════════════════════════════════════════
-function renderFornecedores(){
+function renderFornecedores(_paged=false){
+  if(!_paged) PG.forn=1;
   const forn=CACHE.fornecedores;
+  const total=forn.length;
   const tbody=document.getElementById('tbody-forn');
   document.getElementById('empty-forn').style.display=forn.length?'none':'block';
-  tbody.innerHTML=forn.map(f=>{
+  tbody.innerHTML=_slice(forn,'forn').map(f=>{
     const ultImp=CACHE.importacoes.filter(i=>i.fornecedor_id===f.id).sort((a,b)=>b.data_encomenda?.localeCompare(a.data_encomenda))[0];
     return `<tr>
       <td><strong>${f.nome}</strong></td>
@@ -2316,6 +2365,7 @@ function renderFornecedores(){
       </td>
     </tr>`;
   }).join('');
+  _renderPG('pg-forn',total,'forn',()=>renderFornecedores(true));
 }
 async function saveFornecedor(){
   const nome=document.getElementById('f-nome').value.trim();
@@ -2346,16 +2396,19 @@ async function deleteFornecedor(id){
 // ═══════════════════════════════════════════════════════════════════
 //  IMPORTAÇÕES
 // ═══════════════════════════════════════════════════════════════════
-function renderImportacoes(){
+function renderImportacoes(_paged=false){
+  if(!_paged) PG.imp=1;
   const imp=CACHE.importacoes.sort((a,b)=>b.data_encomenda?.localeCompare(a.data_encomenda));
+  const total=imp.length;
   const tbody=document.getElementById('tbody-imp');
   document.getElementById('empty-imp').style.display=imp.length?'none':'block';
-  tbody.innerHTML=imp.map((i,idx)=>{
+  tbody.innerHTML=_slice(imp,'imp').map((i,idx)=>{
+    const _offset=(PG.imp-1)*PAGE_SIZE; // para manter numeração correcta
     const custUSD=(parseFloat(i.valor_produtos)||0)+(parseFloat(i.frete)||0);
     const custKz=custUSD*(parseFloat(i.cambio)||970)+(parseFloat(i.alfandega)||0);
     const statusColor={'Chegou':'badge-success','Em trânsito':'badge-info','Encomendado':'badge-warning','Alfândega':'badge-danger'}[i.status]||'badge-neutral';
     return `<tr>
-      <td class="mono text-muted">#${String(idx+1).padStart(3,'0')}</td>
+      <td class="mono text-muted">#${String(_offset+idx+1).padStart(3,'0')}</td>
       <td><strong>${nomeFornecedor(i.fornecedor_id)}</strong></td>
       <td><span class="badge badge-info">${CACHE.fornecedores.find(f=>f.id===i.fornecedor_id)?.pais||'—'}</span></td>
       <td>${i.produtos||'—'}</td>
@@ -2369,6 +2422,7 @@ function renderImportacoes(){
       </td>
     </tr>`;
   }).join('');
+  _renderPG('pg-imp',total,'imp',()=>renderImportacoes(true));
 }
 async function updateImportStatus(id){
   const statuses=['Encomendado','Em trânsito','Alfândega','Chegou'];
@@ -2411,8 +2465,49 @@ async function deleteImportacao(id){
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  INIT — Carrega tudo do Supabase
+//  PAGINAÇÃO — Motor de paginação universal para todas as tabelas
 // ═══════════════════════════════════════════════════════════════════
+const PAGE_SIZE = 50;
+const PG = { vendas:1, stock:1, clientes:1, cobr:1, forn:1, imp:1, analise:1 };
+const _PG_FNS = {}; // closures de re-render por chave
+
+/**
+ * Renderiza a barra de paginação.
+ * @param {string} barId   — id do div container
+ * @param {number} total   — total de registos após filtros
+ * @param {string} key     — chave em PG (ex: 'vendas')
+ * @param {Function} rerender — closure que re-renderiza a tabela sem reset de página
+ */
+function _renderPG(barId, total, key, rerender) {
+  _PG_FNS[key] = rerender;
+  const bar = document.getElementById(barId);
+  if (!bar) return;
+  if (total <= PAGE_SIZE) { bar.innerHTML = ''; return; }
+  const p = PG[key], pages = Math.ceil(total / PAGE_SIZE);
+  const from = (p - 1) * PAGE_SIZE + 1, to = Math.min(p * PAGE_SIZE, total);
+  bar.innerHTML = `<div class="pg-bar">
+    <span class="pg-info"><strong>${from}–${to}</strong> de ${total} registos</span>
+    <div class="pg-ctrl">
+      <button class="btn btn-ghost btn-sm" ${p<=1?'disabled':''} onclick="_goPage('${key}',${p-1})">‹ Anterior</button>
+      <span class="pg-num">${p} / ${pages}</span>
+      <button class="btn btn-ghost btn-sm" ${p>=pages?'disabled':''} onclick="_goPage('${key}',${p+1})">Seguinte ›</button>
+    </div>
+  </div>`;
+}
+
+/** Navega para uma página e re-renderiza sem reset de filtros. */
+function _goPage(key, page) {
+  PG[key] = page;
+  _PG_FNS[key]?.();
+}
+
+/** Fatia o array para a página actual. */
+function _slice(arr, key) {
+  const s = (PG[key] - 1) * PAGE_SIZE;
+  return arr.slice(s, s + PAGE_SIZE);
+}
+
+
 // ─── AUTH STATE ───
 let CURRENT_USER = null;
 let CURRENT_ROLE = null;
