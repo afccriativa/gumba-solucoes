@@ -614,6 +614,37 @@ textarea { resize: vertical; min-height: 70px; }
 <body>
 <div id="loading-screen"><div class="spinner"></div><h2>Gumba<span> Soluções</span></h2><p>A carregar dados da nuvem...</p></div>
 
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <header>
+    <span>Gumba Soluções</span>
+  </header>
+  <main>
+    <div class="login-card">
+      <div class="login-brand">
+        <h1>Gumba Soluções</h1>
+        <p>Sistema de Gestão Comercial</p>
+      </div>
+      <div class="login-form">
+        <div class="login-field">
+          <label>E-mail</label>
+          <input type="email" id="l-email" placeholder="utilizador@email.com" autocomplete="username">
+        </div>
+        <div class="login-field">
+          <label>Password</label>
+          <input type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <div id="login-error" class="login-error"></div>
+        <button id="login-btn" class="login-btn" onclick="doLogin()">Entrar</button>
+      </div>
+    </div>
+  </main>
+  <footer>
+    <span>Gumba Soluções</span>
+    <p>© AFC Criativa · Ibisner Solutions 2026</p>
+  </footer>
+</div>
+
 <!-- SIDEBAR -->
 <nav id="sidebar" style="display:none">
   <div class="sidebar-logo">
