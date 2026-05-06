@@ -501,7 +501,7 @@ textarea { resize: vertical; min-height: 70px; }
 #login-screen {
   position: fixed; inset: 0; z-index: 10000;
   background: var(--gs-bg);
-  display: flex; flex-direction: column;
+  display: none; flex-direction: column;
   font-family: var(--font-brand);
   color: var(--gs-text);
 }
@@ -615,7 +615,7 @@ textarea { resize: vertical; min-height: 70px; }
 <div id="loading-screen"><div class="spinner"></div><h2>Gumba<span> Soluções</span></h2><p>A carregar dados da nuvem...</p></div>
 
 <!-- SIDEBAR -->
-<nav id="sidebar">
+<nav id="sidebar" style="display:none">
   <div class="sidebar-logo">
     <h1>Gumba<span> Soluções</span></h1>
     <p>Painel de Gestão</p>
@@ -680,7 +680,7 @@ textarea { resize: vertical; min-height: 70px; }
 </nav>
 
 <!-- MAIN -->
-<div id="main">
+<div id="main" style="display:none">
   <div class="topbar">
     <span class="topbar-title" id="page-title">Dashboard</span>
     <div class="topbar-right">
@@ -2211,40 +2211,51 @@ document.getElementById('l-pass')?.addEventListener('keydown',e=>{if(e.key==='En
 document.getElementById('l-email')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('l-pass').focus();});
 
 async function loadApp(){
-  // Buscar role do utilizador
   try{
-    const {data}=await sb.from('perfis').select('role,nome').eq('id',CURRENT_USER.id).single();
-    CURRENT_ROLE=data?.role||'comercial';
-    // Mostrar nome no header
-    const uname=document.getElementById('user-name');
-    if(uname)uname.textContent=data?.nome||CURRENT_USER.email;
-    const urole=document.getElementById('user-role');
-    if(urole)urole.textContent=CURRENT_ROLE==='admin'?'Administrador':'Comercial';
-  }catch(e){CURRENT_ROLE='comercial';}
+    // 1. Buscar role
+    try{
+      const {data}=await sb.from('perfis').select('role,nome').eq('id',CURRENT_USER.id).single();
+      CURRENT_ROLE=data?.role||'comercial';
+      const uname=document.getElementById('user-name');
+      if(uname)uname.textContent=data?.nome||CURRENT_USER.email;
+      const urole=document.getElementById('user-role');
+      if(urole)urole.textContent=CURRENT_ROLE==='admin'?'Administrador':'Comercial';
+    }catch(e){
+      CURRENT_ROLE='comercial';
+      console.warn('Perfil não encontrado, usando comercial');
+    }
 
-  // Aplicar permissões
-  applyPermissions();
+    // 2. Aplicar permissões
+    applyPermissions();
 
-  // Carregar dados
-  try{
-    const [produtos,clientes,fornecedores,vendas,venda_itens,cobrancas,prestacoes,importacoes]=await Promise.all([
+    // 3. Carregar dados (independente de erros individuais)
+    const results = await Promise.allSettled([
       sbGet('produtos'),sbGet('clientes'),sbGet('fornecedores'),
       sbGet('vendas'),sbGet('venda_itens','*'),
       sbGet('cobrancas'),sbGet('prestacoes'),sbGet('importacoes')
     ]);
+    const [produtos,clientes,fornecedores,vendas,venda_itens,cobrancas,prestacoes,importacoes]
+      = results.map(r=>r.status==='fulfilled'?r.value:[]);
+
     vendas.forEach(v=>{v.itens=venda_itens.filter(it=>it.venda_id===v.id);});
     cobrancas.forEach(c=>{c.prestacoes=prestacoes.filter(p=>p.cobranca_id===c.id).sort((a,b)=>a.numero-b.numero);});
     CACHE.produtos=produtos;CACHE.clientes=clientes;CACHE.fornecedores=fornecedores;
     CACHE.vendas=vendas;CACHE.cobrancas=cobrancas;CACHE.importacoes=importacoes;
-  }catch(e){console.warn('Erro ao carregar dados:',e.message);}
 
-  // Esconder login e loading, mostrar app
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('loading-screen').style.display='none';
-  const mesInput=document.getElementById('filtro-mes');
-  if(mesInput){const n=new Date();mesInput.value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;}
-  document.getElementById('sf-date').textContent=new Date().toLocaleDateString('pt-AO',{day:'2-digit',month:'short',year:'numeric'});
-  renderDashboard();
+  }catch(e){
+    console.error('Erro em loadApp:', e.message);
+  }finally{
+    // 4. SEMPRE mostrar a app, mesmo com erros
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('loading-screen').style.display='none';
+    document.getElementById('sidebar').style.display='';
+    document.getElementById('main').style.display='';
+    const mesInput=document.getElementById('filtro-mes');
+    if(mesInput){const n=new Date();mesInput.value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;}
+    const sfDate=document.getElementById('sf-date');
+    if(sfDate)sfDate.textContent=new Date().toLocaleDateString('pt-AO',{day:'2-digit',month:'short',year:'numeric'});
+    renderDashboard();
+  }
 }
 
 function applyPermissions(){
@@ -2264,21 +2275,47 @@ async function doLogout(){
   await sb.auth.signOut();
   CURRENT_USER=null;CURRENT_ROLE=null;
   Object.keys(CACHE).forEach(k=>CACHE[k]=[]);
+  document.getElementById('sidebar').style.display='none';
+  document.getElementById('main').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('l-email').value='';
   document.getElementById('l-pass').value='';
+  document.getElementById('login-btn').disabled=false;
+  document.getElementById('login-btn').textContent='Entrar';
+}
+
+function showLogin(){
+  const ls=document.getElementById('loading-screen');
+  const li=document.getElementById('login-screen');
+  if(ls)ls.style.display='none';
+  if(li)li.style.display='flex';
 }
 
 async function init(){
-  // Verificar sessão activa
-  const {data:{session}}=await sb.auth.getSession();
-  if(session){
-    CURRENT_USER=session.user;
-    document.getElementById('login-screen').style.display='none';
-    await loadApp();
-  }else{
-    document.getElementById('loading-screen').style.display='none';
-    // Login screen já está visível
+  const ls=document.getElementById('loading-screen');
+  const li=document.getElementById('login-screen');
+  if(ls)ls.style.display='flex';
+  if(li)li.style.display='none';
+
+  // Timeout de segurança — se demorar +4s, mostra login
+  const timeout = setTimeout(showLogin, 4000);
+
+  try{
+    const sessionResult = await Promise.race([
+      sb.auth.getSession(),
+      new Promise((_,reject) => setTimeout(()=>reject(new Error('timeout')), 3500))
+    ]);
+    clearTimeout(timeout);
+    const session = sessionResult?.data?.session;
+    if(session){
+      CURRENT_USER = session.user;
+      await loadApp();
+    } else {
+      showLogin();
+    }
+  }catch(e){
+    clearTimeout(timeout);
+    showLogin();
   }
 }
 init();
