@@ -26,8 +26,8 @@
   --text: #E2E8F0;
   --text-muted: #64748B;
   --text-dim: #94A3B8;
-  --font-display: 'Syne', sans-serif;
-  --font-body: 'Plus Jakarta Sans', sans-serif;
+  --font-display: 'Manrope', sans-serif;
+  --font-body: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --sidebar-w: 230px;
   --radius: 10px;
@@ -480,126 +480,155 @@ textarea { resize: vertical; min-height: 70px; }
   box-shadow: 0 0 0 3px rgba(16,185,129,.15) !important;
 }
 
-/* ─── GUMBA BRAND ─── */
+/* ─── GUMBA BRAND — variáveis preservadas ─── */
 :root {
-  --gs-primary: #006096;
-  --gs-primary-dark: #004a75;
-  --gs-primary-container: #077abc;
-  --gs-secondary: #2d638b;
-  --gs-bg: #f8f9ff;
-  --gs-surface: #ffffff;
-  --gs-surface-low: #eff4ff;
-  --gs-border: #bfc7d2;
-  --gs-text: #0d1c2e;
-  --gs-text-muted: #404850;
-  --gs-outline: #707881;
   --font-brand: 'Manrope', sans-serif;
   --font-ui: 'Inter', sans-serif;
 }
 
-/* ─── LOGIN SCREEN ─── */
+/* ─── LOGIN SCREEN — Dark theme, brand-anchored ─── */
 #login-screen {
   position: fixed; inset: 0; z-index: 10000;
-  background: var(--gs-bg);
-  display: none; flex-direction: column;
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse 70% 45% at 50% -5%, rgba(37,99,235,0.18) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 30% at 80% 110%, rgba(56,189,248,0.06) 0%, transparent 60%);
+  display: none; align-items: center; justify-content: center;
   font-family: var(--font-brand);
-  color: var(--gs-text);
+  opacity: 0;
+  transition: opacity 0.35s ease;
 }
-#login-screen header {
-  background: #fff;
-  border-bottom: 1px solid var(--gs-border);
-  padding: 0 24px;
-  height: 64px;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 1px 4px rgba(0,96,150,0.06);
+#login-screen.visible { opacity: 1; }
+
+.login-wrap {
+  width: 100%; max-width: 400px;
+  padding: 24px 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 28px;
 }
-#login-screen header span {
-  font-size: 1.25rem; font-weight: 700;
-  color: var(--gs-primary); letter-spacing: -0.01em;
+
+/* Cápsula branca — preserva identidade do logótipo em ambiente escuro */
+.login-logo-capsule {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 14px 32px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.06),
+    0 8px 32px rgba(37,99,235,0.28),
+    0 2px 8px rgba(0,0,0,0.4);
 }
-#login-screen main {
-  flex: 1; display: flex;
-  align-items: center; justify-content: center;
-  padding: 32px 16px;
+.login-logo-capsule img {
+  height: 60px;
+  width: auto;
+  display: block;
 }
+
 .login-card {
-  background: #fff;
-  border: 1px solid var(--gs-border);
-  border-radius: 12px;
-  box-shadow: 0 4px 24px rgba(29,130,196,0.08);
-  padding: 40px 36px;
-  width: 100%; max-width: 420px;
-  display: flex; flex-direction: column; gap: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 36px 32px;
+  width: 100%;
+  box-shadow:
+    0 0 0 1px rgba(37,99,235,0.06),
+    0 24px 56px rgba(0,0,0,0.5);
 }
-.login-brand {
-  display: flex; flex-direction: column;
-  align-items: center; gap: 12px;
+
+.login-card-title {
+  font-size: 1.3rem; font-weight: 700;
+  color: var(--text); letter-spacing: -0.02em;
+  text-align: center; margin-bottom: 4px;
 }
-.login-brand img {
-  height: 72px; width: 72px;
-  object-fit: contain;
+.login-card-sub {
+  font-size: .7rem; color: var(--text-muted);
+  text-align: center; margin-bottom: 28px;
+  font-family: var(--font-ui);
+  letter-spacing: .08em; text-transform: uppercase;
 }
-.login-brand h1 {
-  font-size: 1.75rem; font-weight: 700;
-  color: var(--gs-primary); letter-spacing: -0.02em;
-  margin: 0;
-}
-.login-brand p {
-  font-size: .875rem; color: var(--gs-text-muted);
-  margin: 0; text-align: center;
-}
+
 .login-form { display: flex; flex-direction: column; gap: 16px; }
 .login-field { display: flex; flex-direction: column; gap: 6px; }
 .login-field label {
   font-family: var(--font-ui);
-  font-size: .7rem; font-weight: 600;
-  letter-spacing: .05em; text-transform: uppercase;
-  color: var(--gs-text);
+  font-size: .67rem; font-weight: 600;
+  letter-spacing: .07em; text-transform: uppercase;
+  color: var(--text-dim);
 }
+.login-field-wrap { position: relative; }
 .login-field input {
   font-family: var(--font-brand);
   font-size: .875rem;
   width: 100%; padding: 10px 14px;
-  background: var(--gs-bg);
-  border: 1px solid var(--gs-border);
-  border-radius: 4px; color: var(--gs-text);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px; color: var(--text);
   outline: none; transition: border-color .15s, box-shadow .15s;
   box-sizing: border-box;
 }
+.login-field input.has-toggle { padding-right: 44px; }
 .login-field input:focus {
-  border-color: var(--gs-primary);
-  box-shadow: 0 0 0 2px rgba(0,96,150,0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
-.login-field input::placeholder { color: var(--gs-outline); }
+.login-field input::placeholder { color: var(--text-muted); }
+
+.toggle-pass {
+  position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); padding: 4px; line-height: 1;
+  border-radius: 4px; transition: color .15s, background .15s;
+}
+.toggle-pass:hover { color: var(--text-dim); background: var(--surface3); }
+
 .login-btn {
   width: 100%; padding: 12px;
-  background: var(--gs-primary);
-  color: #fff; border: none; border-radius: 6px;
+  background: var(--accent);
+  color: #fff; border: none; border-radius: 8px;
   font-family: var(--font-ui);
-  font-size: .75rem; font-weight: 600;
-  letter-spacing: .05em; text-transform: uppercase;
-  cursor: pointer; transition: background .15s, opacity .15s;
+  font-size: .76rem; font-weight: 600;
+  letter-spacing: .07em; text-transform: uppercase;
+  cursor: pointer;
+  transition: background .15s, transform .12s, box-shadow .15s;
   margin-top: 4px;
 }
-.login-btn:hover { background: var(--gs-primary-container); }
-.login-btn:disabled { opacity: .6; cursor: not-allowed; }
+.login-btn:hover {
+  background: #1d4ed8;
+  box-shadow: 0 4px 18px rgba(37,99,235,0.4);
+  transform: translateY(-1px);
+}
+.login-btn:active { transform: translateY(0); box-shadow: none; }
+.login-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
 .login-error {
-  background: #ffdad6; color: #93000a;
-  border-radius: 6px; padding: 10px 14px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid rgba(239,68,68,.2);
+  border-radius: 8px; padding: 10px 14px;
   font-size: .82rem; display: none;
+  font-family: var(--font-ui);
 }
-#login-screen footer {
-  background: var(--gs-surface-low);
-  border-top: 1px solid var(--gs-border);
-  padding: 20px 24px;
-  display: flex; align-items: center; justify-content: space-between;
-  flex-wrap: wrap; gap: 8px;
+.login-success-msg {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid rgba(16,185,129,.2);
+  border-radius: 8px; padding: 10px 14px;
+  font-size: .82rem;
+  font-family: var(--font-ui);
 }
-#login-screen footer span {
-  font-size: .78rem; color: var(--gs-secondary); font-weight: 600;
+
+.login-forgot {
+  text-align: center; margin-top: 2px;
 }
-#login-screen footer p {
-  font-size: .75rem; color: var(--gs-text-muted); margin: 0;
+.login-forgot a {
+  font-size: .75rem; color: var(--text-muted);
+  text-decoration: none; font-family: var(--font-ui);
+  transition: color .15s;
+}
+.login-forgot a:hover { color: var(--accent2); }
+
+.login-footer-note {
+  font-size: .68rem; color: var(--text-muted);
+  text-align: center; font-family: var(--font-ui);
+  opacity: .5; line-height: 1.7;
 }
 
 /* ─── LOADING ─── */
@@ -616,15 +645,17 @@ textarea { resize: vertical; min-height: 70px; }
 
 <!-- LOGIN SCREEN -->
 <div id="login-screen">
-  <header>
-    <span>Gumba Soluções</span>
-  </header>
-  <main>
+  <div class="login-wrap">
+
+    <!-- Logótipo em cápsula branca — preserva identidade em fundo escuro -->
+    <div class="login-logo-capsule">
+      <img src="./lootipo_gumba_solucoes.png" alt="Gumba Soluções">
+    </div>
+
     <div class="login-card">
-      <div class="login-brand">
-        <h1>Gumba Soluções</h1>
-        <p>Sistema de Gestão Comercial</p>
-      </div>
+      <div class="login-card-title">Bem-vindo</div>
+      <div class="login-card-sub">Comércio e Prestação de Serviços</div>
+
       <div class="login-form">
         <div class="login-field">
           <label>E-mail</label>
@@ -632,17 +663,28 @@ textarea { resize: vertical; min-height: 70px; }
         </div>
         <div class="login-field">
           <label>Password</label>
-          <input type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password">
+          <div class="login-field-wrap">
+            <input type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password" class="has-toggle">
+            <button type="button" class="toggle-pass" onclick="togglePass()" title="Mostrar / ocultar password">
+              <svg id="eye-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </button>
+          </div>
         </div>
         <div id="login-error" class="login-error"></div>
         <button id="login-btn" class="login-btn" onclick="doLogin()">Entrar</button>
+        <div class="login-forgot">
+          <a href="#" onclick="forgotPassword(event)">Esqueci a minha password</a>
+        </div>
       </div>
     </div>
-  </main>
-  <footer>
-    <span>Gumba Soluções</span>
-    <p>© AFC Criativa · Ibisner Solutions 2026</p>
-  </footer>
+
+    <div class="login-footer-note">
+      © AFC Criativa · Ibisner Solutions 2026<br>Painel de Gestão Comercial
+    </div>
+  </div>
 </div>
 
 <!-- SIDEBAR -->
@@ -2277,7 +2319,8 @@ async function loadApp(){
     console.error('Erro em loadApp:', e.message);
   }finally{
     // 4. SEMPRE mostrar a app, mesmo com erros
-    document.getElementById('login-screen').style.display='none';
+    const li=document.getElementById('login-screen');
+    if(li){ li.classList.remove('visible'); setTimeout(()=>li.style.display='none',350); }
     document.getElementById('loading-screen').style.display='none';
     document.getElementById('sidebar').style.display='';
     document.getElementById('main').style.display='';
@@ -2308,21 +2351,62 @@ async function doLogout(){
   Object.keys(CACHE).forEach(k=>CACHE[k]=[]);
   document.getElementById('sidebar').style.display='none';
   document.getElementById('main').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
+  const li=document.getElementById('login-screen');
+  li.style.display='flex';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>li.classList.add('visible')));
   document.getElementById('l-email').value='';
   document.getElementById('l-pass').value='';
   document.getElementById('login-btn').disabled=false;
   document.getElementById('login-btn').textContent='Entrar';
+  document.getElementById('login-error').style.display='none';
 }
 
 function showLogin(){
   const ls=document.getElementById('loading-screen');
   const li=document.getElementById('login-screen');
   if(ls)ls.style.display='none';
-  if(li)li.style.display='flex';
+  if(li){
+    li.style.display='flex';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>li.classList.add('visible')));
+  }
 }
 
-async function init(){
+// ─── TOGGLE PASSWORD VISIBILITY ───
+function togglePass(){
+  const inp=document.getElementById('l-pass');
+  const icon=document.getElementById('eye-icon');
+  const isHidden=inp.type==='password';
+  inp.type=isHidden?'text':'password';
+  icon.innerHTML=isHidden
+    ?'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>'
+    :'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>';
+}
+
+// ─── RECUPERAÇÃO DE PASSWORD ───
+async function forgotPassword(e){
+  e.preventDefault();
+  const email=document.getElementById('l-email').value.trim();
+  const err=document.getElementById('login-error');
+  err.className='login-error';
+  if(!email){
+    err.textContent='Introduza o seu e-mail para recuperar a password.';
+    err.style.display='block';return;
+  }
+  err.style.display='none';
+  try{
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
+    if(error)throw error;
+    err.className='login-success-msg';
+    err.textContent='✓ Link de recuperação enviado. Verifique o seu e-mail.';
+    err.style.display='block';
+  }catch(e){
+    err.className='login-error';
+    err.textContent='Erro ao enviar e-mail de recuperação. Tente novamente.';
+    err.style.display='block';
+  }
+}
+
+
   const ls=document.getElementById('loading-screen');
   const li=document.getElementById('login-screen');
   if(ls)ls.style.display='flex';
