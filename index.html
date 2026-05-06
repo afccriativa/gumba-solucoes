@@ -670,6 +670,58 @@ textarea { resize: vertical; min-height: 70px; }
   opacity: .5; line-height: 1.7;
 }
 
+/* ─── TOAST NOTIFICATIONS ─── */
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 8000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  max-width: 360px;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: .83rem;
+  font-weight: 500;
+  line-height: 1.4;
+  pointer-events: all;
+  box-shadow: 0 8px 28px rgba(0,0,0,.45);
+  animation: toastIn .25s cubic-bezier(.21,1.02,.73,1) forwards;
+}
+.toast.leaving { animation: toastOut .28s ease forwards; }
+.toast-success { background: rgba(16,185,129,.14); border: 1px solid rgba(16,185,129,.32); color: var(--success); }
+.toast-error   { background: rgba(239,68,68,.14);  border: 1px solid rgba(239,68,68,.32);  color: var(--danger);  }
+.toast-warning { background: rgba(245,158,11,.14); border: 1px solid rgba(245,158,11,.32); color: var(--warning); }
+.toast-info    { background: var(--accent-glow);   border: 1px solid rgba(37,99,235,.3);   color: var(--accent2); }
+.toast-icon { flex-shrink: 0; width: 18px; height: 18px; }
+@keyframes toastIn  { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:translateX(0); } }
+@keyframes toastOut { from { opacity:1; transform:translateX(0);    } to { opacity:0; transform:translateX(16px); } }
+
+/* ─── CONFIRM MODAL ─── */
+#confirm-overlay { z-index: 600; }
+.confirm-icon-wrap {
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  background: var(--danger-bg);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+}
+.confirm-icon-wrap svg { color: var(--danger); width: 22px; height: 22px; }
+#confirm-msg {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: .88rem;
+  line-height: 1.65;
+}
+
 /* ─── LOADING ─── */
 #loading-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
 #loading-screen h2{font-family:var(--font-display);font-size:1.4rem;font-weight:800;}
@@ -680,6 +732,31 @@ textarea { resize: vertical; min-height: 70px; }
 </style>
 </head>
 <body>
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<!-- CONFIRM MODAL -->
+<div id="confirm-overlay" class="modal-overlay">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3 id="confirm-title">Confirmar acção</h3>
+      <button class="modal-close" onclick="closeConfirmModal()">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center;padding:28px 24px 20px">
+      <div class="confirm-icon-wrap">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+      </div>
+      <p id="confirm-msg"></p>
+    </div>
+    <div class="modal-footer" style="justify-content:center;gap:12px">
+      <button class="btn btn-ghost" onclick="closeConfirmModal()">Cancelar</button>
+      <button class="btn btn-danger" id="confirm-ok-btn" onclick="executeConfirm()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <div id="loading-screen"><div class="spinner"></div><h2>Gumba<span> Soluções</span></h2><p>A carregar dados da nuvem...</p></div>
 
 <!-- LOGIN SCREEN -->
@@ -1775,9 +1852,9 @@ function toggleParcelaFields(v){
 }
 
 async function saveVenda() {
-  if(!carrinho.length) return alert('Adicione pelo menos um produto ao carrinho.');
+  if(!carrinho.length) return showToast('Adicione pelo menos um produto ao carrinho.','warning');
   const cliente_id=document.getElementById('v-cliente').value;
-  if(!cliente_id) return alert('Seleccione um cliente.');
+  if(!cliente_id) return showToast('Seleccione um cliente.','warning');
   const total=carrinho.reduce((s,c)=>s+c.preco*c.qty,0);
   const tipo=document.getElementById('v-tipo').value;
   try {
@@ -1825,15 +1902,17 @@ async function saveVenda() {
     CACHE.vendas.unshift(venda);
     closeModal('modal-venda');
     renderVendas(); renderDashboard();
-    alert(`✅ Venda registada!\nTotal: ${fmt(total)}`);
-  } catch(e){ alert('Erro ao guardar venda: '+e.message); }
+    showToast(`Venda registada! Total: ${fmt(total)}`,'success');
+  } catch(e){ showToast('Erro ao guardar venda: '+e.message,'error'); }
 }
 
 async function deleteVenda(id) {
-  if(!confirm('Confirmar eliminação?')) return;
-  await sbDelete('vendas',id);
-  CACHE.vendas=CACHE.vendas.filter(x=>x.id!==id);
-  renderVendas(); renderDashboard();
+  showConfirm('Esta venda será eliminada permanentemente. Continuar?', async()=>{
+    await sbDelete('vendas',id);
+    CACHE.vendas=CACHE.vendas.filter(x=>x.id!==id);
+    renderVendas(); renderDashboard();
+    showToast('Venda eliminada.','success');
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1886,7 +1965,7 @@ function editProduto(id){
 }
 async function ajustarStock(id){
   const delta=prompt('Ajuste de stock (+add / -remover). Ex: +5 ou -2');
-  if(!delta)return;const d=parseInt(delta);if(isNaN(d))return alert('Valor inválido.');
+  if(!delta)return;const d=parseInt(delta);if(isNaN(d))return showToast('Valor inválido.','warning');
   const p=CACHE.produtos.find(x=>x.id===id);if(!p)return;
   const novo=Math.max(0,Number(p.stock||0)+d);
   await sbUpdate('produtos',id,{stock:novo});
@@ -1895,7 +1974,7 @@ async function ajustarStock(id){
 }
 async function saveProduto(){
   const nome=document.getElementById('p-nome').value.trim();
-  if(!nome)return alert('Nome do produto é obrigatório.');
+  if(!nome)return showToast('Nome do produto é obrigatório.','warning');
   const data={
     nome,categoria:document.getElementById('p-cat').value,
     origem:document.getElementById('p-origem').value,
@@ -1918,13 +1997,15 @@ async function saveProduto(){
       CACHE.produtos.unshift(novo);
     }
     closeModal('modal-produto');renderStock();renderDashboard();
-  }catch(e){alert('Erro: '+e.message);}
+  }catch(e){showToast('Erro: '+e.message,'error');}
 }
 async function deleteProduto(id){
-  if(!confirm('Confirmar eliminação?'))return;
-  await sbDelete('produtos',id);
-  CACHE.produtos=CACHE.produtos.filter(x=>x.id!==id);
-  renderStock();renderDashboard();
+  showConfirm('Este produto será eliminado permanentemente. Continuar?', async()=>{
+    await sbDelete('produtos',id);
+    CACHE.produtos=CACHE.produtos.filter(x=>x.id!==id);
+    renderStock();renderDashboard();
+    showToast('Produto eliminado.','success');
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1955,7 +2036,7 @@ function renderClientes(q=''){
 }
 async function saveCliente(){
   const nome=document.getElementById('c-nome').value.trim();
-  if(!nome)return alert('Nome é obrigatório.');
+  if(!nome)return showToast('Nome é obrigatório.','warning');
   try{
     const novo=await sbInsert('clientes',{
       nome,telefone:document.getElementById('c-tel').value,
@@ -1967,13 +2048,15 @@ async function saveCliente(){
     });
     CACHE.clientes.unshift(novo);
     closeModal('modal-cliente');renderClientes();renderDashboard();
-  }catch(e){alert('Erro: '+e.message);}
+  }catch(e){showToast('Erro: '+e.message,'error');}
 }
 async function deleteCliente(id){
-  if(!confirm('Confirmar eliminação?'))return;
-  await sbDelete('clientes',id);
-  CACHE.clientes=CACHE.clientes.filter(x=>x.id!==id);
-  renderClientes();renderDashboard();
+  showConfirm('Este cliente será eliminado permanentemente. Continuar?', async()=>{
+    await sbDelete('clientes',id);
+    CACHE.clientes=CACHE.clientes.filter(x=>x.id!==id);
+    renderClientes();renderDashboard();
+    showToast('Cliente eliminado.','success');
+  });
 }
 function verHistorico(clienteId){
   const c=CACHE.clientes.find(x=>x.id===clienteId);
@@ -2105,7 +2188,7 @@ function getNextMonth(offset=0){
 }
 async function saveCobranca(){
   const cliente_id=document.getElementById('cb-cliente').value;
-  if(!cliente_id)return alert('Seleccione um cliente.');
+  if(!cliente_id)return showToast('Seleccione um cliente.','warning');
   const total=parseFloat(document.getElementById('cb-total').value)||0;
   const np=parseInt(document.getElementById('cb-nprest').value)||2;
   const entrada=parseFloat(document.getElementById('cb-entrada').value)||0;
@@ -2138,25 +2221,29 @@ async function saveCobranca(){
     CACHE.cobrancas.unshift(cob);
     closeModal('modal-cobranca');
     renderCobranças();renderDashboard();
-  }catch(e){alert('Erro: '+e.message);}
+  }catch(e){showToast('Erro: '+e.message,'error');}
 }
 async function pagarPrestacaoById(prestId, cobId){
-  if(!confirm('Confirmar pagamento desta prestação?'))return;
-  try{
-    await sbUpdate('prestacoes', prestId, {pago:true, data_pagamento:today()});
-    const c=CACHE.cobrancas.find(x=>x.id===cobId);
-    if(c&&c.prestacoes){
-      const p=c.prestacoes.find(x=>x.id===prestId);
-      if(p){p.pago=true;p.data_pagamento=today();}
-    }
-    renderCobranças();renderDashboard();
-  }catch(e){alert('Erro: '+e.message);}
+  showConfirm('Confirmar o pagamento desta prestação?', async()=>{
+    try{
+      await sbUpdate('prestacoes', prestId, {pago:true, data_pagamento:today()});
+      const c=CACHE.cobrancas.find(x=>x.id===cobId);
+      if(c&&c.prestacoes){
+        const p=c.prestacoes.find(x=>x.id===prestId);
+        if(p){p.pago=true;p.data_pagamento=today();}
+      }
+      renderCobranças();renderDashboard();
+      showToast('Prestação registada como paga.','success');
+    }catch(e){showToast('Erro: '+e.message,'error');}
+  }, 'Confirmar pagamento');
 }
 async function deleteCobranca(id){
-  if(!confirm('Confirmar eliminação?'))return;
-  await sbDelete('cobrancas',id);
-  CACHE.cobrancas=CACHE.cobrancas.filter(x=>x.id!==id);
-  renderCobranças();renderDashboard();
+  showConfirm('Esta cobrança e todas as suas prestações serão eliminadas. Continuar?', async()=>{
+    await sbDelete('cobrancas',id);
+    CACHE.cobrancas=CACHE.cobrancas.filter(x=>x.id!==id);
+    renderCobranças();renderDashboard();
+    showToast('Cobrança eliminada.','success');
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2227,7 +2314,7 @@ function renderFornecedores(){
 }
 async function saveFornecedor(){
   const nome=document.getElementById('f-nome').value.trim();
-  if(!nome)return alert('Nome é obrigatório.');
+  if(!nome)return showToast('Nome é obrigatório.','warning');
   try{
     const novo=await sbInsert('fornecedores',{
       nome,pais:document.getElementById('f-pais').value,
@@ -2239,13 +2326,15 @@ async function saveFornecedor(){
     });
     CACHE.fornecedores.unshift(novo);
     closeModal('modal-fornecedor');renderFornecedores();
-  }catch(e){alert('Erro: '+e.message);}
+  }catch(e){showToast('Erro: '+e.message,'error');}
 }
 async function deleteFornecedor(id){
-  if(!confirm('Confirmar eliminação?'))return;
-  await sbDelete('fornecedores',id);
-  CACHE.fornecedores=CACHE.fornecedores.filter(x=>x.id!==id);
-  renderFornecedores();
+  showConfirm('Este fornecedor será eliminado permanentemente. Continuar?', async()=>{
+    await sbDelete('fornecedores',id);
+    CACHE.fornecedores=CACHE.fornecedores.filter(x=>x.id!==id);
+    renderFornecedores();
+    showToast('Fornecedor eliminado.','success');
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2279,12 +2368,13 @@ async function updateImportStatus(id){
   const statuses=['Encomendado','Em trânsito','Alfândega','Chegou'];
   const i=CACHE.importacoes.find(x=>x.id===id);if(!i)return;
   const next=statuses[(statuses.indexOf(i.status)+1)%statuses.length];
-  if(confirm(`Actualizar status para: "${next}"?`)){
+  showConfirm(`Actualizar o status para "${next}"?`, async()=>{
     const upd={status:next};
     if(next==='Chegou')upd.data_chegada=today();
     await sbUpdate('importacoes',id,upd);
     Object.assign(i,upd);renderImportacoes();
-  }
+    showToast(`Status actualizado: ${next}`,'success');
+  }, 'Actualizar status');
 }
 async function saveImportacao(){
   try{
@@ -2302,13 +2392,15 @@ async function saveImportacao(){
     });
     CACHE.importacoes.unshift(novo);
     closeModal('modal-importacao');renderImportacoes();
-  }catch(e){alert('Erro: '+e.message);}
+  }catch(e){showToast('Erro: '+e.message,'error');}
 }
 async function deleteImportacao(id){
-  if(!confirm('Confirmar eliminação?'))return;
-  await sbDelete('importacoes',id);
-  CACHE.importacoes=CACHE.importacoes.filter(x=>x.id!==id);
-  renderImportacoes();
+  showConfirm('Esta importação será eliminada permanentemente. Continuar?', async()=>{
+    await sbDelete('importacoes',id);
+    CACHE.importacoes=CACHE.importacoes.filter(x=>x.id!==id);
+    renderImportacoes();
+    showToast('Importação eliminada.','success');
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2466,6 +2558,45 @@ async function forgotPassword(e){
   }
 }
 
+
+// ═══════════════════════════════════════════════════════════════════
+//  SISTEMA DE NOTIFICAÇÕES — Toast + Modal de confirmação
+// ═══════════════════════════════════════════════════════════════════
+
+const _TOAST_ICONS = {
+  success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>',
+  error:   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>',
+  warning: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>',
+  info:    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>'
+};
+function showToast(msg, type='info', duration=3500){
+  const container=document.getElementById('toast-container');
+  const toast=document.createElement('div');
+  toast.className=`toast toast-${type}`;
+  toast.innerHTML=`<svg class="toast-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">${_TOAST_ICONS[type]||_TOAST_ICONS.info}</svg><span>${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(()=>{
+    toast.classList.add('leaving');
+    setTimeout(()=>toast.remove(),300);
+  },duration);
+}
+
+let _confirmCb=null;
+function showConfirm(msg, onConfirm, title='Confirmar eliminação'){
+  document.getElementById('confirm-title').textContent=title;
+  document.getElementById('confirm-msg').textContent=msg;
+  _confirmCb=onConfirm;
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+function closeConfirmModal(){
+  document.getElementById('confirm-overlay').classList.remove('open');
+  _confirmCb=null;
+}
+function executeConfirm(){
+  const cb=_confirmCb;
+  closeConfirmModal();
+  if(cb) cb();
+}
 
 async function init(){
   const ls=document.getElementById('loading-screen');
