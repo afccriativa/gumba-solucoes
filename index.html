@@ -3134,7 +3134,7 @@ function calcPreco() {
   const margem = parseFloat(document.getElementById('calc-margem')?.value) || 0;
   const qty    = parseInt(document.getElementById('calc-qty')?.value) || 1;
 
-  const precoVenda = margem >= 100 ? 0 : custo / (1 - margem / 100);
+  const precoVenda = custo + (custo * margem / 100);
   const lucro      = precoVenda - custo;
   const markup     = custo > 0 ? (lucro / custo * 100) : 0;
   const pctCusto   = precoVenda > 0 ? (custo / precoVenda * 100) : 70;
@@ -3209,7 +3209,7 @@ function miniCalc() {
   const elVal = document.getElementById('mini-margem-val');
   if(elVal) elVal.textContent = margem + '%';
   if(custo <= 0) return;
-  const preco = margem >= 100 ? 0 : Math.ceil(custo / (1 - margem/100));
+  const preco = Math.ceil(custo + (custo * margem / 100));
   const lucro = preco - custo;
   const elPreco = document.getElementById('mini-preco-result');
   const elLucro = document.getElementById('mini-lucro-result');
@@ -3220,7 +3220,7 @@ function aplicarMiniCalc() {
   const custo = parseFloat(document.getElementById('p-custo')?.value)||0;
   const margem = parseFloat(document.getElementById('mini-margem')?.value)||30;
   if(custo <= 0) return;
-  const preco = Math.ceil(custo / (1 - margem/100));
+  const preco = Math.ceil(custo + (custo * margem / 100));
   document.getElementById('p-venda').value = preco;
 }
 
