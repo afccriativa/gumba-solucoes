@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gumba Soluções — Painel de Gestão</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1133,6 +1135,10 @@ textarea { resize: vertical; min-height: 70px; }
           <span class="card-title">Registo de Vendas</span>
           <div class="flex gap-2">
             <input type="month" id="filtro-mes" class="search-bar" style="width:150px" onchange="renderVendas()">
+            <button class="btn btn-ghost" onclick="openModal('modal-relatorio')" title="Exportar Relatorio PDF">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              PDF
+            </button>
             <button class="btn btn-primary" onclick="openModal('modal-venda')">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               Nova Venda
@@ -1382,14 +1388,7 @@ textarea { resize: vertical; min-height: 70px; }
                 <!-- Sugestões rápidas -->
                 <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
                   <span style="font-size:.7rem;color:var(--text-muted);align-self:center">Sugestões:</span>
-                  <button onclick="setMargem(10)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">10%</button>
-                  <button onclick="setMargem(15)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">15%</button>
-                  <button onclick="setMargem(20)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">20%</button>
-                  <button onclick="setMargem(25)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">25%</button>
-                  <button onclick="setMargem(30)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">30%</button>
-                  <button onclick="setMargem(35)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">35%</button>
-                  <button onclick="setMargem(40)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">40%</button>
-                  <button onclick="setMargem(50)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">50%</button>
+                  ${[10,15,20,25,30,35,40,50].map(v => `<button onclick="setMargem(${v})" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">${v}%</button>`).join('')}
                 </div>
               </div>
 
@@ -1523,6 +1522,70 @@ textarea { resize: vertical; min-height: 70px; }
     <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;padding:16px 24px;border-top:1px solid var(--border)">
       <button class="btn btn-ghost" onclick="closeModal('modal-aplicar-preco')">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmarAplicarPreco()">Confirmar e Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- RELATORIO PDF -->
+<div class="modal-overlay" id="modal-relatorio">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3>Exportar Relatorio de Vendas</h3>
+      <button class="modal-close" onclick="closeModal('modal-relatorio')">x</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid form-grid-2">
+        <div class="form-group">
+          <label>Periodo</label>
+          <select id="rel-tipo" onchange="toggleRelPeriodo()">
+            <option value="mes">Mes especifico</option>
+            <option value="trimestre">Trimestre</option>
+            <option value="ano">Ano completo</option>
+            <option value="todos">Todos os registos</option>
+          </select>
+        </div>
+        <div class="form-group" id="rel-mes-group">
+          <label>Mes</label>
+          <input type="month" id="rel-mes">
+        </div>
+        <div class="form-group" id="rel-trim-group" style="display:none">
+          <label>Trimestre</label>
+          <select id="rel-trimestre">
+            <option value="1">1 Trimestre (Jan-Mar)</option>
+            <option value="2">2 Trimestre (Abr-Jun)</option>
+            <option value="3">3 Trimestre (Jul-Set)</option>
+            <option value="4">4 Trimestre (Out-Dez)</option>
+          </select>
+        </div>
+        <div class="form-group" id="rel-ano-group" style="display:none">
+          <label>Ano</label>
+          <input type="number" id="rel-ano" placeholder="2025" min="2020" max="2030">
+        </div>
+        <div class="form-group full">
+          <label>Incluir no relatorio</label>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.82rem;text-transform:none;letter-spacing:0;font-weight:400">
+              <input type="checkbox" id="rel-inc-resumo" checked style="accent-color:var(--accent)"> Resumo executivo (KPIs)
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.82rem;text-transform:none;letter-spacing:0;font-weight:400">
+              <input type="checkbox" id="rel-inc-vendas" checked style="accent-color:var(--accent)"> Tabela de vendas detalhada
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.82rem;text-transform:none;letter-spacing:0;font-weight:400">
+              <input type="checkbox" id="rel-inc-produtos" checked style="accent-color:var(--accent)"> Top produtos vendidos
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.82rem;text-transform:none;letter-spacing:0;font-weight:400">
+              <input type="checkbox" id="rel-inc-cobr" style="accent-color:var(--accent)"> Cobranças pendentes
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;padding:16px 24px;border-top:1px solid var(--border)">
+      <button class="btn btn-ghost" onclick="closeModal('modal-relatorio')">Cancelar</button>
+      <button class="btn btn-primary" id="rel-btn" onclick="gerarRelatorio()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Gerar PDF
+      </button>
     </div>
   </div>
 </div>
@@ -1671,19 +1734,13 @@ textarea { resize: vertical; min-height: 70px; }
             </div>
             <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div style="background:var(--surface3);border-radius:6px;padding:8px 10px;text-align:center">
-                <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:5px">Preço de Venda <span style="color:var(--accent2);font-size:.58rem">(editável)</span></div>
-                <input type="number" id="mini-preco-result"
-                  oninput="miniCalcReverso(this.value)"
-                  style="font-size:.95rem;color:var(--accent2);font-family:var(--font-mono);font-weight:700;background:transparent;border:none;border-bottom:1px dashed var(--accent);width:100%;text-align:center;outline:none;padding:2px 0"
-                  placeholder="--">
+                <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:3px">Preço de Venda</div>
+                <div id="mini-preco-result" style="font-size:.9rem;color:var(--accent2);font-family:var(--font-mono);font-weight:700">--</div>
               </div>
               <div style="background:var(--surface3);border-radius:6px;padding:8px 10px;text-align:center">
-                <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:5px">Lucro</div>
-                <div id="mini-lucro-result" style="font-size:.9rem;color:var(--success);font-family:var(--font-mono);font-weight:700;padding-top:4px">--</div>
+                <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:3px">Lucro</div>
+                <div id="mini-lucro-result" style="font-size:.9rem;color:var(--success);font-family:var(--font-mono);font-weight:700">--</div>
               </div>
-            </div>
-            <div id="mini-margem-display" style="margin-top:8px;text-align:center;font-size:.75rem;color:var(--text-muted);display:none">
-              Margem calculada: <strong id="mini-margem-calc" style="color:var(--accent2)">--</strong>
             </div>
             <button type="button" onclick="aplicarMiniCalc()" class="btn btn-ghost btn-sm" style="margin-top:10px;width:100%;justify-content:center">
               Aplicar este preco ao campo
@@ -2081,6 +2138,7 @@ let editingProduto = null;
 function openModal(id) {
   document.getElementById(id).classList.add('open');
   if(id==='modal-venda')      populateVendaSelects();
+  if(id==='modal-relatorio')  initRelatorioModal();
   if(id==='modal-cobranca')   populateCobrancaSelects();
   if(id==='modal-importacao') populateImportacaoSelects();
   if(id==='modal-produto')    populateProdutoFornSelect();
@@ -3214,13 +3272,11 @@ function showMiniCalc() {
   const custo = parseFloat(document.getElementById('p-custo')?.value)||0;
   const wrap = document.getElementById('mini-calc-wrap');
   if(wrap) wrap.style.display = custo > 0 ? '' : 'none';
-  if(custo > 0) miniCalc();
+  miniCalc();
 }
-
-// SLIDER -> PRECO (sentido normal)
 function miniCalc() {
   const custo = parseFloat(document.getElementById('p-custo')?.value)||0;
-  const margem = parseFloat(document.getElementById('mini-margem')?.value)||0;
+  const margem = parseFloat(document.getElementById('mini-margem')?.value)||30;
   const elVal = document.getElementById('mini-margem-val');
   if(elVal) elVal.textContent = margem + '%';
   if(custo <= 0) return;
@@ -3228,42 +3284,356 @@ function miniCalc() {
   const lucro = preco - custo;
   const elPreco = document.getElementById('mini-preco-result');
   const elLucro = document.getElementById('mini-lucro-result');
-  const elDisp = document.getElementById('mini-margem-display');
-  if(elPreco) elPreco.value = preco;
+  if(elPreco) elPreco.textContent = fmtCalc(preco) + ' Kz';
   if(elLucro) elLucro.textContent = fmtCalc(lucro) + ' Kz';
-  if(elDisp) elDisp.style.display = 'none';
 }
-
-// PRECO -> SLIDER (sentido inverso — bidirecional)
-function miniCalcReverso(precoEditado) {
-  const custo = parseFloat(document.getElementById('p-custo')?.value)||0;
-  const preco = parseFloat(precoEditado)||0;
-  if(custo <= 0 || preco <= 0) return;
-  const margemReal = ((preco - custo) / custo * 100);
-  const lucro = preco - custo;
-  const slider = document.getElementById('mini-margem');
-  const elVal = document.getElementById('mini-margem-val');
-  const elLucro = document.getElementById('mini-lucro-result');
-  const elDisp = document.getElementById('mini-margem-display');
-  const elCalc = document.getElementById('mini-margem-calc');
-  if(slider) slider.value = Math.min(100, Math.max(0, margemReal));
-  if(elVal) elVal.textContent = margemReal.toFixed(1) + '%';
-  if(elLucro) {
-    elLucro.textContent = fmtCalc(Math.round(lucro)) + ' Kz';
-    elLucro.style.color = lucro < 0 ? 'var(--danger)' : 'var(--success)';
-  }
-  if(elDisp) elDisp.style.display = '';
-  if(elCalc) elCalc.textContent = margemReal.toFixed(1) + '%' + (lucro < 0 ? ' — Prejuizo!' : '');
-}
-
 function aplicarMiniCalc() {
   const custo = parseFloat(document.getElementById('p-custo')?.value)||0;
+  const margem = parseFloat(document.getElementById('mini-margem')?.value)||30;
   if(custo <= 0) return;
-  const precoInput = document.getElementById('mini-preco-result');
-  const preco = parseFloat(precoInput?.value)||0;
-  if(preco <= 0) return;
+  const preco = Math.ceil(custo + (custo * margem / 100));
   document.getElementById('p-venda').value = preco;
 }
+
+
+// ===========================================================
+//  RELATORIOS PDF — jsPDF + AutoTable
+// ===========================================================
+
+function toggleRelPeriodo() {
+  const tipo = document.getElementById('rel-tipo')?.value;
+  const mesG = document.getElementById('rel-mes-group');
+  const trimG = document.getElementById('rel-trim-group');
+  const anoG = document.getElementById('rel-ano-group');
+  if(mesG) mesG.style.display = tipo === 'mes' ? '' : 'none';
+  if(trimG) trimG.style.display = tipo === 'trimestre' ? '' : 'none';
+  if(anoG) anoG.style.display = (tipo === 'trimestre' || tipo === 'ano') ? '' : 'none';
+}
+
+function filtrarVendasPeriodo() {
+  const tipo = document.getElementById('rel-tipo').value;
+  const ano = document.getElementById('rel-ano')?.value || new Date().getFullYear();
+  let vendas = [...CACHE.vendas];
+
+  if(tipo === 'mes') {
+    const mes = document.getElementById('rel-mes').value;
+    if(mes) vendas = vendas.filter(v => v.data?.startsWith(mes));
+  } else if(tipo === 'trimestre') {
+    const trim = parseInt(document.getElementById('rel-trimestre').value);
+    const meses = [[(trim-1)*3+1, (trim-1)*3+2, (trim-1)*3+3]].flat();
+    vendas = vendas.filter(v => {
+      if(!v.data) return false;
+      const m = parseInt(v.data.split('-')[1]);
+      const a = parseInt(v.data.split('-')[0]);
+      return parseInt(a) === parseInt(ano) && meses.includes(m);
+    });
+  } else if(tipo === 'ano') {
+    vendas = vendas.filter(v => v.data?.startsWith(String(ano)));
+  }
+
+  return vendas.sort((a,b) => b.data?.localeCompare(a.data));
+}
+
+function getPeriodoLabel() {
+  const tipo = document.getElementById('rel-tipo').value;
+  if(tipo === 'mes') {
+    const mes = document.getElementById('rel-mes').value;
+    if(!mes) return 'Periodo nao definido';
+    const [y, m] = mes.split('-');
+    const meses = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    return meses[parseInt(m)-1] + ' ' + y;
+  }
+  if(tipo === 'trimestre') {
+    const trim = document.getElementById('rel-trimestre').value;
+    const ano = document.getElementById('rel-ano').value || new Date().getFullYear();
+    return trim + 'T ' + ano;
+  }
+  if(tipo === 'ano') {
+    return 'Ano ' + (document.getElementById('rel-ano').value || new Date().getFullYear());
+  }
+  return 'Todos os Registos';
+}
+
+async function gerarRelatorio() {
+  const btn = document.getElementById('rel-btn');
+  btn.disabled = true; btn.textContent = 'A gerar...';
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    const vendas = filtrarVendasPeriodo();
+    const periodo = getPeriodoLabel();
+    const incResumo = document.getElementById('rel-inc-resumo').checked;
+    const incVendas = document.getElementById('rel-inc-vendas').checked;
+    const incProdutos = document.getElementById('rel-inc-produtos').checked;
+    const incCobr = document.getElementById('rel-inc-cobr').checked;
+
+    // --- CORES E ESTILOS ---
+    const COR_PRIMARY = [0, 96, 150];      // #006096
+    const COR_DARK    = [13, 28, 46];      // #0d1c2e
+    const COR_MUTED   = [64, 72, 80];      // #404850
+    const COR_LIGHT   = [239, 244, 255];   // #eff4ff
+    const COR_SUCCESS = [16, 185, 129];
+    const COR_BORDER  = [191, 199, 210];
+
+    let y = 0; // cursor vertical
+
+    // ─── CABECALHO ───
+    doc.setFillColor(...COR_PRIMARY);
+    doc.rect(0, 0, pw, 28, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.text('GUMBA SOLUCOES', 14, 12);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Comercio e Prestacao de Servicos', 14, 18);
+    doc.setFontSize(8);
+    doc.text('Relatorio gerado por AFC Criativa', 14, 24);
+    // Data no canto direito
+    doc.setFontSize(8);
+    const dataHoje = new Date().toLocaleDateString('pt-AO', {day:'2-digit',month:'long',year:'numeric'});
+    doc.text(dataHoje, pw - 14, 18, { align: 'right' });
+
+    // ─── TITULO DO RELATORIO ───
+    y = 36;
+    doc.setTextColor(...COR_DARK);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('Relatorio de Vendas — ' + periodo, 14, y);
+    y += 5;
+    doc.setDrawColor(...COR_BORDER);
+    doc.setLineWidth(0.3);
+    doc.line(14, y, pw - 14, y);
+    y += 8;
+
+    // ─── RESUMO EXECUTIVO (KPIs) ───
+    if(incResumo) {
+      const totalVendas = vendas.length;
+      const faturacao = vendas.reduce((s,v) => s + Number(v.total||0), 0);
+      const custoTotal = vendas.reduce((s,v) => s + (v.itens||[]).reduce((ss,it) => {
+        const p = CACHE.produtos.find(x => x.id === it.produto_id);
+        return ss + (p ? p.preco_custo * it.qty : 0);
+      }, 0), 0);
+      const lucro = faturacao - custoTotal;
+      const ticket = totalVendas > 0 ? Math.round(faturacao / totalVendas) : 0;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...COR_PRIMARY);
+      doc.text('RESUMO DO PERIODO', 14, y);
+      y += 6;
+
+      const kpis = [
+        { label: 'Total de Vendas', value: totalVendas + ' venda(s)', cor: COR_PRIMARY },
+        { label: 'Faturacao Total', value: Number(faturacao).toLocaleString('pt-AO') + ' Kz', cor: COR_PRIMARY },
+        { label: 'Lucro Bruto', value: Number(lucro).toLocaleString('pt-AO') + ' Kz', cor: COR_SUCCESS },
+        { label: 'Ticket Medio', value: Number(ticket).toLocaleString('pt-AO') + ' Kz', cor: COR_MUTED },
+      ];
+
+      const kpiW = (pw - 28 - 9) / 4;
+      kpis.forEach((k, i) => {
+        const x = 14 + i * (kpiW + 3);
+        doc.setFillColor(...COR_LIGHT);
+        doc.roundedRect(x, y, kpiW, 18, 2, 2, 'F');
+        doc.setDrawColor(...COR_BORDER);
+        doc.roundedRect(x, y, kpiW, 18, 2, 2, 'S');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(...COR_MUTED);
+        doc.text(k.label.toUpperCase(), x + kpiW/2, y + 5, { align: 'center' });
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...k.cor);
+        doc.text(k.value, x + kpiW/2, y + 13, { align: 'center' });
+      });
+      y += 26;
+    }
+
+    // ─── TABELA DE VENDAS ───
+    if(incVendas && vendas.length > 0) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...COR_PRIMARY);
+      doc.text('VENDAS DETALHADAS', 14, y);
+      y += 4;
+
+      const rows = vendas.map(v => [
+        v.data || '---',
+        nomeCliente(v.cliente_id) || '---',
+        (v.itens||[]).map(i => i.qty + 'x ' + i.nome_snapshot).join(', ') || '---',
+        Number(v.total||0).toLocaleString('pt-AO') + ' Kz',
+        v.pagamento || '---',
+        v.tipo === 'parcelada' ? 'Parcelada' : 'Pronto',
+      ]);
+
+      doc.autoTable({
+        startY: y,
+        head: [['Data', 'Cliente', 'Produtos', 'Total', 'Pagamento', 'Tipo']],
+        body: rows,
+        theme: 'grid',
+        styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 3, textColor: COR_DARK },
+        headStyles: { fillColor: COR_PRIMARY, textColor: [255,255,255], fontStyle: 'bold', fontSize: 8 },
+        alternateRowStyles: { fillColor: [248, 249, 255] },
+        columnStyles: {
+          0: { cellWidth: 20 },
+          1: { cellWidth: 32 },
+          2: { cellWidth: 'auto' },
+          3: { cellWidth: 28, halign: 'right' },
+          4: { cellWidth: 22 },
+          5: { cellWidth: 20 },
+        },
+        margin: { left: 14, right: 14 },
+        didDrawPage: (data) => {
+          // Rodape em cada pagina
+          doc.setFillColor(...COR_PRIMARY);
+          doc.rect(0, ph - 10, pw, 10, 'F');
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(255,255,255);
+          doc.text('Gumba Solucoes — Sistema de Gestao AFC Criativa', 14, ph - 4);
+          doc.text('Pagina ' + data.pageNumber, pw - 14, ph - 4, { align: 'right' });
+        }
+      });
+      y = doc.lastAutoTable.finalY + 10;
+    } else if(incVendas) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(9);
+      doc.setTextColor(...COR_MUTED);
+      doc.text('Sem vendas no periodo seleccionado.', 14, y);
+      y += 10;
+    }
+
+    // ─── TOP PRODUTOS ───
+    if(incProdutos && vendas.length > 0) {
+      // Nova pagina se pouco espaco
+      if(y > ph - 60) { doc.addPage(); y = 20; }
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...COR_PRIMARY);
+      doc.text('TOP PRODUTOS VENDIDOS', 14, y);
+      y += 4;
+
+      const prodStats = {};
+      vendas.forEach(v => (v.itens||[]).forEach(it => {
+        const key = it.nome_snapshot || 'Desconhecido';
+        if(!prodStats[key]) prodStats[key] = { qty: 0, total: 0 };
+        prodStats[key].qty += it.qty || 1;
+        prodStats[key].total += (it.preco_unitario || 0) * (it.qty || 1);
+      }));
+
+      const topRows = Object.entries(prodStats)
+        .sort((a,b) => b[1].qty - a[1].qty)
+        .slice(0, 10)
+        .map(([nome, s], i) => [
+          i+1,
+          nome,
+          s.qty + ' unid.',
+          Number(s.total).toLocaleString('pt-AO') + ' Kz'
+        ]);
+
+      doc.autoTable({
+        startY: y,
+        head: [['#', 'Produto', 'Quantidade', 'Receita']],
+        body: topRows,
+        theme: 'grid',
+        styles: { font: 'helvetica', fontSize: 8, cellPadding: 3, textColor: COR_DARK },
+        headStyles: { fillColor: COR_PRIMARY, textColor: [255,255,255], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 249, 255] },
+        columnStyles: {
+          0: { cellWidth: 10, halign: 'center' },
+          2: { halign: 'center' },
+          3: { halign: 'right' },
+        },
+        margin: { left: 14, right: 14 },
+      });
+      y = doc.lastAutoTable.finalY + 10;
+    }
+
+    // ─── COBRANÇAS PENDENTES ───
+    if(incCobr) {
+      const cobPend = CACHE.cobrancas.filter(c => {
+        const prests = c.prestacoes || [];
+        return prests.some(p => !p.pago);
+      });
+
+      if(cobPend.length > 0) {
+        if(y > ph - 60) { doc.addPage(); y = 20; }
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(...COR_PRIMARY);
+        doc.text('COBRANÇAS PENDENTES', 14, y);
+        y += 4;
+
+        const cobrRows = cobPend.map(c => {
+          const prests = c.prestacoes || [];
+          const pendentes = prests.filter(p => !p.pago);
+          const proxVcto = pendentes[0]?.data_vencimento || '---';
+          const totalPend = pendentes.reduce((s,p) => s + Number(p.valor||0), 0);
+          return [
+            nomeCliente(c.cliente_id),
+            c.referencia || '---',
+            Number(c.valor_total||0).toLocaleString('pt-AO') + ' Kz',
+            pendentes.length + '/' + prests.length,
+            Number(totalPend).toLocaleString('pt-AO') + ' Kz',
+            proxVcto,
+          ];
+        });
+
+        doc.autoTable({
+          startY: y,
+          head: [['Cliente', 'Referencia', 'Total', 'Prestacoes', 'Valor Pendente', 'Prox. Vcto']],
+          body: cobrRows,
+          theme: 'grid',
+          styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 3, textColor: COR_DARK },
+          headStyles: { fillColor: [186, 26, 26], textColor: [255,255,255], fontStyle: 'bold' },
+          alternateRowStyles: { fillColor: [255, 248, 248] },
+          margin: { left: 14, right: 14 },
+        });
+      }
+    }
+
+    // ─── RODAPE FINAL ───
+    const totalPages = doc.internal.getNumberOfPages();
+    for(let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFillColor(...COR_PRIMARY);
+      doc.rect(0, ph - 10, pw, 10, 'F');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(255,255,255);
+      doc.text('Gumba Solucoes — Sistema de Gestao AFC Criativa', 14, ph - 4);
+      doc.text('Pagina ' + i + ' de ' + totalPages, pw - 14, ph - 4, { align: 'right' });
+    }
+
+    // ─── GUARDAR ───
+    const filename = 'Gumba-Relatorio-' + periodo.replace(/ /g, '-') + '.pdf';
+    doc.save(filename);
+    closeModal('modal-relatorio');
+
+  } catch(e) {
+    alert('Erro ao gerar PDF: ' + e.message);
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> Gerar PDF';
+  }
+}
+
+// Init modal relatorio com mes actual
+function initRelatorioModal() {
+  const el = document.getElementById('rel-mes');
+  if(el) {
+    const n = new Date();
+    el.value = n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0');
+  }
+  const anoEl = document.getElementById('rel-ano');
+  if(anoEl) anoEl.value = new Date().getFullYear();
+}
+
 
 function showLogin(){
   const ls=document.getElementById('loading-screen');
