@@ -2445,7 +2445,7 @@ function renderStock(q='', _paged=false) {
   const tbody=document.getElementById('tbody-stock');
   _showEmpty('empty-stock', !produtos.length, !!q && CACHE.produtos.length > 0, 'Nenhum produto encontrado para a pesquisa.');
   tbody.innerHTML=_slice(produtos,'stock').map(p=>{
-    const margem=p.preco_venda>0?Math.round((p.preco_venda-p.preco_custo)/p.preco_venda*100):0;
+    const margem=p.preco_custo>0?Math.round((p.preco_venda-p.preco_custo)/p.preco_custo*100):0;
     const baixo=Number(p.stock||0)<=Number(p.stock_minimo||1);
     const pct=p.stock>0?Math.min(100,Math.round(p.stock/(p.stock+5)*100)):0;
     return `<tr>
