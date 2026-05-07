@@ -1048,10 +1048,6 @@ textarea { resize: vertical; min-height: 70px; }
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
     Importações
   </div>
-  <div class="nav-item" id="nav-utilizadores" onclick="showSection('utilizadores', this)">
-    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-    Utilizadores
-  </div>
   <div class="nav-item" id="nav-calculadora" onclick="showSection('calculadora', this)">
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
     Calculadora
@@ -1335,26 +1331,6 @@ textarea { resize: vertical; min-height: 70px; }
       </div>
     </div>
 
-        <!-- UTILIZADORES -->
-    <div class="section" id="s-utilizadores">
-      <div class="card" style="margin-bottom:20px">
-        <div class="card-header">
-          <span class="card-title">Gestao de Utilizadores</span>
-          <button class="btn btn-primary" onclick="openModal('modal-novo-utilizador')">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Novo Utilizador
-          </button>
-        </div>
-        <div class="card-body" style="padding:0">
-          <div id="empty-users" class="empty-state" style="display:none"><p>Nenhum utilizador encontrado</p></div>
-          <table>
-            <thead><tr><th>Nome</th><th>Email</th><th>Role</th><th>Estado</th><th>Criado em</th><th>Accoes</th></tr></thead>
-            <tbody id="tbody-users"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
     <!-- ═══ CALCULADORA DE PRECIFICAÇÃO ═══ -->
     <div class="section" id="s-calculadora">
 
@@ -1544,67 +1520,6 @@ textarea { resize: vertical; min-height: 70px; }
   </div>
 </div>
 
-<!-- NOVO UTILIZADOR -->
-<div class="modal-overlay" id="modal-novo-utilizador">
-  <div class="modal" style="max-width:460px">
-    <div class="modal-header">
-      <h3>Novo Utilizador</h3>
-      <button class="modal-close" onclick="closeModal('modal-novo-utilizador')">x</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-grid form-grid-2">
-        <div class="form-group full">
-          <label>Nome completo</label>
-          <input type="text" id="nu-nome" placeholder="Ex: Joao Silva">
-        </div>
-        <div class="form-group full">
-          <label>Email</label>
-          <input type="email" id="nu-email" placeholder="email@empresa.com">
-        </div>
-        <div class="form-group">
-          <label>Password</label>
-          <input type="password" id="nu-pass" placeholder="Min. 6 caracteres">
-        </div>
-        <div class="form-group">
-          <label>Role</label>
-          <select id="nu-role">
-            <option value="comercial">Comercial</option>
-            <option value="admin">Administrador</option>
-          </select>
-        </div>
-        <div class="form-group full" id="nu-error" style="display:none">
-          <div style="background:var(--danger-bg);color:var(--danger);border-radius:6px;padding:10px 14px;font-size:.82rem" id="nu-error-msg"></div>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;padding:16px 24px;border-top:1px solid var(--border)">
-      <button class="btn btn-ghost" onclick="closeModal('modal-novo-utilizador')">Cancelar</button>
-      <button class="btn btn-primary" id="nu-btn" onclick="criarUtilizador()">Criar Utilizador</button>
-    </div>
-  </div>
-</div>
-
-<!-- ALTERAR PASSWORD -->
-<div class="modal-overlay" id="modal-change-pass">
-  <div class="modal" style="max-width:400px">
-    <div class="modal-header">
-      <h3>Alterar Password</h3>
-      <button class="modal-close" onclick="closeModal('modal-change-pass')">x</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Nova Password</label>
-        <input type="password" id="cp-pass" placeholder="Min. 6 caracteres">
-      </div>
-      <input type="hidden" id="cp-user-id">
-    </div>
-    <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;padding:16px 24px;border-top:1px solid var(--border)">
-      <button class="btn btn-ghost" onclick="closeModal('modal-change-pass')">Cancelar</button>
-      <button class="btn btn-primary" onclick="alterarPassword()">Confirmar</button>
-    </div>
-  </div>
-</div>
-
 <!-- NOVA VENDA -->
 <div class="modal-overlay" id="modal-venda">
   <div class="modal">
@@ -1749,13 +1664,19 @@ textarea { resize: vertical; min-height: 70px; }
             </div>
             <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div style="background:var(--surface3);border-radius:6px;padding:8px 10px;text-align:center">
-                <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:3px">Preço de Venda</div>
-                <div id="mini-preco-result" style="font-size:.9rem;color:var(--accent2);font-family:var(--font-mono);font-weight:700">--</div>
+                <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:5px">Preço de Venda <span style="color:var(--accent2);font-size:.58rem">(editável)</span></div>
+                <input type="number" id="mini-preco-result"
+                  oninput="miniCalcReverso(this.value)"
+                  style="font-size:.95rem;color:var(--accent2);font-family:var(--font-mono);font-weight:700;background:transparent;border:none;border-bottom:1px dashed var(--accent);width:100%;text-align:center;outline:none;padding:2px 0"
+                  placeholder="--">
               </div>
               <div style="background:var(--surface3);border-radius:6px;padding:8px 10px;text-align:center">
-                <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:3px">Lucro</div>
-                <div id="mini-lucro-result" style="font-size:.9rem;color:var(--success);font-family:var(--font-mono);font-weight:700">--</div>
+                <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:5px">Lucro</div>
+                <div id="mini-lucro-result" style="font-size:.9rem;color:var(--success);font-family:var(--font-mono);font-weight:700;padding-top:4px">--</div>
               </div>
+            </div>
+            <div id="mini-margem-display" style="margin-top:8px;text-align:center;font-size:.75rem;color:var(--text-muted);display:none">
+              Margem calculada: <strong id="mini-margem-calc" style="color:var(--accent2)">--</strong>
             </div>
             <button type="button" onclick="aplicarMiniCalc()" class="btn btn-ghost btn-sm" style="margin-top:10px;width:100%;justify-content:center">
               Aplicar este preco ao campo
@@ -2132,7 +2053,6 @@ function renderSection(name) {
   if(name==='fornecedores') renderFornecedores();
   if(name==='importacoes')  renderImportacoes();
   if(name==='calculadora')  calcPreco();
-  if(name==='utilizadores') renderUtilizadores();
 }
 function renderAll() { renderSection(document.querySelector('.section.active')?.id.replace('s-','')||'dashboard'); }
 
@@ -3167,7 +3087,7 @@ async function loadApp(){
 
 function applyPermissions(){
   // Comercial não vê: Análise, Fornecedores, Importações
-  const adminOnly=['nav-analise','nav-fornecedores','nav-importacoes','nav-calculadora','nav-utilizadores','s-analise','s-fornecedores','s-importacoes','s-calculadora','s-utilizadores'];
+  const adminOnly=['nav-analise','nav-fornecedores','nav-importacoes','nav-calculadora','s-analise','s-fornecedores','s-importacoes','s-calculadora'];
   adminOnly.forEach(id=>{
     const el=document.getElementById(id);
     if(el)el.style.display=CURRENT_ROLE==='admin'?'':'none';
@@ -3287,11 +3207,13 @@ function showMiniCalc() {
   const custo = parseFloat(document.getElementById('p-custo')?.value)||0;
   const wrap = document.getElementById('mini-calc-wrap');
   if(wrap) wrap.style.display = custo > 0 ? '' : 'none';
-  miniCalc();
+  if(custo > 0) miniCalc();
 }
+
+// SLIDER -> PRECO (sentido normal)
 function miniCalc() {
   const custo = parseFloat(document.getElementById('p-custo')?.value)||0;
-  const margem = parseFloat(document.getElementById('mini-margem')?.value)||30;
+  const margem = parseFloat(document.getElementById('mini-margem')?.value)||0;
   const elVal = document.getElementById('mini-margem-val');
   if(elVal) elVal.textContent = margem + '%';
   if(custo <= 0) return;
@@ -3299,136 +3221,44 @@ function miniCalc() {
   const lucro = preco - custo;
   const elPreco = document.getElementById('mini-preco-result');
   const elLucro = document.getElementById('mini-lucro-result');
-  if(elPreco) elPreco.textContent = fmtCalc(preco) + ' Kz';
+  const elDisp = document.getElementById('mini-margem-display');
+  if(elPreco) elPreco.value = preco;
   if(elLucro) elLucro.textContent = fmtCalc(lucro) + ' Kz';
+  if(elDisp) elDisp.style.display = 'none';
 }
+
+// PRECO -> SLIDER (sentido inverso — bidirecional)
+function miniCalcReverso(precoEditado) {
+  const custo = parseFloat(document.getElementById('p-custo')?.value)||0;
+  const preco = parseFloat(precoEditado)||0;
+  if(custo <= 0 || preco <= 0) return;
+  // Calcular margem real com base no preco editado
+  const margemReal = ((preco - custo) / custo * 100);
+  const lucro = preco - custo;
+  // Actualizar slider e label
+  const slider = document.getElementById('mini-margem');
+  const elVal = document.getElementById('mini-margem-val');
+  const elLucro = document.getElementById('mini-lucro-result');
+  const elDisp = document.getElementById('mini-margem-display');
+  const elCalc = document.getElementById('mini-margem-calc');
+  if(slider) slider.value = Math.min(100, Math.max(0, margemReal));
+  if(elVal) elVal.textContent = margemReal.toFixed(1) + '%';
+  if(elLucro) elLucro.textContent = fmtCalc(Math.round(lucro)) + ' Kz';
+  // Mostrar margem calculada destacada
+  if(elDisp) elDisp.style.display = '';
+  if(elCalc) elCalc.textContent = margemReal.toFixed(1) + '%' + (lucro < 0 ? ' ⚠️ Prejuizo!' : '');
+  if(elLucro) elLucro.style.color = lucro < 0 ? 'var(--danger)' : 'var(--success)';
+}
+
 function aplicarMiniCalc() {
   const custo = parseFloat(document.getElementById('p-custo')?.value)||0;
-  const margem = parseFloat(document.getElementById('mini-margem')?.value)||30;
   if(custo <= 0) return;
-  const preco = Math.ceil(custo + (custo * margem / 100));
+  // Usar o valor que estiver no campo (editado ou calculado)
+  const precoInput = document.getElementById('mini-preco-result');
+  const preco = parseFloat(precoInput?.value)||0;
+  if(preco <= 0) return;
   document.getElementById('p-venda').value = preco;
 }
-
-
-// GESTAO DE UTILIZADORES
-const EDGE_URL = 'https://kbeawyysuejukwrppwsm.supabase.co/functions/v1/admin-users';
-
-async function callEdge(payload) {
-  const { data: { session } } = await sb.auth.getSession();
-  const res = await fetch(EDGE_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + session.access_token
-    },
-    body: JSON.stringify(payload)
-  });
-  const json = await res.json();
-  if (!json.ok) throw new Error(json.error || 'Erro desconhecido');
-  return json;
-}
-
-async function renderUtilizadores() {
-  const tbody = document.getElementById('tbody-users');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">A carregar...</td></tr>';
-  try {
-    const { users } = await callEdge({ action: 'listar' });
-    if (!users || !users.length) {
-      const el = document.getElementById('empty-users');
-      if(el) el.style.display = '';
-      tbody.innerHTML = '';
-      return;
-    }
-    tbody.innerHTML = users.map(function(u) {
-      const roleBadge = u.role === 'admin' ? 'badge-danger' : 'badge-info';
-      const roleLabel = u.role === 'admin' ? 'Admin' : 'Comercial';
-      const estadoBadge = u.ativo ? 'badge-success' : 'badge-neutral';
-      const estadoLabel = u.ativo ? 'Activo' : 'Inactivo';
-      const data = u.criado_em ? new Date(u.criado_em).toLocaleDateString('pt-AO') : '---';
-      const isSelf = u.id === (CURRENT_USER && CURRENT_USER.id);
-      const btnPass = '<button class="btn btn-ghost btn-sm" onclick="abrirAlterarPass(\'' + u.id + '\')" title="Alterar password">&#128273;</button>';
-      const btnToggle = isSelf ? '' : (u.ativo
-        ? '<button class="btn btn-danger btn-sm" onclick="toggleUser(\'' + u.id + '\', false)" title="Desactivar">&#9208;</button>'
-        : '<button class="btn btn-success btn-sm" onclick="toggleUser(\'' + u.id + '\', true)" title="Reactivar">&#9654;</button>');
-      return '<tr>' +
-        '<td><strong>' + u.nome + '</strong>' + (isSelf ? ' <span class="badge badge-neutral" style="font-size:.6rem">Eu</span>' : '') + '</td>' +
-        '<td class="mono" style="font-size:.78rem">' + u.email + '</td>' +
-        '<td><span class="badge ' + roleBadge + '">' + roleLabel + '</span></td>' +
-        '<td><span class="badge ' + estadoBadge + '">' + estadoLabel + '</span></td>' +
-        '<td class="mono">' + data + '</td>' +
-        '<td style="display:flex;gap:4px;flex-wrap:wrap">' + btnPass + btnToggle + '</td>' +
-      '</tr>';
-    }).join('');
-  } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--danger)">Erro: ' + e.message + '</td></tr>';
-  }
-}
-
-async function criarUtilizador() {
-  const nome = document.getElementById('nu-nome').value.trim();
-  const email = document.getElementById('nu-email').value.trim();
-  const pass = document.getElementById('nu-pass').value;
-  const role = document.getElementById('nu-role').value;
-  const errDiv = document.getElementById('nu-error');
-  const errMsg = document.getElementById('nu-error-msg');
-  const btn = document.getElementById('nu-btn');
-  errDiv.style.display = 'none';
-  if (!nome || !email || !pass) {
-    errMsg.textContent = 'Preencha todos os campos.';
-    errDiv.style.display = '';
-    return;
-  }
-  if (pass.length < 6) {
-    errMsg.textContent = 'Password deve ter pelo menos 6 caracteres.';
-    errDiv.style.display = '';
-    return;
-  }
-  btn.disabled = true; btn.textContent = 'A criar...';
-  try {
-    await callEdge({ action: 'criar', email: email, password: pass, nome: nome, role: role });
-    closeModal('modal-novo-utilizador');
-    document.getElementById('nu-nome').value = '';
-    document.getElementById('nu-email').value = '';
-    document.getElementById('nu-pass').value = '';
-    document.getElementById('nu-role').value = 'comercial';
-    renderUtilizadores();
-    alert('Utilizador criado com sucesso!');
-  } catch(e) {
-    errMsg.textContent = 'Erro: ' + e.message;
-    errDiv.style.display = '';
-  } finally {
-    btn.disabled = false; btn.textContent = 'Criar Utilizador';
-  }
-}
-
-function abrirAlterarPass(userId) {
-  document.getElementById('cp-user-id').value = userId;
-  document.getElementById('cp-pass').value = '';
-  openModal('modal-change-pass');
-}
-
-async function alterarPassword() {
-  const userId = document.getElementById('cp-user-id').value;
-  const pass = document.getElementById('cp-pass').value;
-  if (!pass || pass.length < 6) return alert('Password deve ter pelo menos 6 caracteres.');
-  try {
-    await callEdge({ action: 'password', userId: userId, password: pass });
-    closeModal('modal-change-pass');
-    alert('Password alterada com sucesso!');
-  } catch(e) { alert('Erro: ' + e.message); }
-}
-
-async function toggleUser(userId, ativar) {
-  const msg = ativar ? 'Reactivar este utilizador?' : 'Desactivar este utilizador?';
-  if (!confirm(msg)) return;
-  try {
-    await callEdge({ action: ativar ? 'reativar' : 'desativar', userId: userId });
-    renderUtilizadores();
-  } catch(e) { alert('Erro: ' + e.message); }
-}
-
 
 function showLogin(){
   const ls=document.getElementById('loading-screen');
