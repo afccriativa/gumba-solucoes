@@ -1382,7 +1382,14 @@ textarea { resize: vertical; min-height: 70px; }
                 <!-- Sugestões rápidas -->
                 <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
                   <span style="font-size:.7rem;color:var(--text-muted);align-self:center">Sugestões:</span>
-                  ${[10,15,20,25,30,35,40,50].map(v => `<button onclick="setMargem(${v})" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">${v}%</button>`).join('')}
+                  <button onclick="setMargem(10)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">10%</button>
+                  <button onclick="setMargem(15)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">15%</button>
+                  <button onclick="setMargem(20)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">20%</button>
+                  <button onclick="setMargem(25)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">25%</button>
+                  <button onclick="setMargem(30)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">30%</button>
+                  <button onclick="setMargem(35)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">35%</button>
+                  <button onclick="setMargem(40)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">40%</button>
+                  <button onclick="setMargem(50)" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.72rem">50%</button>
                 </div>
               </div>
 
@@ -1664,19 +1671,13 @@ textarea { resize: vertical; min-height: 70px; }
             </div>
             <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div style="background:var(--surface3);border-radius:6px;padding:8px 10px;text-align:center">
-                <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:5px">Preço de Venda <span style="color:var(--accent2);font-size:.58rem">(editável)</span></div>
-                <input type="number" id="mini-preco-result"
-                  oninput="miniCalcReverso(this.value)"
-                  style="font-size:.95rem;color:var(--accent2);font-family:var(--font-mono);font-weight:700;background:transparent;border:none;border-bottom:1px dashed var(--accent);width:100%;text-align:center;outline:none;padding:2px 0"
-                  placeholder="--">
+                <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:3px">Preço de Venda</div>
+                <div id="mini-preco-result" style="font-size:.9rem;color:var(--accent2);font-family:var(--font-mono);font-weight:700">--</div>
               </div>
               <div style="background:var(--surface3);border-radius:6px;padding:8px 10px;text-align:center">
-                <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:5px">Lucro</div>
-                <div id="mini-lucro-result" style="font-size:.9rem;color:var(--success);font-family:var(--font-mono);font-weight:700;padding-top:4px">--</div>
+                <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:3px">Lucro</div>
+                <div id="mini-lucro-result" style="font-size:.9rem;color:var(--success);font-family:var(--font-mono);font-weight:700">--</div>
               </div>
-            </div>
-            <div id="mini-margem-display" style="margin-top:8px;text-align:center;font-size:.75rem;color:var(--text-muted);display:none">
-              Margem calculada: <strong id="mini-margem-calc" style="color:var(--accent2)">--</strong>
             </div>
             <button type="button" onclick="aplicarMiniCalc()" class="btn btn-ghost btn-sm" style="margin-top:10px;width:100%;justify-content:center">
               Aplicar este preco ao campo
@@ -3207,13 +3208,11 @@ function showMiniCalc() {
   const custo = parseFloat(document.getElementById('p-custo')?.value)||0;
   const wrap = document.getElementById('mini-calc-wrap');
   if(wrap) wrap.style.display = custo > 0 ? '' : 'none';
-  if(custo > 0) miniCalc();
+  miniCalc();
 }
-
-// SLIDER -> PRECO (sentido normal)
 function miniCalc() {
   const custo = parseFloat(document.getElementById('p-custo')?.value)||0;
-  const margem = parseFloat(document.getElementById('mini-margem')?.value)||0;
+  const margem = parseFloat(document.getElementById('mini-margem')?.value)||30;
   const elVal = document.getElementById('mini-margem-val');
   if(elVal) elVal.textContent = margem + '%';
   if(custo <= 0) return;
@@ -3221,42 +3220,14 @@ function miniCalc() {
   const lucro = preco - custo;
   const elPreco = document.getElementById('mini-preco-result');
   const elLucro = document.getElementById('mini-lucro-result');
-  const elDisp = document.getElementById('mini-margem-display');
-  if(elPreco) elPreco.value = preco;
+  if(elPreco) elPreco.textContent = fmtCalc(preco) + ' Kz';
   if(elLucro) elLucro.textContent = fmtCalc(lucro) + ' Kz';
-  if(elDisp) elDisp.style.display = 'none';
 }
-
-// PRECO -> SLIDER (sentido inverso — bidirecional)
-function miniCalcReverso(precoEditado) {
-  const custo = parseFloat(document.getElementById('p-custo')?.value)||0;
-  const preco = parseFloat(precoEditado)||0;
-  if(custo <= 0 || preco <= 0) return;
-  // Calcular margem real com base no preco editado
-  const margemReal = ((preco - custo) / custo * 100);
-  const lucro = preco - custo;
-  // Actualizar slider e label
-  const slider = document.getElementById('mini-margem');
-  const elVal = document.getElementById('mini-margem-val');
-  const elLucro = document.getElementById('mini-lucro-result');
-  const elDisp = document.getElementById('mini-margem-display');
-  const elCalc = document.getElementById('mini-margem-calc');
-  if(slider) slider.value = Math.min(100, Math.max(0, margemReal));
-  if(elVal) elVal.textContent = margemReal.toFixed(1) + '%';
-  if(elLucro) elLucro.textContent = fmtCalc(Math.round(lucro)) + ' Kz';
-  // Mostrar margem calculada destacada
-  if(elDisp) elDisp.style.display = '';
-  if(elCalc) elCalc.textContent = margemReal.toFixed(1) + '%' + (lucro < 0 ? ' ⚠️ Prejuizo!' : '');
-  if(elLucro) elLucro.style.color = lucro < 0 ? 'var(--danger)' : 'var(--success)';
-}
-
 function aplicarMiniCalc() {
   const custo = parseFloat(document.getElementById('p-custo')?.value)||0;
+  const margem = parseFloat(document.getElementById('mini-margem')?.value)||30;
   if(custo <= 0) return;
-  // Usar o valor que estiver no campo (editado ou calculado)
-  const precoInput = document.getElementById('mini-preco-result');
-  const preco = parseFloat(precoInput?.value)||0;
-  if(preco <= 0) return;
+  const preco = Math.ceil(custo + (custo * margem / 100));
   document.getElementById('p-venda').value = preco;
 }
 
