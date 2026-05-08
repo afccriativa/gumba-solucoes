@@ -2049,6 +2049,11 @@ async function sbGet(table, select='*') {
   return data || [];
 }
 async function sbInsert(table, obj) {
+  // Auto-injectar criado_por nas tabelas que têm essa coluna
+  const tablesWithCriadoPor = ['vendas','cobrancas','clientes','produtos','importacoes','fornecedores'];
+  if(tablesWithCriadoPor.includes(table) && CURRENT_USER?.id) {
+    obj = { ...obj, criado_por: CURRENT_USER.id };
+  }
   const { data, error } = await sb.from(table).insert(obj).select().single();
   if (error) throw error;
   return data;
