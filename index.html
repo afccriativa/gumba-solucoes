@@ -2273,7 +2273,7 @@ const CACHE = { produtos:[], clientes:[], fornecedores:[], vendas:[], cobrancas:
 // Helpers Supabase
 async function sbGet(table, select='*') {
   // Views como vendas_saldo não têm criado_em — usar order opcional
-  const tablesWithOrder = ['produtos','clientes','fornecedores','vendas','venda_itens','cobrancas','prestacoes','importacoes','caixa','pagamentos','stock_movimentos','perfis'];
+  const tablesWithOrder = ['produtos','clientes','fornecedores','vendas','cobrancas','prestacoes','importacoes','caixa','pagamentos','stock_movimentos','perfis']; // venda_itens excluída: sem coluna criado_em
   let query = sb.from(table).select(select);
   if(tablesWithOrder.includes(table)) {
     query = query.order('criado_em', { ascending: false });
@@ -3206,7 +3206,7 @@ function renderAnalise(_paged=false){
   document.getElementById('kpi-analise').innerHTML=`
     <div class="kpi-card" style="--kpi-color:var(--success)"><div class="kpi-label">Receita Total</div><div class="kpi-value">${fmtN(receitaTotal)}<small>Kz</small></div></div>
     <div class="kpi-card" style="--kpi-color:var(--warning)"><div class="kpi-label">COGS — Custo Vendido</div><div class="kpi-value">${fmtN(custoTotal)}<small>Kz</small></div></div>
-    <div class="kpi-card" style="--kpi-color:${lucroTotal>=0?'var(--success)':'var(--danger)'}"><div class="kpi-label">Lucro Bruto</div><div class="kpi-value">${lucroTotal<0?'−':''}${fmtN(Math.abs(lucroTotal))}<small>Kz</small></div><div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">Receita − COGS</div></div>
+    <div class="kpi-card" style="--kpi-color:${lucroTotal>=0?'var(--success)':'var(--danger)'}"><div class="kpi-label">Lucro Bruto</div><div class="kpi-value">${lucroTotal<0?'−':''}${fmtN(Math.abs(lucroTotal))}<small>Kz</small></div><div style="font-size:.68rem;color:${custoTotal>0?'var(--text-muted)':'var(--warning)'};margin-top:4px">${custoTotal>0?'Receita − COGS':'⚠ Sem COGS registado'}</div></div>
     <div class="kpi-card" style="--kpi-color:#A78BFA"><div class="kpi-label">Margem Média</div><div class="kpi-value">${margemMedia}<small>%</small></div></div>
     <div class="kpi-card" style="--kpi-color:#F472B6"><div class="kpi-label">Custo Stock Actual</div><div class="kpi-value">${fmtN(custoStockActual)}<small>Kz</small></div><div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">Capital imobilizado</div></div>`;
   const prodStats={};
