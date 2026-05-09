@@ -1349,7 +1349,7 @@ textarea { resize: vertical; min-height: 70px; }
         <div class="card">
           <div class="card-header"><span class="card-title">Margem por Produto</span></div>
           <table>
-            <thead><tr><th>Produto</th><th>Custo</th><th>Venda</th><th>Margem</th><th>%</th></tr></thead>
+            <thead id="thead-analise"><tr><th>Produto</th><th>Volume</th><th>Custo</th><th>Venda</th><th>Margem</th><th>%</th></tr></thead>
             <tbody id="tbody-analise"></tbody>
           </table>
           <div id="pg-analise"></div>
@@ -3374,6 +3374,22 @@ function applyCustomPeriod() {
   renderAnalise();
 }
 
+// Estado de ordenação da tabela Margem por Produto
+// Persiste entre re-renders e mudanças de página/período
+let _analiseSort = { col: 'venda', dir: 'desc' };
+
+function _sortAnalise(col) {
+  if (_analiseSort.col === col) {
+    _analiseSort.dir = _analiseSort.dir === 'desc' ? 'asc' : 'desc';
+  } else {
+    _analiseSort.col = col;
+    // Colunas numéricas: desc por defeito (maior primeiro); nome: asc
+    _analiseSort.dir = col === 'nome' ? 'asc' : 'desc';
+  }
+  PG.analise = 1; // reset para página 1 ao mudar ordenação
+  renderAnalise(false);
+}
+
 // ═══════════════════════════════════════════════════════════════════
 //  COMPARAÇÃO DE PERÍODOS — motor de métricas e período anterior
 // ═══════════════════════════════════════════════════════════════════
@@ -3621,16 +3637,64 @@ function renderAnalise(_paged=false){
       <div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">Lucro Bruto − OpEx</div>
       ${_deltaChip(resultadoLiquido, prev?.resultado)}
     </div>`;
-  const rows=Object.entries(prodStats).sort((a,b)=>b[1].venda-a[1].venda);
+  // ── Ordenação da tabela Margem por Produto ──────────────────────
+  const _sortFns = {
+    nome:   ([a],[b]) => a.localeCompare(b),
+    qty:    ([,a],[,b]) => a.qty - b.qty,
+    custo:  ([,a],[,b]) => a.custo - b.custo,
+    venda:  ([,a],[,b]) => a.venda - b.venda,
+    margem: ([,a],[,b]) => (a.venda-a.custo) - (b.venda-b.custo),
+    pct:    ([,a],[,b]) => {
+      const ma = a.venda>0?(a.venda-a.custo)/a.venda:0;
+      const mb = b.venda>0?(b.venda-b.custo)/b.venda:0;
+      return ma - mb;
+    }
+  };
+  const _sfn = _sortFns[_analiseSort.col] || _sortFns.venda;
+  const rows = Object.entries(prodStats).sort((a,b) =>
+    _analiseSort.dir === 'desc' ? _sfn(b,a) : _sfn(a,b)
+  );
   const totalRows=rows.length;
+
+  // ── Cabeçalho dinâmico com indicadores de ordenação ─────────────
+  const _thCols = [
+    { key:'nome',   label:'Produto',    align:'left'  },
+    { key:'qty',    label:'Volume',     align:'right' },
+    { key:'custo',  label:'Custo',      align:'right' },
+    { key:'venda',  label:'Venda',      align:'right' },
+    { key:'margem', label:'Margem',     align:'right' },
+    { key:'pct',    label:'%',          align:'right' },
+  ];
+  const _thBase = 'cursor:pointer;user-select:none;white-space:nowrap;transition:color .15s,background .15s;border-radius:4px;';
+  document.getElementById('thead-analise').innerHTML = '<tr>' + _thCols.map(c => {
+    const isActive = _analiseSort.col === c.key;
+    const arrow = isActive ? (_analiseSort.dir === 'desc' ? ' ↓' : ' ↑') : ' ⇅';
+    const activeStyle = isActive ? 'color:var(--accent2);' : 'color:var(--text-muted);';
+    return `<th style="${_thBase}${activeStyle}text-align:${c.align}" onclick="_sortAnalise('${c.key}')" title="Ordenar por ${c.label}">
+      ${c.label}<span style="font-size:.65rem;opacity:${isActive?1:.4};margin-left:2px">${arrow}</span>
+    </th>`;
+  }).join('') + '</tr>';
+
+  // ── Corpo da tabela ──────────────────────────────────────────────
   document.getElementById('tbody-analise').innerHTML=_slice(rows,'analise').map(([nome,s])=>{
     const m=s.venda>0?Math.round((s.venda-s.custo)/s.venda*100):0;
-    return `<tr><td><strong>${nome}</strong><br><span class="text-xs text-muted">${s.qty}x vendido(s)</span></td>
-      <td class="mono">${fmt(s.custo)}</td><td class="mono text-success">${fmt(s.venda)}</td>
-      <td class="mono ${m>30?'text-success':m>15?'text-warning':'text-danger'}">${fmt(s.venda-s.custo)}</td>
-      <td><div class="margin-bar"><div class="margin-fill" style="width:${m}%;height:6px;border-radius:3px;background:${m>30?'var(--success)':m>15?'var(--warning)':'var(--danger)'}"></div><span class="mono text-xs" style="margin-left:6px">${m}%</span></div></td>
+    const mCor = m>30?'var(--success)':m>15?'var(--warning)':'var(--danger)';
+    return `<tr>
+      <td><strong>${nome}</strong></td>
+      <td class="mono" style="text-align:right;color:var(--text-dim)">${s.qty}×</td>
+      <td class="mono" style="text-align:right">${fmt(s.custo)}</td>
+      <td class="mono text-success" style="text-align:right">${fmt(s.venda)}</td>
+      <td class="mono" style="text-align:right;color:${mCor};font-weight:600">${fmt(s.venda-s.custo)}</td>
+      <td style="text-align:right;min-width:80px">
+        <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+          <div style="width:44px;background:var(--border);border-radius:3px;height:5px;overflow:hidden;flex-shrink:0">
+            <div style="height:100%;width:${Math.max(0,m)}%;background:${mCor};border-radius:3px;transition:width .3s"></div>
+          </div>
+          <span class="mono" style="font-size:.78rem;font-weight:700;color:${mCor};min-width:30px;text-align:right">${m}%</span>
+        </div>
+      </td>
     </tr>`;
-  }).join('')||'<tr><td colspan="5" class="text-muted text-sm" style="text-align:center;padding:20px">Sem dados de vendas para análise</td></tr>';
+  }).join('')||'<tr><td colspan="6" class="text-muted text-sm" style="text-align:center;padding:20px">Sem dados de vendas para análise</td></tr>';
   _renderPG('pg-analise',totalRows,'analise',()=>renderAnalise(true));
   // ── Painel de Despesas Operacionais ──
   const despEl=document.getElementById('analise-despesas');
