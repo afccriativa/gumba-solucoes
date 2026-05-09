@@ -2658,13 +2658,16 @@ function renderVendas(q='', _paged=false) {
   _showEmpty('empty-vendas', !vendas.length, _isFiltered && CACHE.vendas.length > 0, 'Sem vendas para o período ou pesquisa aplicada.');
   tbody.innerHTML=_slice(vendas,'vendas').map(function(v) {
     const saldo = CACHE.vendasSaldo.find(function(s){return s.id===v.id;});
+    // Para vendas a pronto sem entrada no vendasSaldo, assumir como Pago
     const totalPago = saldo ? Number(saldo.total_pago||0) : (v.tipo==='pronto'?Number(v.total||0):0);
-    const saldoPend = saldo ? Number(saldo.saldo_pendente||0) : (v.tipo==='pronto'?0:Number(v.total||0));
+    const saldoRaw  = saldo ? Number(saldo.saldo_pendente||0) : (v.tipo==='pronto'?0:Number(v.total||0));
+    const saldoPend = Math.max(0, saldoRaw); // nunca negativo
     const estadoPag = saldo ? saldo.estado_pagamento : (v.tipo==='pronto'?'Pago':'Pendente');
     const estadoBadge = estadoPag==='Pago'?'badge-success':estadoPag==='Parcial'?'badge-warning':'badge-danger';
     const vid = v.id;
     const btnDelete = '<button class="btn btn-danger btn-sm" onclick="deleteVenda(\'' + vid + '\')" >&#128465;</button>';
-    const btnPag = saldoPend>0 ? '<button class="btn btn-success btn-sm" onclick="registarPagamentoVenda(\'' + vid + '\',' + Math.round(saldoPend) + ')" title="Registar pagamento">&#128176;</button>' : '';
+    // Botão pagamento só aparece se saldo > 100 Kz (evita floating point e vendas já pagas)
+    const btnPag = saldoPend > 100 ? '<button class="btn btn-success btn-sm" onclick="registarPagamentoVenda(\'' + vid + '\',' + Math.round(saldoPend) + ')" title="Registar pagamento">&#128176;</button>' : '';
     const produtos = (v.itens||[]).map(function(i){return '<span class="prod-chip">'+i.qty+'x '+i.nome_snapshot+'</span>';}).join('') || '—';
     return '<tr>' +
       '<td class="mono">' + (v.data||'—') + '</td>' +
@@ -3109,6 +3112,15 @@ async function saveCobranca(){
   }catch(e){showToast('Erro: '+e.message,'error');}
 }
 async function pagarPrestacaoById(prestId, cobId){
+  // Verificar se já está paga
+  const cobCheck = CACHE.cobrancas.find(x=>x.id===cobId);
+  const prestCheck = (cobCheck?.prestacoes||[]).find(x=>x.id===prestId);
+  if(prestCheck?.pago) {
+    showToast('Esta prestação já foi paga.', 'info');
+    renderCobranças();
+    return;
+  }
+
   showConfirm('Confirmar o pagamento desta prestação?', async()=>{
     try{
       await sbUpdate('prestacoes', prestId, {pago:true, data_pagamento:today()});
@@ -4196,7 +4208,19 @@ async function registarEntradaCaixa(venda, clienteNome) {
 // ═══════════════════════════════════════════════
 //  PAGAMENTOS DE VENDAS
 // ═══════════════════════════════════════════════
-function registarPagamentoVenda(vendaId, saldoPendente) {
+async function registarPagamentoVenda(vendaId, saldoPassado) {
+  // Recarregar saldo real do Supabase antes de mostrar o modal
+  try { CACHE.vendasSaldo = await sbGet('vendas_saldo'); } catch(e){}
+  const saldoActual = CACHE.vendasSaldo.find(s => s.id === vendaId);
+  const saldoPendente = saldoActual ? Math.max(0, Number(saldoActual.saldo_pendente||0)) : saldoPassado;
+
+  if(saldoPendente <= 100) {
+    showToast('Esta venda já está totalmente paga.', 'info');
+    // Forçar re-render para esconder botão
+    renderVendas();
+    return;
+  }
+
   document.getElementById('pv-venda-id').value = vendaId;
   document.getElementById('pv-saldo-display').textContent = fmt(saldoPendente);
   document.getElementById('pv-valor').value = Math.round(saldoPendente);
@@ -4218,12 +4242,15 @@ async function confirmarPagamentoVenda() {
   const venda = CACHE.vendas.find(v => v.id === vendaId);
   if(!venda) return;
 
-  // Verificar saldo real actual antes de registar
+  // Recarregar saldo REAL do Supabase antes de processar (previne duplicados)
+  try { CACHE.vendasSaldo = await sbGet('vendas_saldo'); } catch(e){}
   const saldoActual = CACHE.vendasSaldo.find(s => s.id === vendaId);
-  const saldoPendente = saldoActual ? Number(saldoActual.saldo_pendente||0) : Number(venda.total||0);
+  const saldoPendente = saldoActual ? Math.max(0, Number(saldoActual.saldo_pendente||0)) : Number(venda.total||0);
 
-  if(saldoPendente <= 0) {
-    return alert('Esta venda já está totalmente paga.');
+  if(saldoPendente <= 100) {
+    closeModal('modal-pag-venda');
+    renderVendas();
+    return showToast('Esta venda já está totalmente paga.', 'info');
   }
   if(valor > saldoPendente + 1) {
     if(!confirm('O valor (' + fmt(valor) + ') é maior que o saldo pendente (' + fmt(saldoPendente) + '). Confirmar?')) return;
