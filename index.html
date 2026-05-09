@@ -45,6 +45,68 @@ body {
   overflow-x: hidden;
 }
 
+/* ─── PERIOD FILTER BAR (Análise) ─── */
+.period-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.period-btn {
+  padding: 6px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .18s;
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+.period-btn:hover { background: var(--surface3); color: var(--text); }
+.period-btn.active {
+  background: var(--accent-glow);
+  color: var(--accent2);
+  border-color: rgba(56,189,248,.35);
+}
+.period-custom {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+.period-custom.visible { display: flex; }
+.period-custom input[type="date"] {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: .78rem;
+  font-family: var(--font-body);
+  outline: none;
+  cursor: pointer;
+}
+.period-custom input[type="date"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.period-custom span { color: var(--text-muted); font-size: .78rem; }
+.period-badge {
+  margin-left: auto;
+  font-size: .72rem;
+  color: var(--text-muted);
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+.period-badge strong { color: var(--accent2); }
+
 /* ─── SIDEBAR ─── */
 #sidebar {
   width: var(--sidebar-w);
@@ -1266,6 +1328,22 @@ textarea { resize: vertical; min-height: 70px; }
 
     <!-- ══════════════════════════════════════════════ ANÁLISE DE LUCRO -->
     <div class="section" id="s-analise">
+      <!-- Barra de filtro de período -->
+      <div class="period-bar" id="period-bar">
+        <button class="period-btn" data-period="today" onclick="setPeriod('today')">Hoje</button>
+        <button class="period-btn" data-period="week" onclick="setPeriod('week')">Esta Semana</button>
+        <button class="period-btn active" data-period="month" onclick="setPeriod('month')">Este Mês</button>
+        <button class="period-btn" data-period="quarter" onclick="setPeriod('quarter')">Trimestre</button>
+        <button class="period-btn" data-period="year" onclick="setPeriod('year')">Este Ano</button>
+        <button class="period-btn" data-period="all" onclick="setPeriod('all')">Todos</button>
+        <button class="period-btn" data-period="custom" onclick="setPeriod('custom')">Personalizado</button>
+        <div class="period-custom" id="period-custom">
+          <input type="date" id="period-from" onchange="applyCustomPeriod()">
+          <span>→</span>
+          <input type="date" id="period-to" onchange="applyCustomPeriod()">
+        </div>
+        <div class="period-badge" id="period-badge"><strong>—</strong></div>
+      </div>
       <div class="kpi-grid" id="kpi-analise"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div class="card">
@@ -2353,7 +2431,16 @@ function renderSection(name) {
   if(name==='stock')        renderStock();
   if(name==='clientes')     renderClientes();
   if(name==='cobranças')    renderCobranças();
-  if(name==='analise')      renderAnalise();
+  if(name==='analise'){
+    // Inicializar badge de período se ainda não foi feito
+    const badge = document.getElementById('period-badge');
+    if(badge && badge.innerHTML.trim()==='<strong>—</strong>') {
+      const r = _periodRange(_period.type);
+      _period.from = r.from; _period.to = r.to;
+      badge.innerHTML = _periodLabel(_period.type, _period.from, _period.to);
+    }
+    renderAnalise();
+  }
   if(name==='fornecedores') renderFornecedores();
   if(name==='importacoes')  renderImportacoes();
   if(name==='calculadora')  calcPreco();
@@ -3186,6 +3273,89 @@ async function deleteCobranca(id){
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  PERÍODO — estado e utilitários
+// ═══════════════════════════════════════════════════════════════════
+let _period = { type: 'month', from: null, to: null };
+
+function _isoToday() {
+  return new Date().toISOString().slice(0,10);
+}
+function _periodRange(type) {
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+  const pad = n => String(n).padStart(2,'0');
+  const iso = (yr,mo,dy) => `${yr}-${pad(mo+1)}-${pad(dy)}`;
+  switch(type) {
+    case 'today':
+      return { from: iso(y,m,d), to: iso(y,m,d) };
+    case 'week': {
+      const day = now.getDay()||7; // Mon=1
+      const mon = new Date(now); mon.setDate(d - day + 1);
+      const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+      return { from: mon.toISOString().slice(0,10), to: sun.toISOString().slice(0,10) };
+    }
+    case 'month':
+      return { from: iso(y,m,1), to: iso(y,m, new Date(y,m+1,0).getDate()) };
+    case 'quarter': {
+      const q = Math.floor(m/3);
+      return { from: iso(y,q*3,1), to: iso(y,q*3+2, new Date(y,q*3+3,0).getDate()) };
+    }
+    case 'year':
+      return { from: iso(y,0,1), to: iso(y,11,31) };
+    case 'all':
+    default:
+      return { from: null, to: null };
+  }
+}
+function _periodLabel(type, from, to) {
+  const fmt = s => s ? s.split('-').reverse().join('/') : '—';
+  const labels = { today:'Hoje', week:'Esta Semana', month:'Este Mês', quarter:'Trimestre', year:'Este Ano', all:'Todos os registos', custom:'Personalizado' };
+  if(type === 'all') return '<strong>Todos os registos</strong>';
+  return `${labels[type]||'Período'}: <strong>${fmt(from)}</strong> → <strong>${fmt(to)}</strong>`;
+}
+function _filterByPeriod(vendas) {
+  const { from, to } = _period;
+  if(!from && !to) return vendas;
+  return vendas.filter(v => {
+    const d = v.data || (v.criado_em||'').slice(0,10);
+    if(!d) return false;
+    if(from && d < from) return false;
+    if(to   && d > to)   return false;
+    return true;
+  });
+}
+function setPeriod(type) {
+  _period.type = type;
+  // Update buttons
+  document.querySelectorAll('.period-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.period === type);
+  });
+  const custom = document.getElementById('period-custom');
+  if(type === 'custom') {
+    custom.classList.add('visible');
+    // Init dates if empty
+    const fi = document.getElementById('period-from');
+    const ti = document.getElementById('period-to');
+    if(!fi.value) { const r=_periodRange('month'); fi.value=r.from; ti.value=r.to; }
+    _period.from = fi.value;
+    _period.to   = ti.value;
+  } else {
+    custom.classList.remove('visible');
+    const r = _periodRange(type);
+    _period.from = r.from;
+    _period.to   = r.to;
+  }
+  document.getElementById('period-badge').innerHTML = _periodLabel(_period.type, _period.from, _period.to);
+  renderAnalise();
+}
+function applyCustomPeriod() {
+  _period.from = document.getElementById('period-from').value;
+  _period.to   = document.getElementById('period-to').value;
+  document.getElementById('period-badge').innerHTML = _periodLabel('custom', _period.from, _period.to);
+  renderAnalise();
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  ANÁLISE
 // ═══════════════════════════════════════════════════════════════════
 function renderAnalise(_paged=false){
@@ -3193,6 +3363,7 @@ function renderAnalise(_paged=false){
   const filtro=getFilterMercado();
   let vendas=CACHE.vendas;
   if(filtro!=='todos')vendas=vendas.filter(v=>v.mercado===filtro);
+  vendas=_filterByPeriod(vendas);
   const produtos=CACHE.produtos;
   const custoTotal=vendas.reduce((s,v)=>s+(v.itens||[]).reduce((ss,it)=>{
     const p=produtos.find(x=>x.id===it.produto_id);return ss+(p?p.preco_custo*it.qty:0);
