@@ -1152,7 +1152,7 @@ textarea { resize: vertical; min-height: 70px; }
         <table>
           <thead><tr>
             <th>Data</th><th>Cliente</th><th>Produtos</th><th>Total</th>
-            <th>Pagamento</th><th>Tipo</th><th>Mercado</th><th>Acções</th>
+            <th>Pago</th><th>Saldo</th><th>Estado</th><th>Pagamento</th><th>Tipo</th><th>Acções</th>
           </tr></thead>
           <tbody id="tbody-vendas"></tbody>
         </table>
@@ -1766,6 +1766,52 @@ textarea { resize: vertical; min-height: 70px; }
   </div>
 </div>
 
+<!-- REGISTAR PAGAMENTO VENDA -->
+<div class="modal-overlay" id="modal-pag-venda">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>Registar Pagamento</h3>
+      <button class="modal-close" onclick="closeModal('modal-pag-venda')">x</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--surface2);border-radius:8px;padding:14px;margin-bottom:16px;text-align:center">
+        <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:4px">Saldo Pendente</div>
+        <div id="pv-saldo-display" style="font-size:1.6rem;font-weight:800;color:var(--danger);font-family:var(--font-display)">—</div>
+      </div>
+      <div class="form-grid form-grid-2">
+        <div class="form-group">
+          <label>Valor Recebido (Kz)</label>
+          <input type="number" id="pv-valor" placeholder="0" min="0" step="100">
+        </div>
+        <div class="form-group">
+          <label>Método</label>
+          <select id="pv-metodo">
+            <option>Dinheiro</option>
+            <option>TPA</option>
+            <option>Transferência</option>
+            <option>TelePay</option>
+            <option>Multicaixa</option>
+            <option>Outro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" id="pv-data">
+        </div>
+        <div class="form-group">
+          <label>Obs</label>
+          <input type="text" id="pv-obs" placeholder="Opcional">
+        </div>
+      </div>
+      <input type="hidden" id="pv-venda-id">
+    </div>
+    <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;padding:16px 24px;border-top:1px solid var(--border)">
+      <button class="btn btn-ghost" onclick="closeModal('modal-pag-venda')">Cancelar</button>
+      <button class="btn btn-success" onclick="confirmarPagamentoVenda()">Confirmar Pagamento</button>
+    </div>
+  </div>
+</div>
+
 <!-- NOVA VENDA -->
 <div class="modal-overlay" id="modal-venda">
   <div class="modal">
@@ -2222,7 +2268,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // ═══════════════════════════════════════════════════════════════════
 //  CACHE em memória (carregado do Supabase no init)
 // ═══════════════════════════════════════════════════════════════════
-const CACHE = { produtos:[], clientes:[], fornecedores:[], vendas:[], cobrancas:[], importacoes:[], caixa:[] };
+const CACHE = { produtos:[], clientes:[], fornecedores:[], vendas:[], cobrancas:[], importacoes:[], caixa:[], vendasSaldo:[] };
 
 // Helpers Supabase
 async function sbGet(table, select='*') {
@@ -2600,16 +2646,29 @@ function renderVendas(q='', _paged=false) {
   const tbody=document.getElementById('tbody-vendas');
   const _isFiltered = !!(q || mes);
   _showEmpty('empty-vendas', !vendas.length, _isFiltered && CACHE.vendas.length > 0, 'Sem vendas para o período ou pesquisa aplicada.');
-  tbody.innerHTML=_slice(vendas,'vendas').map(v=>`<tr>
-    <td class="mono">${v.data||'—'}</td>
-    <td><strong>${nomeCliente(v.cliente_id)}</strong></td>
-    <td>${(v.itens||[]).map(i=>`<span class="prod-chip">${i.qty}x ${i.nome_snapshot}</span>`).join('')||'—'}</td>
-    <td class="mono text-success"><strong>${fmt(v.total)}</strong></td>
-    <td><span class="badge badge-neutral">${v.pagamento||'—'}</span></td>
-    <td><span class="badge ${v.tipo==='parcelada'?'badge-warning':'badge-success'}">${v.tipo==='parcelada'?'Parcelada':'Pronto'}</span></td>
-    <td><span class="badge badge-info">${v.mercado||'—'}</span></td>
-    <td><button class="btn btn-danger btn-sm" onclick="deleteVenda('${v.id}')">🗑</button></td>
-  </tr>`).join('');
+  tbody.innerHTML=_slice(vendas,'vendas').map(function(v) {
+    const saldo = CACHE.vendasSaldo.find(function(s){return s.id===v.id;});
+    const totalPago = saldo ? Number(saldo.total_pago||0) : (v.tipo==='pronto'?Number(v.total||0):0);
+    const saldoPend = saldo ? Number(saldo.saldo_pendente||0) : (v.tipo==='pronto'?0:Number(v.total||0));
+    const estadoPag = saldo ? saldo.estado_pagamento : (v.tipo==='pronto'?'Pago':'Pendente');
+    const estadoBadge = estadoPag==='Pago'?'badge-success':estadoPag==='Parcial'?'badge-warning':'badge-danger';
+    const vid = v.id;
+    const btnDelete = '<button class="btn btn-danger btn-sm" onclick="deleteVenda(\'' + vid + '\')" >&#128465;</button>';
+    const btnPag = saldoPend>0 ? '<button class="btn btn-success btn-sm" onclick="registarPagamentoVenda(\'' + vid + '\',' + Math.round(saldoPend) + ')" title="Registar pagamento">&#128176;</button>' : '';
+    const produtos = (v.itens||[]).map(function(i){return '<span class="prod-chip">'+i.qty+'x '+i.nome_snapshot+'</span>';}).join('') || '—';
+    return '<tr>' +
+      '<td class="mono">' + (v.data||'—') + '</td>' +
+      '<td><strong>' + nomeCliente(v.cliente_id) + '</strong></td>' +
+      '<td>' + produtos + '</td>' +
+      '<td class="mono text-success"><strong>' + fmt(v.total) + '</strong></td>' +
+      '<td class="mono text-success">' + fmt(totalPago) + '</td>' +
+      '<td class="mono ' + (saldoPend>0?'text-danger':'text-muted') + '">' + (saldoPend>0?fmt(saldoPend):'—') + '</td>' +
+      '<td><span class="badge ' + estadoBadge + '">' + estadoPag + '</span></td>' +
+      '<td><span class="badge badge-neutral">' + (v.pagamento||'—') + '</span></td>' +
+      '<td><span class="badge ' + (v.tipo==='parcelada'?'badge-warning':'badge-success') + '">' + (v.tipo==='parcelada'?'Parcelada':'Pronto') + '</span></td>' +
+      '<td>' + btnDelete + btnPag + '</td>' +
+    '</tr>';
+  }).join('');
   _renderPG('pg-vendas',total,'vendas',()=>renderVendas(q,true));
 }
 
@@ -3322,16 +3381,16 @@ async function loadApp(){
       sbGet('produtos'),sbGet('clientes'),sbGet('fornecedores'),
       sbGet('vendas'),sbGet('venda_itens','*'),
       sbGet('cobrancas'),sbGet('prestacoes'),sbGet('importacoes'),
-      sbGet('caixa')
+      sbGet('caixa'),sbGet('vendas_saldo')
     ]);
-    const [produtos,clientes,fornecedores,vendas,venda_itens,cobrancas,prestacoes,importacoes,caixa]
+    const [produtos,clientes,fornecedores,vendas,venda_itens,cobrancas,prestacoes,importacoes,caixa,vendasSaldo]
       = results.map(r=>r.status==='fulfilled'?r.value:[]);
 
     vendas.forEach(v=>{v.itens=venda_itens.filter(it=>it.venda_id===v.id);});
     cobrancas.forEach(c=>{c.prestacoes=prestacoes.filter(p=>p.cobranca_id===c.id).sort((a,b)=>a.numero-b.numero);});
     CACHE.produtos=produtos;CACHE.clientes=clientes;CACHE.fornecedores=fornecedores;
     CACHE.vendas=vendas;CACHE.cobrancas=cobrancas;CACHE.importacoes=importacoes;
-    CACHE.caixa=caixa;
+    CACHE.caixa=caixa;CACHE.vendasSaldo=vendasSaldo;
 
   }catch(e){
     console.error('Erro em loadApp:', e.message);
@@ -4081,6 +4140,84 @@ async function registarEntradaCaixa(venda, clienteNome) {
     });
     CACHE.caixa.unshift(mov);
   } catch(e) { console.warn('Erro ao registar caixa:', e.message); }
+}
+
+
+
+// ═══════════════════════════════════════════════
+//  PAGAMENTOS DE VENDAS
+// ═══════════════════════════════════════════════
+function registarPagamentoVenda(vendaId, saldoPendente) {
+  document.getElementById('pv-venda-id').value = vendaId;
+  document.getElementById('pv-saldo-display').textContent = fmt(saldoPendente);
+  document.getElementById('pv-valor').value = Math.round(saldoPendente);
+  document.getElementById('pv-data').value = today();
+  document.getElementById('pv-obs').value = '';
+  openModal('modal-pag-venda');
+}
+
+async function confirmarPagamentoVenda() {
+  const vendaId = document.getElementById('pv-venda-id').value;
+  const valor   = parseFloat(document.getElementById('pv-valor').value)||0;
+  const metodo  = document.getElementById('pv-metodo').value;
+  const data    = document.getElementById('pv-data').value;
+  const obs     = document.getElementById('pv-obs').value;
+
+  if(!valor || valor <= 0) return alert('Introduza um valor válido.');
+  if(!data) return alert('Seleccione uma data.');
+
+  const venda = CACHE.vendas.find(v => v.id === vendaId);
+  if(!venda) return;
+
+  try {
+    // Registar na tabela pagamentos
+    const pag = await sbInsert('pagamentos', {
+      venda_id: vendaId, valor, metodo,
+      data: data, obs,
+      criado_por: CURRENT_USER?.id
+    });
+
+    // Registar também na caixa como entrada
+    const clienteNome = nomeCliente(venda.cliente_id);
+    await sbInsert('caixa', {
+      tipo: 'entrada',
+      categoria: 'Cobrança',
+      descricao: 'Pagamento de venda — ' + clienteNome,
+      valor, metodo,
+      referencia_id: vendaId,
+      referencia_tipo: 'venda',
+      data: data,
+      criado_por: CURRENT_USER?.id
+    });
+
+    // Actualizar vendas_saldo no cache
+    const saldoIdx = CACHE.vendasSaldo.findIndex(s => s.id === vendaId);
+    if(saldoIdx >= 0) {
+      CACHE.vendasSaldo[saldoIdx].total_pago = Number(CACHE.vendasSaldo[saldoIdx].total_pago||0) + valor;
+      CACHE.vendasSaldo[saldoIdx].saldo_pendente = Number(CACHE.vendasSaldo[saldoIdx].saldo_pendente||0) - valor;
+      if(CACHE.vendasSaldo[saldoIdx].saldo_pendente <= 0) {
+        CACHE.vendasSaldo[saldoIdx].estado_pagamento = 'Pago';
+        CACHE.vendasSaldo[saldoIdx].saldo_pendente = 0;
+      } else {
+        CACHE.vendasSaldo[saldoIdx].estado_pagamento = 'Parcial';
+      }
+    } else {
+      // Não existia ainda no cache — criar entrada
+      CACHE.vendasSaldo.push({
+        id: vendaId,
+        total: venda.total,
+        total_pago: valor,
+        saldo_pendente: Math.max(0, Number(venda.total||0) - valor),
+        estado_pagamento: valor >= Number(venda.total||0) ? 'Pago' : 'Parcial'
+      });
+    }
+
+    closeModal('modal-pag-venda');
+    renderVendas();
+    renderCaixa();
+    renderDashboard();
+    showToast('Pagamento registado com sucesso!', 'success');
+  } catch(e) { alert('Erro: ' + e.message); }
 }
 
 
