@@ -2521,10 +2521,14 @@ function renderDashboard() {
   const faturacaoMes = vendasMes.reduce((s,v)=>s+Number(v.total||0),0);
   const faturacaoTotal = vendas.reduce((s,v)=>s+Number(v.total||0),0);
   const stockValor = produtos.reduce((s,p)=>s+Number(p.preco_venda||0)*Number(p.stock||0),0);
-  const pendentes = cobrancas.filter(c=>c.status!=='Pago Total');
-  const vencidas = cobrancas.filter(c=>{
-    if(c.status==='Pago Total') return false;
-    return (c.vcto1&&c.vcto1<today()&&!c.pago1)||(c.vcto2&&c.vcto2<today()&&!c.pago2)||(c.vcto3&&c.vcto3<today()&&!c.pago3);
+  // Calcular pendentes e vencidas a partir das prestações reais
+  const pendentes = cobrancas.filter(c => {
+    const prests = c.prestacoes || [];
+    return prests.some(p => !p.pago);
+  });
+  const vencidas = cobrancas.filter(c => {
+    const prests = c.prestacoes || [];
+    return prests.some(p => !p.pago && p.data_vencimento && p.data_vencimento < today());
   });
   const badge = document.getElementById('badge-cobr');
   const badgeCount = document.getElementById('badge-cobr-count');
@@ -2619,12 +2623,18 @@ function renderDashboard() {
       <span class="badge badge-info">${qty}x</span>
     </div>`).join(''):'<div class="empty-state" style="padding:20px"><p>Sem dados de vendas</p></div>';
   // Cobranças dash
-  const cobPend=CACHE.cobrancas.filter(c=>c.status!=='Pago Total').slice(0,4);
-  document.getElementById('dash-cobr-list').innerHTML=cobPend.length?`<table><thead><tr><th>Cliente</th><th>Referência</th><th>Vencimento</th><th>Status</th></tr></thead><tbody>${cobPend.map(c=>{
-    const vencido=(c.vcto1&&c.vcto1<today()&&!c.pago1)||(c.vcto2&&c.vcto2<today()&&!c.pago2);
-    const vcto=c.vcto1&&!c.pago1?c.vcto1:(c.vcto2&&!c.pago2?c.vcto2:'—');
-    return `<tr><td><strong>${nomeCliente(c.cliente_id)}</strong></td><td>${c.referencia||'—'}</td><td class="mono">${vcto}</td><td><span class="badge ${vencido?'badge-danger':'badge-warning'}">${vencido?'Vencida':'Pendente'}</span></td></tr>`;
-  }).join('')}</tbody></table>`:'<div class="empty-state" style="padding:20px"><p>Sem cobranças pendentes 🎉</p></div>';
+  const cobPend = CACHE.cobrancas.filter(c => (c.prestacoes||[]).some(p=>!p.pago)).slice(0,4);
+  document.getElementById('dash-cobr-list').innerHTML = cobPend.length ?
+    '<table><thead><tr><th>Cliente</th><th>Referência</th><th>Próx. Vencimento</th><th>Status</th></tr></thead><tbody>' +
+    cobPend.map(function(c) {
+      const prests = c.prestacoes || [];
+      const proxPend = prests.filter(function(p){return !p.pago;}).sort(function(a,b){return (a.data_vencimento||'').localeCompare(b.data_vencimento||'');});
+      const proxVcto = proxPend[0]?.data_vencimento || '—';
+      const vencido = proxPend.some(function(p){return p.data_vencimento && p.data_vencimento < today();});
+      return '<tr><td><strong>' + nomeCliente(c.cliente_id) + '</strong></td><td>' + (c.referencia||'—') + '</td><td class="mono">' + proxVcto + '</td><td><span class="badge ' + (vencido?'badge-danger':'badge-warning') + '">' + (vencido?'Vencida':'Pendente') + '</span></td></tr>';
+    }).join('') +
+    '</tbody></table>'
+    : '<div class="empty-state" style="padding:20px"><p>Sem cobranças pendentes 🎉</p></div>';
   // Stock alerts
   const alertStock=produtos.filter(p=>Number(p.stock||0)<=Number(p.stock_minimo||1));
   document.getElementById('dash-stock-alerts').innerHTML=alertStock.length?`<table><thead><tr><th>Produto</th><th>Stock</th><th>Mínimo</th><th>Status</th></tr></thead><tbody>${alertStock.map(p=>`<tr><td><strong>${p.nome}</strong></td><td class="mono text-danger">${p.stock}</td><td class="mono">${p.stock_minimo}</td><td><span class="badge ${p.stock==0?'badge-danger':'badge-warning'}">${p.stock==0?'Esgotado':'Stock baixo'}</span></td></tr>`).join('')}</tbody></table>`:'<div class="empty-state" style="padding:20px"><p>Stock em níveis normais ✓</p></div>';
@@ -2728,8 +2738,10 @@ async function saveVenda() {
         p.stock=novoStock;
       }
     }
-    // 4. Registar pagamento
-    await sbInsert('pagamentos',{venda_id:venda.id,valor:total,metodo:document.getElementById('v-pagamento').value});
+    // 4. Registar pagamento (apenas para vendas a pronto — parceladas registam via cobranças)
+    if(tipo === 'pronto') {
+      await sbInsert('pagamentos',{venda_id:venda.id,valor:total,metodo:document.getElementById('v-pagamento').value,criado_por:CURRENT_USER?.id});
+    }
     // 5. Se parcelada, criar cobrança
     if(tipo==='parcelada'){
       const nprest=parseInt(document.getElementById('v-nprest').value)||2;
@@ -2756,6 +2768,8 @@ async function saveVenda() {
     if(tipo === 'pronto') {
       const cliNome = CACHE.clientes.find(x=>x.id===cliente_id)?.nome || 'Cliente directo';
       await registarEntradaCaixa(venda, cliNome);
+      // Recarregar vendasSaldo para reflectir pagamento imediato
+      try { CACHE.vendasSaldo = await sbGet('vendas_saldo'); } catch(e) {}
     }
     closeModal('modal-venda');
     renderVendas(); renderDashboard();
@@ -3098,12 +3112,47 @@ async function pagarPrestacaoById(prestId, cobId){
   showConfirm('Confirmar o pagamento desta prestação?', async()=>{
     try{
       await sbUpdate('prestacoes', prestId, {pago:true, data_pagamento:today()});
-      const c=CACHE.cobrancas.find(x=>x.id===cobId);
-      if(c&&c.prestacoes){
-        const p=c.prestacoes.find(x=>x.id===prestId);
-        if(p){p.pago=true;p.data_pagamento=today();}
+
+      // Actualizar cache local
+      const c = CACHE.cobrancas.find(x=>x.id===cobId);
+      if(c && c.prestacoes){
+        const p = c.prestacoes.find(x=>x.id===prestId);
+        if(p){ p.pago=true; p.data_pagamento=today(); }
       }
-      renderCobranças();renderDashboard();
+
+      // Registar na caixa
+      if(c) {
+        const prest = (c.prestacoes||[]).find(x=>x.id===prestId);
+        const valPrest = prest ? Number(prest.valor||0) : 0;
+        if(valPrest > 0) {
+          const mov = await sbInsert('caixa', {
+            tipo: 'entrada',
+            categoria: 'Cobrança',
+            descricao: 'Prestação recebida — ' + nomeCliente(c.cliente_id) + ' (' + (c.referencia||'—') + ')',
+            valor: valPrest,
+            metodo: 'Dinheiro',
+            referencia_id: cobId,
+            referencia_tipo: 'prestacao',
+            data: today(),
+            criado_por: CURRENT_USER?.id
+          });
+          CACHE.caixa.unshift(mov);
+        }
+        // Registar na tabela pagamentos e recarregar vendasSaldo
+        if(c.venda_id && prest) {
+          await sbInsert('pagamentos', {
+            venda_id: c.venda_id,
+            valor: Number(prest.valor||0),
+            metodo: 'Dinheiro',
+            criado_por: CURRENT_USER?.id
+          });
+          try { CACHE.vendasSaldo = await sbGet('vendas_saldo'); } catch(e){}
+        }
+      }
+
+      renderCobranças();
+      renderDashboard();
+      if(document.getElementById('s-caixa')?.classList.contains('active')) renderCaixa();
       showToast('Prestação registada como paga.','success');
     }catch(e){showToast('Erro: '+e.message,'error');}
   }, 'Confirmar pagamento');
@@ -4169,55 +4218,55 @@ async function confirmarPagamentoVenda() {
   const venda = CACHE.vendas.find(v => v.id === vendaId);
   if(!venda) return;
 
+  // Verificar saldo real actual antes de registar
+  const saldoActual = CACHE.vendasSaldo.find(s => s.id === vendaId);
+  const saldoPendente = saldoActual ? Number(saldoActual.saldo_pendente||0) : Number(venda.total||0);
+
+  if(saldoPendente <= 0) {
+    return alert('Esta venda já está totalmente paga.');
+  }
+  if(valor > saldoPendente + 1) {
+    if(!confirm('O valor (' + fmt(valor) + ') é maior que o saldo pendente (' + fmt(saldoPendente) + '). Confirmar?')) return;
+  }
+
+  const btn = document.querySelector('#modal-pag-venda .btn-success');
+  if(btn) { btn.disabled = true; btn.textContent = 'A registar...'; }
+
   try {
-    // Registar na tabela pagamentos
-    const pag = await sbInsert('pagamentos', {
-      venda_id: vendaId, valor, metodo,
-      data: data, obs,
+    // 1. Registar pagamento
+    await sbInsert('pagamentos', {
+      venda_id: vendaId, valor, metodo, obs,
       criado_por: CURRENT_USER?.id
     });
 
-    // Registar também na caixa como entrada
+    // 2. Registar na caixa (uma única vez por pagamento)
     const clienteNome = nomeCliente(venda.cliente_id);
-    await sbInsert('caixa', {
+    const movCaixa = await sbInsert('caixa', {
       tipo: 'entrada',
       categoria: 'Cobrança',
-      descricao: 'Pagamento de venda — ' + clienteNome,
+      descricao: 'Pagamento parcial/total — ' + clienteNome,
       valor, metodo,
       referencia_id: vendaId,
-      referencia_tipo: 'venda',
+      referencia_tipo: 'pagamento_venda',
       data: data,
       criado_por: CURRENT_USER?.id
     });
+    CACHE.caixa.unshift(movCaixa);
 
-    // Actualizar vendas_saldo no cache
-    const saldoIdx = CACHE.vendasSaldo.findIndex(s => s.id === vendaId);
-    if(saldoIdx >= 0) {
-      CACHE.vendasSaldo[saldoIdx].total_pago = Number(CACHE.vendasSaldo[saldoIdx].total_pago||0) + valor;
-      CACHE.vendasSaldo[saldoIdx].saldo_pendente = Number(CACHE.vendasSaldo[saldoIdx].saldo_pendente||0) - valor;
-      if(CACHE.vendasSaldo[saldoIdx].saldo_pendente <= 0) {
-        CACHE.vendasSaldo[saldoIdx].estado_pagamento = 'Pago';
-        CACHE.vendasSaldo[saldoIdx].saldo_pendente = 0;
-      } else {
-        CACHE.vendasSaldo[saldoIdx].estado_pagamento = 'Parcial';
-      }
-    } else {
-      // Não existia ainda no cache — criar entrada
-      CACHE.vendasSaldo.push({
-        id: vendaId,
-        total: venda.total,
-        total_pago: valor,
-        saldo_pendente: Math.max(0, Number(venda.total||0) - valor),
-        estado_pagamento: valor >= Number(venda.total||0) ? 'Pago' : 'Parcial'
-      });
-    }
+    // 3. Recarregar vendasSaldo directamente do Supabase (fonte da verdade)
+    const novoSaldo = await sbGet('vendas_saldo');
+    CACHE.vendasSaldo = novoSaldo;
 
     closeModal('modal-pag-venda');
     renderVendas();
     renderCaixa();
     renderDashboard();
-    showToast('Pagamento registado com sucesso!', 'success');
-  } catch(e) { alert('Erro: ' + e.message); }
+    showToast('Pagamento de ' + fmt(valor) + ' registado!', 'success');
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  } finally {
+    if(btn) { btn.disabled = false; btn.textContent = 'Confirmar Pagamento'; }
+  }
 }
 
 
