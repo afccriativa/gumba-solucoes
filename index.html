@@ -1345,7 +1345,7 @@ textarea { resize: vertical; min-height: 70px; }
         <div class="period-badge" id="period-badge"><strong>—</strong></div>
       </div>
       <div class="kpi-grid" id="kpi-analise"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
         <div class="card">
           <div class="card-header"><span class="card-title">Margem por Produto</span></div>
           <table>
@@ -1358,6 +1358,14 @@ textarea { resize: vertical; min-height: 70px; }
           <div class="card-header"><span class="card-title">Distribuição por Mercado</span></div>
           <div class="card-body" id="analise-mercado"></div>
         </div>
+      </div>
+      <!-- Painel Despesas Operacionais -->
+      <div class="card" id="card-despesas-opex">
+        <div class="card-header">
+          <span class="card-title">Despesas Operacionais do Período</span>
+          <span id="opex-periodo-label" style="font-size:.72rem;color:var(--text-muted)"></span>
+        </div>
+        <div class="card-body" id="analise-despesas"></div>
       </div>
     </div>
 
@@ -3383,6 +3391,23 @@ function renderAnalise(_paged=false){
   // Custo do stock actual (capital imobilizado em armazém ao preço de custo)
   const custoStockActual=(filtro==='todos'?CACHE.produtos:CACHE.produtos.filter(p=>p.mercado===filtro))
     .reduce((s,p)=>s+Number(p.preco_custo||0)*Number(p.stock||0),0);
+  // Despesas Operacionais — saídas de caixa no período (excl. Compra/Stock para evitar dupla contagem com COGS)
+  const CATS_OPEX=['Transporte','Alfândega','Salário','Aluguer','Comunicações','Bancário','Outro'];
+  const caixaPeriodo=CACHE.caixa.filter(m=>{
+    if(m.tipo!=='saida')return false;
+    const d=m.data||'';
+    if(_period.from&&d<_period.from)return false;
+    if(_period.to  &&d>_period.to  )return false;
+    return true;
+  });
+  const despesasOpex=caixaPeriodo.filter(m=>CATS_OPEX.includes(m.categoria));
+  const totalOpex=despesasOpex.reduce((s,m)=>s+Number(m.valor||0),0);
+  const comprasStock=caixaPeriodo.filter(m=>m.categoria==='Compra');
+  const totalCompras=comprasStock.reduce((s,m)=>s+Number(m.valor||0),0);
+  const resultadoLiquido=lucroTotal-totalOpex;
+  // Breakdown por categoria para o painel de despesas
+  const opexPorCat={};
+  despesasOpex.forEach(m=>{opexPorCat[m.categoria]=(opexPorCat[m.categoria]||0)+Number(m.valor||0);});
   document.getElementById('kpi-analise').innerHTML=`
     <div class="kpi-card" style="--kpi-color:var(--success)">
       <div class="kpi-label">Facturado</div>
@@ -3404,7 +3429,13 @@ function renderAnalise(_paged=false){
     <div class="kpi-card" style="--kpi-color:var(--warning)"><div class="kpi-label">COGS — Custo Vendido</div><div class="kpi-value">${fmtN(custoTotal)}<small>Kz</small></div></div>
     <div class="kpi-card" style="--kpi-color:${lucroTotal>=0?'var(--success)':'var(--danger)'}"><div class="kpi-label">Lucro Bruto</div><div class="kpi-value">${lucroTotal<0?'−':''}${fmtN(Math.abs(lucroTotal))}<small>Kz</small></div><div style="font-size:.68rem;color:${custoTotal>0?'var(--text-muted)':'var(--warning)'};margin-top:4px">${custoTotal>0?'Facturado − COGS':'⚠ Sem COGS registado'}</div></div>
     <div class="kpi-card" style="--kpi-color:#A78BFA"><div class="kpi-label">Margem Média</div><div class="kpi-value">${margemMedia}<small>%</small></div></div>
-    <div class="kpi-card" style="--kpi-color:#F472B6"><div class="kpi-label">Custo Stock Actual</div><div class="kpi-value">${fmtN(custoStockActual)}<small>Kz</small></div><div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">Capital imobilizado</div></div>`;
+    <div class="kpi-card" style="--kpi-color:#F472B6"><div class="kpi-label">Custo Stock Actual</div><div class="kpi-value">${fmtN(custoStockActual)}<small>Kz</small></div><div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">Capital imobilizado</div></div>
+    <div class="kpi-card" style="--kpi-color:#FB923C"><div class="kpi-label">Desp. Operacionais</div><div class="kpi-value">${fmtN(totalOpex)}<small>Kz</small></div><div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">${despesasOpex.length} movimento(s)</div></div>
+    <div class="kpi-card" style="--kpi-color:${resultadoLiquido>=0?'var(--success)':'var(--danger)'}">
+      <div class="kpi-label">Resultado Líquido</div>
+      <div class="kpi-value" style="color:${resultadoLiquido>=0?'var(--success)':'var(--danger)'}">${resultadoLiquido<0?'−':''}${fmtN(Math.abs(resultadoLiquido))}<small>Kz</small></div>
+      <div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">Lucro Bruto − OpEx</div>
+    </div>`;
   const prodStats={};
   vendas.forEach(v=>(v.itens||[]).forEach(it=>{
     const p=produtos.find(x=>x.id===it.produto_id);
@@ -3424,6 +3455,61 @@ function renderAnalise(_paged=false){
     </tr>`;
   }).join('')||'<tr><td colspan="5" class="text-muted text-sm" style="text-align:center;padding:20px">Sem dados de vendas para análise</td></tr>';
   _renderPG('pg-analise',totalRows,'analise',()=>renderAnalise(true));
+  // ── Painel de Despesas Operacionais ──
+  const despEl=document.getElementById('analise-despesas');
+  const opexLabel=document.getElementById('opex-periodo-label');
+  if(opexLabel) opexLabel.textContent=despesasOpex.length===0&&totalCompras===0?'Sem registos no período':'';
+  if(despEl){
+    if(despesasOpex.length===0&&totalCompras===0){
+      despEl.innerHTML='<p style="color:var(--text-muted);font-size:.85rem;padding:8px 0">Sem despesas operacionais registadas para este período.<br><span style="font-size:.78rem">Registe saídas na secção <strong>Caixa</strong> para as ver aqui.</span></p>';
+    } else {
+      const cats=Object.entries(opexPorCat).sort((a,b)=>b[1]-a[1]);
+      const maxVal=cats.length?cats[0][1]:1;
+      const catIcons={'Transporte':'🚚','Alfândega':'🛃','Salário':'👥','Aluguer':'🏠','Comunicações':'📡','Bancário':'🏦','Outro':'📋'};
+      despEl.innerHTML=`
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+          <div>
+            <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted);margin-bottom:12px;font-weight:600">Por Categoria</div>
+            ${cats.length?cats.map(([cat,val])=>{
+              const pct=Math.round(val/totalOpex*100);
+              const barPct=Math.round(val/maxVal*100);
+              return `<div style="margin-bottom:12px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                  <span style="font-size:.82rem">${catIcons[cat]||'📋'} ${cat}</span>
+                  <span style="font-family:var(--font-mono);font-size:.8rem;color:var(--text-dim)">${fmt(val)} <span style="color:var(--text-muted);font-size:.72rem">(${pct}%)</span></span>
+                </div>
+                <div style="background:var(--border);border-radius:3px;height:5px;overflow:hidden">
+                  <div style="height:100%;width:${barPct}%;background:#FB923C;border-radius:3px;transition:width .4s ease"></div>
+                </div>
+              </div>`;
+            }).join(''):'<p style="color:var(--text-muted);font-size:.82rem">Sem despesas operacionais.</p>'}
+          </div>
+          <div>
+            <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted);margin-bottom:12px;font-weight:600">Resumo</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="background:var(--surface3);border-radius:8px;padding:12px;border:1px solid var(--border)">
+                <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:4px">Lucro Bruto</div>
+                <div style="font-family:var(--font-mono);font-size:1rem;font-weight:700;color:${lucroTotal>=0?'var(--success)':'var(--danger)'}">${lucroTotal<0?'− ':''}${fmt(Math.abs(lucroTotal))}</div>
+              </div>
+              <div style="background:var(--surface3);border-radius:8px;padding:12px;border:1px solid var(--border)">
+                <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:4px">− Desp. Operacionais</div>
+                <div style="font-family:var(--font-mono);font-size:1rem;font-weight:700;color:#FB923C">− ${fmt(totalOpex)}</div>
+              </div>
+              ${totalCompras>0?`<div style="background:var(--surface3);border-radius:8px;padding:10px 12px;border:1px dashed var(--border2)">
+                <div style="font-size:.68rem;color:var(--text-muted);margin-bottom:2px">Aquisição de Stock (não deduzido)</div>
+                <div style="font-family:var(--font-mono);font-size:.85rem;font-weight:600;color:var(--text-dim)">${fmt(totalCompras)}</div>
+                <div style="font-size:.63rem;color:var(--text-muted);margin-top:2px">Já reflectido no COGS quando vendido</div>
+              </div>`:''}
+              <div style="background:${resultadoLiquido>=0?'rgba(16,185,129,.08)':'rgba(239,68,68,.08)'};border-radius:8px;padding:12px;border:1px solid ${resultadoLiquido>=0?'rgba(16,185,129,.25)':'rgba(239,68,68,.25)'}">
+                <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:4px">= Resultado Líquido</div>
+                <div style="font-family:var(--font-mono);font-size:1.15rem;font-weight:800;color:${resultadoLiquido>=0?'var(--success)':'var(--danger)'}">${resultadoLiquido<0?'− ':''}${fmt(Math.abs(resultadoLiquido))}</div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+  }
+
   const mercados={};
   CACHE.vendas.forEach(v=>{mercados[v.mercado||'—']=(mercados[v.mercado||'—']||0)+Number(v.total||0);});
   const mercTotal=Object.values(mercados).reduce((s,v)=>s+v,0);
