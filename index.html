@@ -3368,16 +3368,41 @@ function renderAnalise(_paged=false){
   const custoTotal=vendas.reduce((s,v)=>s+(v.itens||[]).reduce((ss,it)=>{
     const p=produtos.find(x=>x.id===it.produto_id);return ss+(p?p.preco_custo*it.qty:0);
   },0),0);
-  const receitaTotal=vendas.reduce((s,v)=>s+Number(v.total||0),0);
-  const lucroTotal=receitaTotal-custoTotal;
-  const margemMedia=receitaTotal>0?Math.round(lucroTotal/receitaTotal*100):0;
+  // Receita Facturada = total das vendas do período (base de cálculo do lucro)
+  const receitaFacturada=vendas.reduce((s,v)=>s+Number(v.total||0),0);
+  // Receita Recebida = o que efectivamente entrou em caixa para essas vendas
+  const receitaRecebida=vendas.reduce((s,v)=>{
+    const sd=CACHE.vendasSaldo.find(x=>x.id===v.id);
+    const pago=sd?Number(sd.total_pago||0):(v.tipo==='pronto'?Number(v.total||0):0);
+    return s+pago;
+  },0);
+  const porCobrar=Math.max(0,receitaFacturada-receitaRecebida);
+  const pctRecebido=receitaFacturada>0?Math.round(receitaRecebida/receitaFacturada*100):100;
+  const lucroTotal=receitaFacturada-custoTotal;
+  const margemMedia=receitaFacturada>0?Math.round(lucroTotal/receitaFacturada*100):0;
   // Custo do stock actual (capital imobilizado em armazém ao preço de custo)
   const custoStockActual=(filtro==='todos'?CACHE.produtos:CACHE.produtos.filter(p=>p.mercado===filtro))
     .reduce((s,p)=>s+Number(p.preco_custo||0)*Number(p.stock||0),0);
   document.getElementById('kpi-analise').innerHTML=`
-    <div class="kpi-card" style="--kpi-color:var(--success)"><div class="kpi-label">Receita Total</div><div class="kpi-value">${fmtN(receitaTotal)}<small>Kz</small></div></div>
+    <div class="kpi-card" style="--kpi-color:var(--success)">
+      <div class="kpi-label">Facturado</div>
+      <div class="kpi-value">${fmtN(receitaFacturada)}<small>Kz</small></div>
+      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:.68rem;color:var(--text-muted)">✓ Recebido</span>
+          <span style="font-size:.75rem;font-weight:700;color:var(--success);font-family:var(--font-mono)">${fmtN(receitaRecebida)} Kz</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:.68rem;color:var(--text-muted)">${porCobrar>0?'⏳ Por cobrar':'✓ Totalmente pago'}</span>
+          <span style="font-size:.75rem;font-weight:700;color:${porCobrar>0?'var(--warning)':'var(--success)'};font-family:var(--font-mono)">${porCobrar>0?fmtN(porCobrar)+' Kz':''}</span>
+        </div>
+        <div style="height:4px;background:var(--border);border-radius:2px;margin-top:2px;overflow:hidden">
+          <div style="height:100%;width:${pctRecebido}%;background:${pctRecebido===100?'var(--success)':'var(--accent2)'};border-radius:2px;transition:width .4s ease"></div>
+        </div>
+      </div>
+    </div>
     <div class="kpi-card" style="--kpi-color:var(--warning)"><div class="kpi-label">COGS — Custo Vendido</div><div class="kpi-value">${fmtN(custoTotal)}<small>Kz</small></div></div>
-    <div class="kpi-card" style="--kpi-color:${lucroTotal>=0?'var(--success)':'var(--danger)'}"><div class="kpi-label">Lucro Bruto</div><div class="kpi-value">${lucroTotal<0?'−':''}${fmtN(Math.abs(lucroTotal))}<small>Kz</small></div><div style="font-size:.68rem;color:${custoTotal>0?'var(--text-muted)':'var(--warning)'};margin-top:4px">${custoTotal>0?'Receita − COGS':'⚠ Sem COGS registado'}</div></div>
+    <div class="kpi-card" style="--kpi-color:${lucroTotal>=0?'var(--success)':'var(--danger)'}"><div class="kpi-label">Lucro Bruto</div><div class="kpi-value">${lucroTotal<0?'−':''}${fmtN(Math.abs(lucroTotal))}<small>Kz</small></div><div style="font-size:.68rem;color:${custoTotal>0?'var(--text-muted)':'var(--warning)'};margin-top:4px">${custoTotal>0?'Facturado − COGS':'⚠ Sem COGS registado'}</div></div>
     <div class="kpi-card" style="--kpi-color:#A78BFA"><div class="kpi-label">Margem Média</div><div class="kpi-value">${margemMedia}<small>%</small></div></div>
     <div class="kpi-card" style="--kpi-color:#F472B6"><div class="kpi-label">Custo Stock Actual</div><div class="kpi-value">${fmtN(custoStockActual)}<small>Kz</small></div><div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">Capital imobilizado</div></div>`;
   const prodStats={};
