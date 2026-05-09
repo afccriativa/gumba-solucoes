@@ -1355,7 +1355,7 @@ textarea { resize: vertical; min-height: 70px; }
           <div id="pg-analise"></div>
         </div>
         <div class="card">
-          <div class="card-header"><span class="card-title">Distribuição por Mercado</span></div>
+          <div class="card-header"><span class="card-title">Análise por Mercado</span></div>
           <div class="card-body" id="analise-mercado"></div>
         </div>
       </div>
@@ -3510,13 +3510,59 @@ function renderAnalise(_paged=false){
     }
   }
 
-  const mercados={};
-  CACHE.vendas.forEach(v=>{mercados[v.mercado||'—']=(mercados[v.mercado||'—']||0)+Number(v.total||0);});
-  const mercTotal=Object.values(mercados).reduce((s,v)=>s+v,0);
-  document.getElementById('analise-mercado').innerHTML=Object.entries(mercados).map(([m,v])=>{
-    const pct=mercTotal>0?Math.round(v/mercTotal*100):0;
-    return `<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span class="text-sm">${m}</span><span class="mono text-sm text-accent">${pct}% — ${fmt(v)}</span></div><div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--accent);border-radius:4px"></div></div></div>`;
-  }).join('')||'<p class="text-muted text-sm">Sem dados.</p>';
+  // ── Análise por Mercado — receita + COGS + margem por mercado no período ──
+  // Usa todas as vendas do período (ignora filtro de mercado para poder comparar)
+  const vendasPeriodo = _filterByPeriod(CACHE.vendas);
+  const mercMap = {};
+  vendasPeriodo.forEach(v => {
+    const mk = v.mercado || '—';
+    if(!mercMap[mk]) mercMap[mk] = { receita:0, custo:0, numVendas:0 };
+    mercMap[mk].receita  += Number(v.total||0);
+    mercMap[mk].numVendas++;
+    (v.itens||[]).forEach(it => {
+      const p = produtos.find(x=>x.id===it.produto_id);
+      mercMap[mk].custo += (p?p.preco_custo:0)*it.qty;
+    });
+  });
+  const mercRows = Object.entries(mercMap).sort((a,b)=>b[1].receita-a[1].receita);
+  const mercMaxReceita = mercRows.length ? mercRows[0][1].receita : 1;
+  const mercTotalReceita = mercRows.reduce((s,[,v])=>s+v.receita,0);
+  document.getElementById('analise-mercado').innerHTML = mercRows.length ? `
+    <!-- Cabeçalho da tabela -->
+    <div style="display:grid;grid-template-columns:1fr 80px 80px 60px;gap:8px;padding:0 0 8px;border-bottom:1px solid var(--border);margin-bottom:12px">
+      <span style="font-size:.65rem;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted);font-weight:600">Mercado</span>
+      <span style="font-size:.65rem;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted);font-weight:600;text-align:right">Receita</span>
+      <span style="font-size:.65rem;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted);font-weight:600;text-align:right">Margem</span>
+      <span style="font-size:.65rem;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted);font-weight:600;text-align:right">%</span>
+    </div>
+    ${mercRows.map(([mk, d]) => {
+      const margem     = d.receita - d.custo;
+      const margemPct  = d.receita > 0 ? Math.round(margem / d.receita * 100) : 0;
+      const receitaPct = mercTotalReceita > 0 ? Math.round(d.receita / mercTotalReceita * 100) : 0;
+      const barRecPct  = Math.round(d.receita / mercMaxReceita * 100);
+      const barMarPct  = d.receita > 0 ? Math.round(margem / d.receita * barRecPct) : 0;
+      const cor        = margemPct > 30 ? 'var(--success)' : margemPct > 15 ? 'var(--warning)' : 'var(--danger)';
+      return `<div style="margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:1fr 80px 80px 60px;gap:8px;align-items:center;margin-bottom:5px">
+          <span style="font-size:.83rem;font-weight:600">${mk}
+            <span style="font-size:.68rem;color:var(--text-muted);font-weight:400;margin-left:4px">${d.numVendas} venda(s)</span>
+          </span>
+          <span style="font-family:var(--font-mono);font-size:.75rem;text-align:right;color:var(--text-dim)">${fmt(d.receita)}</span>
+          <span style="font-family:var(--font-mono);font-size:.75rem;text-align:right;color:${cor};font-weight:700">${margem<0?'−':''}${fmt(Math.abs(margem))}</span>
+          <span style="font-family:var(--font-mono);font-size:.75rem;text-align:right;color:${cor};font-weight:700">${margemPct}%</span>
+        </div>
+        <!-- Barra dupla: cinzento=receita, cor=margem -->
+        <div style="position:relative;background:var(--border);border-radius:4px;height:7px;overflow:hidden">
+          <div style="position:absolute;left:0;top:0;height:100%;width:${barRecPct}%;background:var(--border2);border-radius:4px"></div>
+          <div style="position:absolute;left:0;top:0;height:100%;width:${Math.max(0,barMarPct)}%;background:${cor};border-radius:4px;transition:width .4s ease"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:3px">
+          <span style="font-size:.62rem;color:var(--text-muted)">${receitaPct}% da receita total</span>
+          <span style="font-size:.62rem;color:${cor}">${d.custo>0?'margem real':'sem COGS'}</span>
+        </div>
+      </div>`;
+    }).join('')}
+  ` : '<p class="text-muted text-sm">Sem dados de vendas para o período.</p>';
 }
 
 // ═══════════════════════════════════════════════════════════════════
