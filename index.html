@@ -1367,6 +1367,17 @@ textarea { resize: vertical; min-height: 70px; }
         </div>
         <div class="card-body" id="analise-despesas"></div>
       </div>
+
+      <!-- ── Rotação de Stock ── -->
+      <div class="card" id="card-rotacao-stock" style="margin-top:0">
+        <div class="card-header">
+          <span class="card-title">Rotação de Stock</span>
+          <span id="rotacao-header-info" style="font-size:.72rem;color:var(--text-muted)"></span>
+        </div>
+        <div class="card-body" id="rotacao-body">
+          <p style="color:var(--text-muted);font-size:.85rem">A calcular…</p>
+        </div>
+      </div>
     </div>
 
     <!-- ══════════════════════════════════════════════ FORNECEDORES -->
@@ -3563,6 +3574,203 @@ function renderAnalise(_paged=false){
       </div>`;
     }).join('')}
   ` : '<p class="text-muted text-sm">Sem dados de vendas para o período.</p>';
+
+  // Rotação de Stock — executar sempre que a análise re-renderiza
+  renderRotacaoStock(vendas, produtos);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  ROTAÇÃO DE STOCK
+//  Métrica: DSI — Days Sales of Inventory (por produto e agregado)
+//  Fórmula: DSI = (Valor Stock em Custo) / (COGS Diário do Período)
+//  COGS Diário = COGS Vendido no Período / Dias do Período
+// ═══════════════════════════════════════════════════════════════════
+function renderRotacaoStock(vendasFiltradas, produtos) {
+  const el = document.getElementById('rotacao-body');
+  const headerInfo = document.getElementById('rotacao-header-info');
+  if (!el) return;
+
+  // ── 1. Calcular dias do período ──────────────────────────────────
+  let diasPeriodo = 30; // default
+  if (_period.from && _period.to) {
+    const d0 = new Date(_period.from), d1 = new Date(_period.to);
+    diasPeriodo = Math.max(1, Math.round((d1 - d0) / 86400000) + 1);
+  } else if (_period.type === 'all') {
+    // Usar histórico real: primeiro até último registo de venda
+    const datas = CACHE.vendas.map(v => v.data).filter(Boolean).sort();
+    if (datas.length >= 2) {
+      const d0 = new Date(datas[0]), d1 = new Date(datas[datas.length - 1]);
+      diasPeriodo = Math.max(1, Math.round((d1 - d0) / 86400000) + 1);
+    } else {
+      diasPeriodo = 365;
+    }
+  }
+
+  // ── 2. Agregar vendas por produto_id ────────────────────────────
+  const vendaMap = {}; // produto_id → { qtyVendida, cogsVendido }
+  vendasFiltradas.forEach(v => {
+    (v.itens || []).forEach(it => {
+      const p = produtos.find(x => x.id === it.produto_id);
+      if (!vendaMap[it.produto_id]) vendaMap[it.produto_id] = { qtyVendida: 0, cogsVendido: 0 };
+      vendaMap[it.produto_id].qtyVendida  += Number(it.qty || 0);
+      vendaMap[it.produto_id].cogsVendido += (p ? Number(p.preco_custo || 0) : 0) * Number(it.qty || 0);
+    });
+  });
+
+  // ── 3. Calcular DSI por produto ─────────────────────────────────
+  const linhas = [];
+  produtos.forEach(p => {
+    const stockQty    = Number(p.stock || 0);
+    const custUnit    = Number(p.preco_custo || 0);
+    const valorStock  = stockQty * custUnit;
+
+    const vd          = vendaMap[p.id] || { qtyVendida: 0, cogsVendido: 0 };
+    const cogsVendido = vd.cogsVendido;
+    const qtyVendida  = vd.qtyVendida;
+    const cogsDiario  = cogsVendido / diasPeriodo;
+
+    // DSI: infinito se cogsDiario = 0 (nenhuma venda no período)
+    const dsi = cogsDiario > 0 ? valorStock / cogsDiario : (stockQty > 0 ? Infinity : null);
+
+    // Só incluir produtos com stock > 0 (nada a gerir num produto esgotado)
+    if (stockQty <= 0) return;
+
+    linhas.push({ p, stockQty, custUnit, valorStock, qtyVendida, cogsVendido, dsi });
+  });
+
+  if (linhas.length === 0) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:.85rem;padding:8px 0">Sem produtos com stock em armazém.</p>';
+    if (headerInfo) headerInfo.textContent = '';
+    return;
+  }
+
+  // Ordenar: pior primeiro (Infinity → maior dsi → menor)
+  linhas.sort((a, b) => {
+    if (a.dsi === Infinity && b.dsi === Infinity) return b.valorStock - a.valorStock;
+    if (a.dsi === Infinity) return -1;
+    if (b.dsi === Infinity) return 1;
+    return b.dsi - a.dsi;
+  });
+
+  // ── 4. KPIs agregados ───────────────────────────────────────────
+  const totalCustoStock  = linhas.reduce((s, l) => s + l.valorStock, 0);
+  const totalCogsVendido = linhas.reduce((s, l) => s + l.cogsVendido, 0);
+  const giroTotal        = totalCustoStock > 0 ? (totalCogsVendido / totalCustoStock) * (365 / diasPeriodo) : 0;
+  // DSI médio ponderado pelo valor do stock
+  const dsiMedPonderado  = totalCogsVendido > 0
+    ? totalCustoStock / (totalCogsVendido / diasPeriodo)
+    : null;
+
+  const prodEmRisco      = linhas.filter(l => l.dsi === Infinity || l.dsi > 60);
+  const capitalEmRisco   = prodEmRisco.reduce((s, l) => s + l.valorStock, 0);
+  const nRisco           = prodEmRisco.length;
+
+  // ── 5. Classificação e cor ──────────────────────────────────────
+  function classifDSI(dsi) {
+    if (dsi === null)    return { label: '—',              cor: 'var(--text-muted)',  bg: 'transparent',                       badge: 'badge-neutral' };
+    if (dsi === Infinity)return { label: 'Sem rotação',    cor: 'var(--danger)',      bg: 'rgba(239,68,68,.08)',               badge: 'badge-danger'  };
+    if (dsi > 120)       return { label: 'Stock parado',   cor: 'var(--danger)',      bg: 'rgba(239,68,68,.08)',               badge: 'badge-danger'  };
+    if (dsi > 60)        return { label: 'Stock lento',    cor: 'var(--warning)',     bg: 'rgba(245,158,11,.08)',              badge: 'badge-warning' };
+    if (dsi > 30)        return { label: 'Atenção',        cor: '#60A5FA',            bg: 'rgba(96,165,250,.08)',              badge: 'badge-info'    };
+    return               { label: 'Rotação saudável', cor: 'var(--success)',     bg: 'rgba(16,185,129,.08)',              badge: 'badge-success' };
+  }
+
+  // ── 6. Render KPIs de topo ──────────────────────────────────────
+  const dsiMedLabel = dsiMedPonderado !== null
+    ? (dsiMedPonderado === Infinity ? '∞' : Math.round(dsiMedPonderado) + ' dias')
+    : 'N/D';
+  const dsiMedCor = dsiMedPonderado === null ? 'var(--text-muted)'
+    : dsiMedPonderado > 60 ? 'var(--danger)'
+    : dsiMedPonderado > 30 ? 'var(--warning)'
+    : 'var(--success)';
+  const giroLabel = giroTotal > 0 ? giroTotal.toFixed(1) + '×' : 'N/D';
+
+  if (headerInfo) headerInfo.textContent = `${diasPeriodo} dias de período · ${linhas.length} produtos em stock`;
+
+  el.innerHTML = `
+    <!-- KPIs Rotação -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+      <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:14px 16px">
+        <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);font-weight:600;margin-bottom:6px">Giro Anualizado</div>
+        <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:${giroTotal>4?'var(--success)':giroTotal>2?'var(--warning)':'var(--danger)'};line-height:1">${giroLabel}</div>
+        <div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">vezes por ano</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:14px 16px">
+        <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);font-weight:600;margin-bottom:6px">DSI Médio Pond.</div>
+        <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:${dsiMedCor};line-height:1">${dsiMedLabel}</div>
+        <div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">dias médios de stock</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:14px 16px;border-color:${nRisco>0?'rgba(239,68,68,.3)':'var(--border2)'}">
+        <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);font-weight:600;margin-bottom:6px">Produtos em Risco</div>
+        <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:${nRisco>0?'var(--danger)':'var(--success)'};line-height:1">${nRisco}</div>
+        <div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">DSI > 60 dias ou sem rotação</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:14px 16px;border-color:${capitalEmRisco>0?'rgba(239,68,68,.3)':'var(--border2)'}">
+        <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);font-weight:600;margin-bottom:6px">Capital em Risco</div>
+        <div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:800;color:${capitalEmRisco>0?'var(--danger)':'var(--success)'};line-height:1">${fmtN(capitalEmRisco)}<span style="font-size:.72rem;font-weight:400;color:var(--text-muted);margin-left:2px">Kz</span></div>
+        <div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">imobilizado sem escoamento</div>
+      </div>
+    </div>
+
+    <!-- Legenda de semáforo -->
+    <div style="display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap">
+      <span style="font-size:.68rem;color:var(--success);font-weight:600">● &lt; 30 dias — Saudável</span>
+      <span style="font-size:.68rem;color:#60A5FA;font-weight:600">● 30–60 dias — Atenção</span>
+      <span style="font-size:.68rem;color:var(--warning);font-weight:600">● 60–120 dias — Lento</span>
+      <span style="font-size:.68rem;color:var(--danger);font-weight:600">● &gt; 120 dias / Sem rot. — Parado</span>
+    </div>
+
+    <!-- Tabela de produtos -->
+    <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th style="text-align:right">Stock (un.)</th>
+          <th style="text-align:right">Custo Stock</th>
+          <th style="text-align:right">Vendido (un.)</th>
+          <th style="text-align:right">COGS Período</th>
+          <th style="text-align:center">DSI</th>
+          <th style="text-align:center">Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${linhas.map(l => {
+          const cls = classifDSI(l.dsi);
+          const dsiTxt = l.dsi === null ? '—' : l.dsi === Infinity ? '∞' : Math.round(l.dsi) + ' d';
+          // Barra visual de DSI (cap a 120 dias para proporções)
+          const dsiCap = l.dsi === Infinity ? 120 : Math.min(l.dsi || 0, 120);
+          const barPct = Math.round(dsiCap / 120 * 100);
+          return `<tr style="background:${cls.bg}">
+            <td>
+              <strong>${l.p.nome}</strong>
+              <div style="font-size:.68rem;color:var(--text-muted);margin-top:2px">${l.p.categoria || '—'}</div>
+            </td>
+            <td class="mono" style="text-align:right">${l.stockQty}</td>
+            <td class="mono" style="text-align:right">${fmt(l.valorStock)}</td>
+            <td class="mono" style="text-align:right;color:${l.qtyVendida>0?'var(--text)':'var(--text-muted)'}">${l.qtyVendida || '—'}</td>
+            <td class="mono" style="text-align:right;color:${l.cogsVendido>0?'var(--text-dim)':'var(--text-muted)'}">${l.cogsVendido>0?fmt(l.cogsVendido):'—'}</td>
+            <td style="text-align:center">
+              <div style="font-family:var(--font-mono);font-size:.9rem;font-weight:700;color:${cls.cor}">${dsiTxt}</div>
+              <div style="background:var(--border);border-radius:2px;height:3px;margin-top:4px;overflow:hidden;width:64px;margin-left:auto;margin-right:auto">
+                <div style="height:100%;width:${barPct}%;background:${cls.cor};border-radius:2px;transition:width .4s ease"></div>
+              </div>
+            </td>
+            <td style="text-align:center"><span class="badge ${cls.badge}">${cls.label}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    </div>
+
+    <!-- Nota metodológica -->
+    <div style="margin-top:14px;padding:10px 14px;background:var(--surface3);border-radius:8px;border:1px solid var(--border);font-size:.7rem;color:var(--text-muted);line-height:1.6">
+      <strong style="color:var(--text-dim)">Metodologia:</strong>
+      DSI = Valor de Stock em Custo ÷ (COGS Vendido no Período ÷ Dias do Período).
+      Produtos sem vendas no período têm DSI infinito — capital imobilizado sem escoamento confirmado.
+      Giro anualizado = (COGS Período ÷ Custo Stock) × (365 ÷ Dias Período).
+    </div>
+  `;
 }
 
 // ═══════════════════════════════════════════════════════════════════
