@@ -3375,6 +3375,90 @@ function applyCustomPeriod() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  COMPARAÇÃO DE PERÍODOS — motor de métricas e período anterior
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Calcula as métricas financeiras principais para um intervalo from→to.
+ * Reutilizável por renderAnalise (período actual) e comparação (período anterior).
+ */
+function _calcPeriodMetrics(from, to, filtro) {
+  const CATS_OPEX = ['Transporte','Alfândega','Salário','Aluguer','Comunicações','Bancário','Outro'];
+  const produtos = CACHE.produtos;
+  let vendas = CACHE.vendas;
+  if (filtro !== 'todos') vendas = vendas.filter(v => v.mercado === filtro);
+  if (from || to) {
+    vendas = vendas.filter(v => {
+      const d = v.data || '';
+      if (!d) return false;
+      if (from && d < from) return false;
+      if (to   && d > to  ) return false;
+      return true;
+    });
+  }
+  const receita = vendas.reduce((s,v) => s + Number(v.total||0), 0);
+  const cogs    = vendas.reduce((s,v) => s + (v.itens||[]).reduce((ss,it) => {
+    const p = produtos.find(x => x.id === it.produto_id);
+    return ss + (p ? Number(p.preco_custo||0) * it.qty : 0);
+  }, 0), 0);
+  const lucro   = receita - cogs;
+  const opex    = CACHE.caixa.filter(m => {
+    if (m.tipo !== 'saida') return false;
+    if (!CATS_OPEX.includes(m.categoria)) return false;
+    const d = m.data || '';
+    if (from && d < from) return false;
+    if (to   && d > to  ) return false;
+    return true;
+  }).reduce((s,m) => s + Number(m.valor||0), 0);
+  return { receita, cogs, lucro, opex, resultado: lucro - opex, nVendas: vendas.length };
+}
+
+/**
+ * Devolve { from, to, label } do período anterior equivalente ao _period actual.
+ * Devolve null quando não existe comparação significativa (ex: "Todos").
+ */
+function _prevPeriodRange() {
+  const { type, from, to } = _period;
+  if (type === 'all') return null;
+  const pad = n => String(n).padStart(2,'0');
+  const iso = (y,m,d) => `${y}-${pad(m+1)}-${pad(d)}`;
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  if (type === 'custom' && from && to) {
+    const d0 = new Date(from), d1 = new Date(to);
+    const dias = Math.max(1, Math.round((d1-d0)/86400000)+1);
+    const prevTo   = new Date(d0); prevTo.setDate(prevTo.getDate()-1);
+    const prevFrom = new Date(prevTo); prevFrom.setDate(prevFrom.getDate()-dias+1);
+    return { from: prevFrom.toISOString().slice(0,10), to: prevTo.toISOString().slice(0,10), label: `${dias}d anteriores` };
+  }
+  switch(type) {
+    case 'today': {
+      const y2 = new Date(now); y2.setDate(y2.getDate()-1);
+      const s = y2.toISOString().slice(0,10);
+      return { from: s, to: s, label: 'ontem' };
+    }
+    case 'week': {
+      const day = now.getDay()||7;
+      const mon = new Date(now); mon.setDate(now.getDate()-day+1);
+      const prevSun = new Date(mon); prevSun.setDate(mon.getDate()-1);
+      const prevMon = new Date(prevSun); prevMon.setDate(prevSun.getDate()-6);
+      return { from: prevMon.toISOString().slice(0,10), to: prevSun.toISOString().slice(0,10), label: 'semana anterior' };
+    }
+    case 'month': {
+      const pm = m===0?11:m-1, py = m===0?y-1:y;
+      return { from: iso(py,pm,1), to: iso(py,pm,new Date(py,pm+1,0).getDate()), label: 'mês anterior' };
+    }
+    case 'quarter': {
+      const q = Math.floor(m/3), pq = q===0?3:q-1, py = q===0?y-1:y;
+      return { from: iso(py,pq*3,1), to: iso(py,pq*3+2,new Date(py,pq*3+3,0).getDate()), label: 'trimestre anterior' };
+    }
+    case 'year':
+      return { from: iso(y-1,0,1), to: iso(y-1,11,31), label: 'ano anterior' };
+    default: return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  ANÁLISE
 // ═══════════════════════════════════════════════════════════════════
 function renderAnalise(_paged=false){
@@ -3419,6 +3503,33 @@ function renderAnalise(_paged=false){
   // Breakdown por categoria para o painel de despesas
   const opexPorCat={};
   despesasOpex.forEach(m=>{opexPorCat[m.categoria]=(opexPorCat[m.categoria]||0)+Number(m.valor||0);});
+
+  // ── Comparação com período anterior ─────────────────────────────
+  const prevRange = _prevPeriodRange();
+  const prev      = prevRange ? _calcPeriodMetrics(prevRange.from, prevRange.to, filtro) : null;
+
+  /**
+   * Gera o chip visual de delta (↑↓ %) para um par actual/anterior.
+   * invertedGood=true em custos: subida é mau, descida é bom.
+   */
+  function _deltaChip(curr, prevVal, invertedGood=false) {
+    if (!prev || prevVal === undefined) return '';
+    if (prevVal === 0 && curr === 0)
+      return `<div style="font-size:.66rem;color:var(--text-muted);margin-top:5px;padding-top:5px;border-top:1px solid var(--border)">= igual ao ${prevRange.label}</div>`;
+    if (prevVal === 0) return '';
+    const diff = curr - prevVal;
+    const pct  = Math.round(Math.abs(diff) / Math.abs(prevVal) * 100);
+    if (pct === 0) return `<div style="font-size:.66rem;color:var(--text-muted);margin-top:5px;padding-top:5px;border-top:1px solid var(--border)">≈ estável vs ${prevRange.label}</div>`;
+    const isPositive = invertedGood ? diff < 0 : diff > 0;
+    const cor  = isPositive ? 'var(--success)' : 'var(--danger)';
+    const arrow = diff > 0 ? '↑' : '↓';
+    const sign  = diff > 0 ? '+' : '−';
+    return `<div style="display:flex;align-items:center;gap:5px;margin-top:5px;padding-top:5px;border-top:1px solid var(--border)">
+      <span style="font-size:.8rem;font-weight:800;color:${cor};line-height:1">${arrow}</span>
+      <span style="font-size:.72rem;font-weight:700;color:${cor};font-family:var(--font-mono)">${sign}${pct}%</span>
+      <span style="font-size:.64rem;color:var(--text-muted);flex:1">${sign}${fmtN(Math.abs(diff))} Kz vs ${prevRange.label}</span>
+    </div>`;
+  }
 
   // ── Margem por produto — calculado ANTES dos KPIs para poder alimentar o card ──
   const prodStats={};
@@ -3483,16 +3594,32 @@ function renderAnalise(_paged=false){
           <div style="height:100%;width:${pctRecebido}%;background:${pctRecebido===100?'var(--success)':'var(--accent2)'};border-radius:2px;transition:width .4s ease"></div>
         </div>
       </div>
+      ${_deltaChip(receitaFacturada, prev?.receita)}
     </div>
-    <div class="kpi-card" style="--kpi-color:var(--warning)"><div class="kpi-label">COGS — Custo Vendido</div><div class="kpi-value">${fmtN(custoTotal)}<small>Kz</small></div></div>
-    <div class="kpi-card" style="--kpi-color:${lucroTotal>=0?'var(--success)':'var(--danger)'}"><div class="kpi-label">Lucro Bruto</div><div class="kpi-value">${lucroTotal<0?'−':''}${fmtN(Math.abs(lucroTotal))}<small>Kz</small></div><div style="font-size:.68rem;color:${custoTotal>0?'var(--text-muted)':'var(--warning)'};margin-top:4px">${custoTotal>0?'Facturado − COGS':'⚠ Sem COGS registado'}</div></div>
+    <div class="kpi-card" style="--kpi-color:var(--warning)">
+      <div class="kpi-label">COGS — Custo Vendido</div>
+      <div class="kpi-value">${fmtN(custoTotal)}<small>Kz</small></div>
+      ${_deltaChip(custoTotal, prev?.cogs, true)}
+    </div>
+    <div class="kpi-card" style="--kpi-color:${lucroTotal>=0?'var(--success)':'var(--danger)'}">
+      <div class="kpi-label">Lucro Bruto</div>
+      <div class="kpi-value">${lucroTotal<0?'−':''}${fmtN(Math.abs(lucroTotal))}<small>Kz</small></div>
+      <div style="font-size:.68rem;color:${custoTotal>0?'var(--text-muted)':'var(--warning)'};margin-top:4px">${custoTotal>0?'Facturado − COGS':'⚠ Sem COGS registado'}</div>
+      ${_deltaChip(lucroTotal, prev?.lucro)}
+    </div>
     <div class="kpi-card" style="--kpi-color:${_margemRedundante?'var(--border2)':'#A78BFA'}">${_margemCardInner}</div>
     <div class="kpi-card" style="--kpi-color:#F472B6"><div class="kpi-label">Custo Stock Actual</div><div class="kpi-value">${fmtN(custoStockActual)}<small>Kz</small></div><div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">Capital imobilizado</div></div>
-    <div class="kpi-card" style="--kpi-color:#FB923C"><div class="kpi-label">Desp. Operacionais</div><div class="kpi-value">${fmtN(totalOpex)}<small>Kz</small></div><div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">${despesasOpex.length} movimento(s)</div></div>
+    <div class="kpi-card" style="--kpi-color:#FB923C">
+      <div class="kpi-label">Desp. Operacionais</div>
+      <div class="kpi-value">${fmtN(totalOpex)}<small>Kz</small></div>
+      <div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">${despesasOpex.length} movimento(s)</div>
+      ${_deltaChip(totalOpex, prev?.opex, true)}
+    </div>
     <div class="kpi-card" style="--kpi-color:${resultadoLiquido>=0?'var(--success)':'var(--danger)'}">
       <div class="kpi-label">Resultado Líquido</div>
       <div class="kpi-value" style="color:${resultadoLiquido>=0?'var(--success)':'var(--danger)'}">${resultadoLiquido<0?'−':''}${fmtN(Math.abs(resultadoLiquido))}<small>Kz</small></div>
       <div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">Lucro Bruto − OpEx</div>
+      ${_deltaChip(resultadoLiquido, prev?.resultado)}
     </div>`;
   const rows=Object.entries(prodStats).sort((a,b)=>b[1].venda-a[1].venda);
   const totalRows=rows.length;
