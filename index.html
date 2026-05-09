@@ -2272,7 +2272,13 @@ const CACHE = { produtos:[], clientes:[], fornecedores:[], vendas:[], cobrancas:
 
 // Helpers Supabase
 async function sbGet(table, select='*') {
-  const { data, error } = await sb.from(table).select(select).order('criado_em', { ascending: false });
+  // Views como vendas_saldo não têm criado_em — usar order opcional
+  const tablesWithOrder = ['produtos','clientes','fornecedores','vendas','venda_itens','cobrancas','prestacoes','importacoes','caixa','pagamentos','stock_movimentos','perfis'];
+  let query = sb.from(table).select(select);
+  if(tablesWithOrder.includes(table)) {
+    query = query.order('criado_em', { ascending: false });
+  }
+  const { data, error } = await query;
   if (error) { console.warn(table, error.message); return []; }
   return data || [];
 }
