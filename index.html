@@ -2772,7 +2772,7 @@ async function saveVenda() {
       CACHE.cobrancas.unshift(cob);
     }
     // Actualizar cache
-    venda.itens=carrinho.map(c=>({nome_snapshot:c.nome,qty:c.qty,preco_unitario:c.preco}));
+    venda.itens=carrinho.map(c=>({produto_id:c.id,nome_snapshot:c.nome,qty:c.qty,preco_unitario:c.preco}));
     CACHE.vendas.unshift(venda);
     // Registar automaticamente na caixa se venda a pronto
     if(tipo === 'pronto') {
@@ -3200,11 +3200,15 @@ function renderAnalise(_paged=false){
   const receitaTotal=vendas.reduce((s,v)=>s+Number(v.total||0),0);
   const lucroTotal=receitaTotal-custoTotal;
   const margemMedia=receitaTotal>0?Math.round(lucroTotal/receitaTotal*100):0;
+  // Custo do stock actual (capital imobilizado em armazém ao preço de custo)
+  const custoStockActual=(filtro==='todos'?CACHE.produtos:CACHE.produtos.filter(p=>p.mercado===filtro))
+    .reduce((s,p)=>s+Number(p.preco_custo||0)*Number(p.stock||0),0);
   document.getElementById('kpi-analise').innerHTML=`
     <div class="kpi-card" style="--kpi-color:var(--success)"><div class="kpi-label">Receita Total</div><div class="kpi-value">${fmtN(receitaTotal)}<small>Kz</small></div></div>
-    <div class="kpi-card" style="--kpi-color:var(--warning)"><div class="kpi-label">Custo Total</div><div class="kpi-value">${fmtN(custoTotal)}<small>Kz</small></div></div>
-    <div class="kpi-card" style="--kpi-color:var(--accent2)"><div class="kpi-label">Lucro Bruto</div><div class="kpi-value">${fmtN(lucroTotal)}<small>Kz</small></div></div>
-    <div class="kpi-card" style="--kpi-color:#A78BFA"><div class="kpi-label">Margem Média</div><div class="kpi-value">${margemMedia}<small>%</small></div></div>`;
+    <div class="kpi-card" style="--kpi-color:var(--warning)"><div class="kpi-label">COGS — Custo Vendido</div><div class="kpi-value">${fmtN(custoTotal)}<small>Kz</small></div></div>
+    <div class="kpi-card" style="--kpi-color:${lucroTotal>=0?'var(--success)':'var(--danger)'}"><div class="kpi-label">Lucro Bruto</div><div class="kpi-value">${lucroTotal<0?'−':''}${fmtN(Math.abs(lucroTotal))}<small>Kz</small></div><div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">Receita − COGS</div></div>
+    <div class="kpi-card" style="--kpi-color:#A78BFA"><div class="kpi-label">Margem Média</div><div class="kpi-value">${margemMedia}<small>%</small></div></div>
+    <div class="kpi-card" style="--kpi-color:#F472B6"><div class="kpi-label">Custo Stock Actual</div><div class="kpi-value">${fmtN(custoStockActual)}<small>Kz</small></div><div style="font-size:.68rem;color:var(--text-muted);margin-top:4px">Capital imobilizado</div></div>`;
   const prodStats={};
   vendas.forEach(v=>(v.itens||[]).forEach(it=>{
     const p=produtos.find(x=>x.id===it.produto_id);
