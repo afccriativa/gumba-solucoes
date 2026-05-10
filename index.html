@@ -4921,7 +4921,11 @@ function _filtrarVendasRelatorio() {
   // — filtros de dados —
   if(mercado !== 'todos') vendas = vendas.filter(v => v.mercado === mercado);
   if(cliente) vendas = vendas.filter(v => v.cliente_id === cliente);
-  if(estado !== 'todos') vendas = vendas.filter(v => v.estado === estado);
+  if(estado !== 'todos') vendas = vendas.filter(v => {
+    const sv = CACHE.vendasSaldo?.find(s => s.id === v.id);
+    const ep = sv ? sv.estado_pagamento : (v.tipo === 'pronto' ? 'Pago' : 'Pendente');
+    return ep.toLowerCase() === estado;
+  });
   if(tipoV !== 'todos') vendas = vendas.filter(v => v.tipo === tipoV);
 
   return vendas.sort((a,b) => (b.data||'').localeCompare(a.data||''));
@@ -5093,7 +5097,11 @@ async function gerarRelatorio() {
       const lucro  = faturacao - custoTotal;
       const ticket = vendas.length > 0 ? Math.round(faturacao / vendas.length) : 0;
       const margem = faturacao > 0 ? Math.round((lucro / faturacao) * 100) : 0;
-      const pagas  = vendas.filter(v => v.estado === 'pago').length;
+      const pagas  = vendas.filter(v => {
+        const sv = CACHE.vendasSaldo?.find(s => s.id === v.id);
+        const ep = sv ? sv.estado_pagamento : (v.tipo === 'pronto' ? 'Pago' : 'Pendente');
+        return ep === 'Pago';
+      }).length;
 
       _titulo('RESUMO DO PERÍODO');
       const kpis = [
@@ -5130,14 +5138,15 @@ async function gerarRelatorio() {
       if(vendas.length > 0) {
         const rows = vendas.map(v => {
           const saldoObj = CACHE.vendasSaldo?.find(s => s.id === v.id);
-          const saldo = saldoObj ? Number(saldoObj.saldo_devedor||0) : 0;
+          const saldo = saldoObj ? Number(saldoObj.saldo_pendente||0) : (v.tipo==='pronto'?0:Number(v.total||0));
+          const estadoPag = saldoObj ? saldoObj.estado_pagamento : (v.tipo==='pronto'?'Pago':'Pendente');
           return [
             v.data || '---',
             nomeCliente(v.cliente_id) || '---',
             (v.itens||[]).map(i => i.qty+'x '+i.nome_snapshot).join(', ') || '---',
             Number(v.total||0).toLocaleString('pt-AO') + ' Kz',
             saldo > 0 ? Number(saldo).toLocaleString('pt-AO') + ' Kz' : '—',
-            v.estado ? v.estado.charAt(0).toUpperCase()+v.estado.slice(1) : '---',
+            estadoPag || '---',
             v.pagamento || '---',
             v.tipo === 'parcelada' ? 'Parcelada' : 'Pronto',
           ];
@@ -5208,8 +5217,7 @@ async function gerarRelatorio() {
         stats[cid].count++;
         stats[cid].total += Number(v.total||0);
         const sv = CACHE.vendasSaldo?.find(s=>s.id===v.id);
-        const saldo = sv ? Number(sv.saldo_devedor||0) : 0;
-        stats[cid].pago += Number(v.total||0) - saldo;
+        stats[cid].pago += sv ? Number(sv.total_pago||0) : (v.tipo==='pronto'?Number(v.total||0):0);
       });
       const rows = Object.values(stats)
         .sort((a,b)=>b.total-a.total).slice(0,5)
