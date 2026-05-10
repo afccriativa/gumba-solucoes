@@ -1032,29 +1032,76 @@ textarea { resize: vertical; min-height: 70px; }
 }
 
 /* ─── RELATORIO MODAL ─── */
+/* ─── MODAL RELATÓRIO — redesign ─── */
 .rel-doc-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 14px; border-radius: 7px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px; border-radius: 9px;
   border: 1px solid var(--border2); background: var(--surface2);
-  color: var(--text-dim); font-size: .78rem; font-weight: 600;
-  cursor: pointer; transition: all .15s; font-family: var(--font-body);
+  color: var(--text-dim); cursor: pointer; transition: all .18s;
+  font-family: var(--font-body); text-align: left;
 }
-.rel-doc-btn:hover { background: var(--surface3); color: var(--text); }
+.rel-doc-btn:hover { background: var(--surface3); border-color: var(--border2); color: var(--text); }
 .rel-doc-btn.active {
-  background: var(--accent-glow); color: var(--accent2);
-  border-color: rgba(56,189,248,.35);
+  background: rgba(37,99,235,.1); border-color: rgba(37,99,235,.38); color: var(--text);
+}
+.rel-doc-btn-icon {
+  width: 30px; height: 30px; border-radius: 7px;
+  background: var(--surface3); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--text-muted); transition: all .18s;
+}
+.rel-doc-btn.active .rel-doc-btn-icon { background: rgba(37,99,235,.18); color: var(--accent2); }
+.rel-doc-btn-title { font-size: .8rem; font-weight: 700; font-family: var(--font-display); line-height: 1; margin-bottom: 3px; }
+.rel-doc-btn-desc  { font-size: .67rem; color: var(--text-muted); line-height: 1; }
+.rel-doc-btn.active .rel-doc-btn-desc { color: var(--text-dim); }
+.rel-type-bar { padding: 0 24px 16px; border-bottom: 1px solid var(--border); }
+.rel-type-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.rel-section-title {
+  display: flex; align-items: center; gap: 7px;
+  font-size: .67rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 10px;
+}
+.rel-section-title svg { flex-shrink: 0; }
+.rel-section-group { margin-bottom: 16px; }
+.rel-field-lbl {
+  font-size: .7rem; color: var(--text-muted); margin-bottom: 4px;
+  display: block; font-weight: 500; text-transform: none; letter-spacing: 0;
 }
 .rel-chk-lbl {
-  display: flex; align-items: center; gap: 8px;
-  cursor: pointer; font-size: .81rem;
-  text-transform: none; letter-spacing: 0; font-weight: 400;
-  padding: 6px 10px; border-radius: 6px; border: 1px solid transparent;
-  color: var(--text-dim); transition: all .13s;
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 9px; border-radius: 7px; border: 1px solid transparent;
+  cursor: pointer; transition: all .15s; color: var(--text-dim);
+  font-size: .79rem; font-weight: 500; font-family: var(--font-body);
+  text-transform: none; letter-spacing: 0;
 }
-.rel-chk-lbl:hover { background: var(--surface3); color: var(--text); border-color: var(--border); }
-.rel-chk-lbl input:checked ~ span, .rel-chk-lbl:has(input:checked) { color: var(--text); }
-.rel-chk-lbl:has(input:checked) { border-color: var(--border2); background: var(--surface2); }
-.rel-chk-icon { font-size: .85rem; }
+.rel-chk-lbl:hover { background: var(--surface3); border-color: var(--border); color: var(--text); }
+.rel-chk-lbl:has(input:checked) { background: var(--surface2); border-color: var(--border2); color: var(--text); }
+.rel-chk-lbl input[type="checkbox"] { display: none; }
+.rel-chk-ico {
+  width: 24px; height: 24px; border-radius: 6px; background: var(--surface3);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  color: var(--text-muted); transition: all .15s;
+}
+.rel-chk-lbl:has(input:checked) .rel-chk-ico { background: rgba(37,99,235,.15); color: var(--accent2); }
+.rel-chk-txt { flex: 1; line-height: 1.25; }
+.rel-toggle {
+  width: 28px; height: 16px; background: var(--surface3);
+  border: 1px solid var(--border2); border-radius: 999px;
+  position: relative; flex-shrink: 0; transition: all .18s;
+}
+.rel-toggle::after {
+  content: ''; position: absolute; width: 10px; height: 10px;
+  background: var(--text-muted); border-radius: 50%; top: 2px; left: 2px; transition: all .18s;
+}
+.rel-chk-lbl:has(input:checked) .rel-toggle { background: var(--accent); border-color: var(--accent); }
+.rel-chk-lbl:has(input:checked) .rel-toggle::after { background: #fff; left: 14px; }
+.rel-count-badge {
+  margin-left: auto; font-size: .65rem; font-family: var(--font-mono); font-weight: 700;
+  background: var(--accent-glow); color: var(--accent2);
+  border: 1px solid rgba(56,189,248,.25); padding: 2px 8px; border-radius: 99px;
+}
+.rel-footer-info {
+  display: flex; align-items: center; gap: 6px; font-size: .75rem; color: var(--text-muted);
+}
 
 /* ─── TOAST NOTIFICATIONS ─── */
 #toast-container {
@@ -1860,40 +1907,75 @@ textarea { resize: vertical; min-height: 70px; }
 
 <!-- RELATORIO PDF -->
 <div class="modal-overlay" id="modal-relatorio">
-  <div class="modal" style="max-width:680px;width:95vw">
-    <div class="modal-header">
-      <h3>Exportar Relatório PDF</h3>
-      <button class="modal-close" onclick="closeModal('modal-relatorio')">x</button>
-    </div>
-    <div class="modal-body" style="padding:20px 24px">
+  <div class="modal" style="max-width:740px;width:96vw">
 
-      <!-- BLOCO A: Tipo de Relatório -->
-      <div style="margin-bottom:16px">
-        <label style="font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:8px">Tipo de Relatório</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap" id="rel-tipo-doc-btns">
-          <button type="button" class="rel-doc-btn active" data-val="vendas" onclick="setRelTipoDoc('vendas')">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="13" height="13"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-            Vendas
-          </button>
-          <button type="button" class="rel-doc-btn" data-val="caixa" onclick="setRelTipoDoc('caixa')">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="13" height="13"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-            Caixa / Fluxo
-          </button>
-          <button type="button" class="rel-doc-btn" data-val="executivo" onclick="setRelTipoDoc('executivo')">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="13" height="13"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-            Executivo Completo
-          </button>
+    <!-- ── HEADER ── -->
+    <div class="modal-header" style="padding:18px 24px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:36px;height:36px;border-radius:9px;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.25);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
         </div>
-        <input type="hidden" id="rel-tipo-doc" value="vendas">
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px">
-
-        <!-- COLUNA ESQUERDA -->
         <div>
+          <h3 style="font-family:var(--font-display);font-size:.95rem;font-weight:700;line-height:1.1">Exportar Relatório PDF</h3>
+          <p style="font-size:.71rem;color:var(--text-muted);margin-top:2px;font-weight:400">Configure as secções e filtros do relatório</p>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-relatorio')" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:7px">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- ── TIPO DE RELATÓRIO ── -->
+    <div class="rel-type-bar">
+      <div class="rel-type-grid" id="rel-tipo-doc-btns">
+
+        <button type="button" class="rel-doc-btn active" data-val="vendas" onclick="setRelTipoDoc('vendas')">
+          <div class="rel-doc-btn-icon">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          </div>
+          <div>
+            <div class="rel-doc-btn-title">Vendas</div>
+            <div class="rel-doc-btn-desc">Transações e clientes</div>
+          </div>
+        </button>
+
+        <button type="button" class="rel-doc-btn" data-val="caixa" onclick="setRelTipoDoc('caixa')">
+          <div class="rel-doc-btn-icon">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          </div>
+          <div>
+            <div class="rel-doc-btn-title">Caixa / Fluxo</div>
+            <div class="rel-doc-btn-desc">Entradas e saídas</div>
+          </div>
+        </button>
+
+        <button type="button" class="rel-doc-btn" data-val="executivo" onclick="setRelTipoDoc('executivo')">
+          <div class="rel-doc-btn-icon">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <div>
+            <div class="rel-doc-btn-title">Executivo Completo</div>
+            <div class="rel-doc-btn-desc">Visão geral do negócio</div>
+          </div>
+        </button>
+
+      </div>
+      <input type="hidden" id="rel-tipo-doc" value="vendas">
+    </div>
+
+    <!-- ── BODY: 2 colunas ── -->
+    <div class="modal-body" style="padding:20px 24px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">
+
+        <!-- COLUNA ESQUERDA: Período + Filtros -->
+        <div>
+
           <!-- Período -->
-          <div style="margin-bottom:14px">
-            <label style="font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:8px">Período</label>
+          <div class="rel-section-group">
+            <div class="rel-section-title">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Período
+            </div>
             <select id="rel-tipo" onchange="toggleRelPeriodo()" style="width:100%;margin-bottom:8px">
               <option value="mes">Mês específico</option>
               <option value="custom">Intervalo personalizado</option>
@@ -1907,17 +1989,17 @@ textarea { resize: vertical; min-height: 70px; }
             <div id="rel-custom-group" style="display:none">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
                 <div>
-                  <label style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;display:block">De</label>
+                  <span class="rel-field-lbl">De</span>
                   <input type="date" id="rel-data-ini" style="width:100%">
                 </div>
                 <div>
-                  <label style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;display:block">Até</label>
+                  <span class="rel-field-lbl">Até</span>
                   <input type="date" id="rel-data-fim" style="width:100%">
                 </div>
               </div>
             </div>
             <div id="rel-trim-group" style="display:none">
-              <select id="rel-trimestre" style="width:100%;margin-bottom:6px">
+              <select id="rel-trimestre" style="width:100%">
                 <option value="1">1.º Trimestre (Jan–Mar)</option>
                 <option value="2">2.º Trimestre (Abr–Jun)</option>
                 <option value="3">3.º Trimestre (Jul–Set)</option>
@@ -1929,12 +2011,15 @@ textarea { resize: vertical; min-height: 70px; }
             </div>
           </div>
 
-          <!-- Filtros de Dados -->
-          <div>
-            <label style="font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:8px">Filtros de Dados</label>
+          <!-- Filtros -->
+          <div class="rel-section-group">
+            <div class="rel-section-title">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"/></svg>
+              Filtros de Dados
+            </div>
             <div style="display:flex;flex-direction:column;gap:7px">
               <div>
-                <label style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;display:block">Mercado</label>
+                <span class="rel-field-lbl">Mercado</span>
                 <select id="rel-mercado" style="width:100%">
                   <option value="todos">Todos os mercados</option>
                   <option value="Angola">Angola</option>
@@ -1942,13 +2027,13 @@ textarea { resize: vertical; min-height: 70px; }
                 </select>
               </div>
               <div id="rel-cliente-group">
-                <label style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;display:block">Cliente</label>
+                <span class="rel-field-lbl">Cliente</span>
                 <select id="rel-cliente" style="width:100%">
                   <option value="">Todos os clientes</option>
                 </select>
               </div>
               <div id="rel-estado-group">
-                <label style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;display:block">Estado da venda</label>
+                <span class="rel-field-lbl">Estado da venda</span>
                 <select id="rel-estado" style="width:100%">
                   <option value="todos">Todos</option>
                   <option value="pago">Pago</option>
@@ -1957,7 +2042,7 @@ textarea { resize: vertical; min-height: 70px; }
                 </select>
               </div>
               <div id="rel-tipo-venda-group">
-                <label style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;display:block">Tipo de venda</label>
+                <span class="rel-field-lbl">Tipo de venda</span>
                 <select id="rel-tipo-venda" style="width:100%">
                   <option value="todos">Todos</option>
                   <option value="pronto">Pronto pagamento</option>
@@ -1966,60 +2051,101 @@ textarea { resize: vertical; min-height: 70px; }
               </div>
             </div>
           </div>
+
         </div>
 
         <!-- COLUNA DIREITA: Secções -->
         <div>
-          <label style="font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:8px">Secções a incluir</label>
-          <div style="display:flex;flex-direction:column;gap:6px" id="rel-seccoes">
+          <div class="rel-section-title">
+            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+            Secções a incluir
+            <span class="rel-count-badge" id="rel-count-badge">3 de 9</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px" id="rel-seccoes">
 
             <label class="rel-chk-lbl" id="lbl-inc-resumo">
-              <input type="checkbox" id="rel-inc-resumo" checked style="accent-color:var(--accent)">
-              <span class="rel-chk-icon">📊</span> Resumo executivo (KPIs)
+              <input type="checkbox" id="rel-inc-resumo" checked onchange="updateRelCount()">
+              <div class="rel-chk-ico"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg></div>
+              <span class="rel-chk-txt">Resumo executivo (KPIs)</span>
+              <div class="rel-toggle"></div>
             </label>
+
             <label class="rel-chk-lbl" id="lbl-inc-vendas">
-              <input type="checkbox" id="rel-inc-vendas" checked style="accent-color:var(--accent)">
-              <span class="rel-chk-icon">🧾</span> Tabela de vendas detalhada
+              <input type="checkbox" id="rel-inc-vendas" checked onchange="updateRelCount()">
+              <div class="rel-chk-ico"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+              <span class="rel-chk-txt">Tabela de vendas detalhada</span>
+              <div class="rel-toggle"></div>
             </label>
+
             <label class="rel-chk-lbl" id="lbl-inc-produtos">
-              <input type="checkbox" id="rel-inc-produtos" checked style="accent-color:var(--accent)">
-              <span class="rel-chk-icon">📦</span> Top 10 produtos por volume
+              <input type="checkbox" id="rel-inc-produtos" checked onchange="updateRelCount()">
+              <div class="rel-chk-ico"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div>
+              <span class="rel-chk-txt">Top 10 produtos por volume</span>
+              <div class="rel-toggle"></div>
             </label>
+
             <label class="rel-chk-lbl" id="lbl-inc-clientes">
-              <input type="checkbox" id="rel-inc-clientes" style="accent-color:var(--accent)">
-              <span class="rel-chk-icon">👥</span> Top 5 clientes por facturação
+              <input type="checkbox" id="rel-inc-clientes" onchange="updateRelCount()">
+              <div class="rel-chk-ico"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+              <span class="rel-chk-txt">Top 5 clientes por facturação</span>
+              <div class="rel-toggle"></div>
             </label>
+
             <label class="rel-chk-lbl" id="lbl-inc-mercado">
-              <input type="checkbox" id="rel-inc-mercado" style="accent-color:var(--accent)">
-              <span class="rel-chk-icon">🌍</span> Análise por mercado
+              <input type="checkbox" id="rel-inc-mercado" onchange="updateRelCount()">
+              <div class="rel-chk-ico"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></div>
+              <span class="rel-chk-txt">Análise por mercado</span>
+              <div class="rel-toggle"></div>
             </label>
+
             <label class="rel-chk-lbl" id="lbl-inc-cobr">
-              <input type="checkbox" id="rel-inc-cobr" style="accent-color:var(--accent)">
-              <span class="rel-chk-icon">⏰</span> Cobranças pendentes
+              <input type="checkbox" id="rel-inc-cobr" onchange="updateRelCount()">
+              <div class="rel-chk-ico"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg></div>
+              <span class="rel-chk-txt">Cobranças pendentes</span>
+              <div class="rel-toggle"></div>
             </label>
+
             <label class="rel-chk-lbl" id="lbl-inc-caixa" style="display:none">
-              <input type="checkbox" id="rel-inc-caixa" style="accent-color:var(--accent)">
-              <span class="rel-chk-icon">💳</span> Movimentos de caixa
+              <input type="checkbox" id="rel-inc-caixa" onchange="updateRelCount()">
+              <div class="rel-chk-ico"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+              <span class="rel-chk-txt">Movimentos de caixa</span>
+              <div class="rel-toggle"></div>
             </label>
+
             <label class="rel-chk-lbl" id="lbl-inc-opex">
-              <input type="checkbox" id="rel-inc-opex" style="accent-color:var(--accent)">
-              <span class="rel-chk-icon">💸</span> Despesas operacionais
+              <input type="checkbox" id="rel-inc-opex" onchange="updateRelCount()">
+              <div class="rel-chk-ico"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23,6 13.5,15.5 8.5,10.5 1,18"/><polyline points="17,6 23,6 23,12"/></svg></div>
+              <span class="rel-chk-txt">Despesas operacionais</span>
+              <div class="rel-toggle"></div>
             </label>
+
             <label class="rel-chk-lbl" id="lbl-inc-resultado">
-              <input type="checkbox" id="rel-inc-resultado" style="accent-color:var(--accent)">
-              <span class="rel-chk-icon">📈</span> Resultado líquido (Lucro − OpEx)
+              <input type="checkbox" id="rel-inc-resultado" onchange="updateRelCount()">
+              <div class="rel-chk-ico"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23,18 13.5,8.5 8.5,13.5 1,6"/><polyline points="17,18 23,18 23,12"/></svg></div>
+              <span class="rel-chk-txt">Resultado líquido (Lucro − OpEx)</span>
+              <div class="rel-toggle"></div>
             </label>
+
           </div>
         </div>
       </div>
     </div>
-    <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;padding:16px 24px;border-top:1px solid var(--border)">
-      <button class="btn btn-ghost" onclick="closeModal('modal-relatorio')">Cancelar</button>
-      <button class="btn btn-primary" id="rel-btn" onclick="gerarRelatorio()">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        Gerar PDF
-      </button>
+
+    <!-- ── FOOTER ── -->
+    <div class="modal-footer" style="display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-top:1px solid var(--border)">
+      <div class="rel-footer-info">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+        <span id="rel-footer-count">3 secções seleccionadas</span>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost" onclick="closeModal('modal-relatorio')">Cancelar</button>
+        <button class="btn btn-primary" id="rel-btn" onclick="gerarRelatorio()">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Gerar PDF
+        </button>
+      </div>
     </div>
+
   </div>
 </div>
 
@@ -5355,6 +5481,17 @@ async function gerarRelatorio() {
 }
 
 // Init modal relatorio com mes actual
+function updateRelCount() {
+  const checkboxes = document.querySelectorAll('#rel-seccoes input[type="checkbox"]');
+  const visible = Array.from(checkboxes).filter(c => c.closest('label')?.style.display !== 'none');
+  const checked = visible.filter(c => c.checked).length;
+  const total   = visible.length;
+  const badge   = document.getElementById('rel-count-badge');
+  const footer  = document.getElementById('rel-footer-count');
+  if(badge)  badge.textContent  = checked + ' de ' + total;
+  if(footer) footer.textContent = checked + (checked === 1 ? ' secção seleccionada' : ' secções seleccionadas');
+}
+
 function initRelatorioModal() {
   const n = new Date();
   const mesStr = n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
@@ -5377,6 +5514,8 @@ function initRelatorioModal() {
   setRelTipoDoc('vendas');
   // garantir estado inicial do período
   toggleRelPeriodo();
+  // actualizar contagem de secções
+  updateRelCount();
 }
 
 
