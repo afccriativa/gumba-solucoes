@@ -2392,6 +2392,38 @@ textarea { resize: vertical; min-height: 70px; }
   </div>
 </div>
 
+<!-- MODAL SUCESSO VENDA + WHATSAPP -->
+<div class="modal-overlay" id="modal-venda-sucesso">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header" style="border-bottom:none;padding-bottom:0">
+      <button class="modal-close" onclick="closeModal('modal-venda-sucesso')">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center;padding-top:0">
+      <div id="vs-icon" style="font-size:3rem;margin-bottom:8px">✅</div>
+      <h2 style="margin:0 0 4px;color:var(--success);font-size:1.25rem">Venda Registada!</h2>
+      <p id="vs-cliente-nome" style="margin:0 0 2px;color:var(--text);font-weight:600;font-size:1rem"></p>
+      <p id="vs-total" style="margin:0 0 20px;color:var(--text-muted);font-size:.9rem"></p>
+
+      <div id="vs-itens" style="text-align:left;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:20px;font-size:.82rem;line-height:1.7"></div>
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button id="btn-whatsapp" class="btn btn-success" style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:.95rem;padding:11px 16px;border-radius:10px" onclick="enviarReciboWhatsApp()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          Enviar Recibo por WhatsApp
+        </button>
+        <button class="btn btn-ghost" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 16px;border-radius:10px" onclick="descarregarReciboPDF()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Descarregar Recibo PDF
+        </button>
+        <button class="btn btn-ghost" style="color:var(--text-muted);font-size:.82rem;padding:6px" onclick="closeModal('modal-venda-sucesso')">Fechar sem enviar</button>
+      </div>
+      <p id="vs-sem-tel" style="display:none;margin-top:12px;font-size:.78rem;color:var(--warning);background:var(--warning-bg,rgba(251,191,36,.1));padding:8px 12px;border-radius:8px">
+        ⚠️ Este cliente não tem número de telefone registado. Edite o perfil do cliente para activar o envio por WhatsApp.
+      </p>
+    </div>
+  </div>
+</div>
+
 <!-- NOVO PRODUTO -->
 <div class="modal-overlay" id="modal-produto">
   <div class="modal">
@@ -3312,10 +3344,25 @@ async function saveVenda() {
       CACHE.vendasSaldo = novoSaldo;
     } catch(e) {}
 
+    // Guardar snapshot para o modal de sucesso / WhatsApp / PDF
+    const clienteObj  = CACHE.clientes.find(c => c.id === cliente_id) || {};
+    const vendaSnap   = {
+      id:        vendaId,
+      data:      payload.p_data,
+      pagamento: payload.p_pagamento,
+      tipo:      tipo,
+      mercado:   payload.p_mercado,
+      obs:       payload.p_obs,
+      total,
+      itens:     [...carrinho]   // cópia antes de limpar
+    };
+
     closeModal('modal-venda');
     renderVendas();
     renderDashboard();
-    showToast('Venda registada! Total: ' + fmt(total), 'success');
+
+    // Abrir modal de sucesso com opção WhatsApp + PDF
+    mostrarSucessoVenda(vendaSnap, clienteObj);
 
   } catch(e) {
     showToast('Erro: ' + e.message, 'error');
@@ -3334,8 +3381,271 @@ async function deleteVenda(id) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  STOCK / PRODUTOS
+//  WHATSAPP RECIBO — mostrarSucessoVenda / enviarReciboWhatsApp / PDF
 // ═══════════════════════════════════════════════════════════════════
+
+// Estado global do modal de sucesso
+let _vendaSuccessSnap   = null;
+let _clienteSuccessSnap = null;
+
+function mostrarSucessoVenda(venda, cliente) {
+  _vendaSuccessSnap   = venda;
+  _clienteSuccessSnap = cliente;
+
+  const nomeCliente = cliente.nome || 'Cliente';
+  const tel         = (cliente.telefone || '').replace(/\D/g, '');
+  const temTel      = tel.length >= 9;
+
+  // Preencher cabeçalho
+  document.getElementById('vs-cliente-nome').textContent = nomeCliente;
+  document.getElementById('vs-total').textContent =
+    fmt(venda.total) + ' · ' + venda.pagamento + ' · ' +
+    (venda.tipo === 'parcelada' ? 'Parcelada' : 'À Pronto') + ' · ' + _fmtDataExibir(venda.data);
+
+  // Itens
+  const itensHTML = venda.itens.map(i =>
+    `<div style="display:flex;justify-content:space-between;gap:8px">
+       <span>📦 ${i.qty}× <strong>${i.nome}</strong></span>
+       <span style="white-space:nowrap;font-family:var(--font-mono)">${fmt(i.preco * i.qty)}</span>
+     </div>`
+  ).join('') +
+  `<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between">
+     <strong>Total</strong>
+     <strong style="color:var(--success);font-family:var(--font-mono)">${fmt(venda.total)}</strong>
+   </div>`;
+  document.getElementById('vs-itens').innerHTML = itensHTML;
+
+  // Botão WhatsApp
+  const btnWA = document.getElementById('btn-whatsapp');
+  if(temTel) {
+    btnWA.disabled = false;
+    btnWA.title    = 'Enviar para ' + cliente.telefone;
+    btnWA.style.opacity = '1';
+  } else {
+    btnWA.disabled = true;
+    btnWA.style.opacity = '0.45';
+    btnWA.title = 'Cliente sem telefone registado';
+  }
+  document.getElementById('vs-sem-tel').style.display = temTel ? 'none' : 'block';
+
+  openModal('modal-venda-sucesso');
+  showToast('Venda registada! Total: ' + fmt(venda.total), 'success');
+}
+
+function _fmtDataExibir(iso) {
+  if(!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function _normalizarTelAngola(tel) {
+  // Remove tudo que não seja dígito
+  const digits = tel.replace(/\D/g, '');
+  // Se começa com 244 já está correcto
+  if(digits.startsWith('244') && digits.length >= 12) return digits;
+  // Se começa com 0 substitui pelo 244
+  if(digits.startsWith('0') && digits.length >= 9) return '244' + digits.slice(1);
+  // Número sem prefixo (9 dígitos) → adicionar 244
+  if(digits.length === 9) return '244' + digits;
+  // Fallback: devolver como está
+  return digits;
+}
+
+function _gerarMensagemWhatsApp(venda, cliente) {
+  const nome   = (cliente.nome || 'prezado cliente').split(' ')[0];
+  const data   = _fmtDataExibir(venda.data);
+  const refId  = (venda.id || '').toString().slice(-6).toUpperCase();
+
+  const linhasItens = venda.itens.map(i => {
+    const subtotal = (i.preco * i.qty).toLocaleString('pt-AO');
+    return `  • ${i.qty}× ${i.nome} — ${subtotal} Kz`;
+  }).join('\n');
+
+  const totalFmt   = venda.total.toLocaleString('pt-AO') + ' Kz';
+  const tipoPag    = venda.pagamento || 'Dinheiro';
+  const modalidade = venda.tipo === 'parcelada' ? 'Parcelada (crédito)' : 'À Pronto';
+
+  return (
+`Olá ${nome}! 👋
+
+Obrigado por escolher a *Gumba Soluções*. É sempre um prazer recebê-lo(a)! 😊
+
+Aqui está o resumo da sua compra:
+
+🧾 *Recibo nº ${refId}*
+📅 Data: ${data}
+
+${linhasItens}
+
+━━━━━━━━━━━━━━
+💰 *Total: ${totalFmt}*
+💳 Pagamento: ${tipoPag}
+📋 Modalidade: ${modalidade}${venda.obs ? '\n📝 Obs: ' + venda.obs : ''}
+━━━━━━━━━━━━━━
+
+✅ A sua compra foi registada com sucesso.
+
+Ficamos à sua disposição para qualquer dúvida ou assistência. Até à próxima! 🙏
+
+_Gumba Soluções — Smartphones, Computadores & Acessórios_`
+  );
+}
+
+function enviarReciboWhatsApp() {
+  if(!_vendaSuccessSnap || !_clienteSuccessSnap) return;
+  const tel = _normalizarTelAngola(_clienteSuccessSnap.telefone || '');
+  if(!tel || tel.length < 9) {
+    showToast('Número de telefone inválido.', 'warning');
+    return;
+  }
+  const mensagem = _gerarMensagemWhatsApp(_vendaSuccessSnap, _clienteSuccessSnap);
+  const url = `https://wa.me/${tel}?text=${encodeURIComponent(mensagem)}`;
+  window.open(url, '_blank', 'noopener');
+  // PDF automático como acompanhamento
+  descarregarReciboPDF();
+}
+
+function descarregarReciboPDF() {
+  if(!_vendaSuccessSnap) return;
+  const venda   = _vendaSuccessSnap;
+  const cliente = _clienteSuccessSnap || {};
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+
+  const PW      = 148;   // A5 width mm
+  const MARGIN  = 14;
+  const INNER   = PW - MARGIN * 2;
+  let y         = 0;
+
+  // ── Cabeçalho verde ───────────────────────────────────────────────
+  doc.setFillColor(16, 200, 134);
+  doc.rect(0, 0, PW, 38, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.text('Gumba Soluções', MARGIN, 13);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text('Smartphones · Computadores · Acessórios', MARGIN, 19);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('RECIBO DE COMPRA', PW - MARGIN, 13, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  const refId = (venda.id || '').toString().slice(-6).toUpperCase();
+  doc.text('Ref: #' + refId, PW - MARGIN, 19, { align: 'right' });
+  doc.text('Data: ' + _fmtDataExibir(venda.data), PW - MARGIN, 24, { align: 'right' });
+
+  y = 46;
+
+  // ── Info do cliente ───────────────────────────────────────────────
+  doc.setTextColor(40, 40, 40);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text('CLIENTE', MARGIN, y);
+  y += 5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(cliente.nome || '—', MARGIN, y);
+  if(cliente.telefone) {
+    y += 4.5;
+    doc.text('Tel: ' + cliente.telefone, MARGIN, y);
+  }
+
+  y += 10;
+
+  // ── Linha separadora ──────────────────────────────────────────────
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.3);
+  doc.line(MARGIN, y, PW - MARGIN, y);
+  y += 6;
+
+  // ── Cabeçalho tabela ──────────────────────────────────────────────
+  doc.setFillColor(245, 245, 245);
+  doc.rect(MARGIN, y - 3, INNER, 7, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(90, 90, 90);
+  doc.text('PRODUTO', MARGIN + 2, y + 1.5);
+  doc.text('QTY', MARGIN + INNER * 0.62, y + 1.5, { align: 'center' });
+  doc.text('P. UNIT.', MARGIN + INNER * 0.79, y + 1.5, { align: 'center' });
+  doc.text('SUBTOTAL', PW - MARGIN - 2, y + 1.5, { align: 'right' });
+  y += 8;
+
+  // ── Linhas de itens ───────────────────────────────────────────────
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(30, 30, 30);
+  let totalCalc = 0;
+
+  venda.itens.forEach((item, idx) => {
+    const sub = item.preco * item.qty;
+    totalCalc += sub;
+    if(idx % 2 === 0) {
+      doc.setFillColor(251, 252, 253);
+      doc.rect(MARGIN, y - 3.5, INNER, 7, 'F');
+    }
+    doc.text(item.nome || '', MARGIN + 2, y + 0.5);
+    doc.text(String(item.qty), MARGIN + INNER * 0.62, y + 0.5, { align: 'center' });
+    doc.text(item.preco.toLocaleString('pt-AO') + ' Kz', MARGIN + INNER * 0.79, y + 0.5, { align: 'center' });
+    doc.text(sub.toLocaleString('pt-AO') + ' Kz', PW - MARGIN - 2, y + 0.5, { align: 'right' });
+    y += 7;
+  });
+
+  y += 2;
+  doc.setDrawColor(220, 220, 220);
+  doc.line(MARGIN, y, PW - MARGIN, y);
+  y += 6;
+
+  // ── Total ─────────────────────────────────────────────────────────
+  doc.setFillColor(16, 200, 134);
+  doc.roundedRect(MARGIN, y - 3, INNER, 10, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(255, 255, 255);
+  doc.text('TOTAL', MARGIN + 4, y + 3.5);
+  doc.text(venda.total.toLocaleString('pt-AO') + ' Kz', PW - MARGIN - 4, y + 3.5, { align: 'right' });
+  y += 16;
+
+  // ── Info pagamento ────────────────────────────────────────────────
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(90, 90, 90);
+  doc.text('Forma de pagamento: ' + (venda.pagamento || '—'), MARGIN, y);
+  y += 5;
+  doc.text('Modalidade: ' + (venda.tipo === 'parcelada' ? 'Parcelada (crédito)' : 'À Pronto'), MARGIN, y);
+  if(venda.mercado) {
+    y += 5;
+    doc.text('Mercado: ' + venda.mercado, MARGIN, y);
+  }
+  if(venda.obs) {
+    y += 5;
+    doc.setFontSize(7.5);
+    doc.text('Obs: ' + venda.obs, MARGIN, y);
+  }
+
+  // ── Rodapé ────────────────────────────────────────────────────────
+  const pageH = 210; // A5
+  doc.setDrawColor(16, 200, 134);
+  doc.setLineWidth(0.5);
+  doc.line(MARGIN, pageH - 16, PW - MARGIN, pageH - 16);
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(7.5);
+  doc.setTextColor(130, 130, 130);
+  doc.text('Obrigado pela sua preferência! 🙏', PW / 2, pageH - 11, { align: 'center' });
+  doc.setFontSize(7);
+  doc.text('Gumba Soluções · www.gumbasolucoes.ao', PW / 2, pageH - 7, { align: 'center' });
+
+  const nomeArquivo = `Recibo_Gumba_${refId}_${(venda.data || '').replace(/-/g,'')}.pdf`;
+  doc.save(nomeArquivo);
+  showToast('Recibo PDF gerado com sucesso.', 'success');
+}
+
+
 function renderStock(q='', _paged=false) {
   if(!_paged) PG.stock=1;
   let produtos=CACHE.produtos;
