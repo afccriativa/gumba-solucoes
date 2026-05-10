@@ -3538,7 +3538,6 @@ function enviarReciboWhatsApp() {
   if(!tel || tel.length < 11) { showToast('Numero de telefone invalido.', 'warning'); return; }
   const mensagem = _gerarMensagemWhatsApp(_vendaSuccessSnap, _clienteSuccessSnap);
   window.open('https://wa.me/' + tel + '?text=' + encodeURIComponent(mensagem), '_blank', 'noopener');
-  descarregarReciboPDF();
 }
 
 function descarregarReciboPDF() {
@@ -3701,31 +3700,35 @@ function descarregarReciboPDF() {
     doc.text('PLANO DE PRESTAÇÕES', M + 6, y + 3);
     y += 10;
 
-    // Linhas de prestações
+    // Linhas de prestações (altura 10mm para caber 2 linhas de texto)
+    var ROW_H = 10;
     prests.forEach(function(p, idx) {
       var bgR = idx % 2 === 0 ? 247 : 255;
       var bgG = idx % 2 === 0 ? 251 : 255;
       doc.setFillColor(bgR, bgG, 255);
-      doc.rect(M, y - 3, INNER, 7.5, 'F');
+      doc.rect(M, y, INNER, ROW_H, 'F');
       doc.setFillColor(BR, BG, BB);
-      doc.rect(M, y - 3, 2.5, 7.5, 'F');
+      doc.rect(M, y, 2.5, ROW_H, 'F');
 
+      // Linha 1 — "Prestação N"
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7.5);
       doc.setTextColor(50, 50, 50);
-      doc.text('Prestação ' + p.numero, M + 5, y + 1.5);
+      doc.text('Prestação ' + p.numero, M + 5, y + 3.5);
 
+      // Linha 2 — data de vencimento
       var dataVcto = p.data_vencimento ? _fmtDataExibir(p.data_vencimento) : '—';
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
       doc.setTextColor(100, 100, 100);
-      doc.text('Venc.: ' + dataVcto, M + 5, y + 1.5 + 4.5 - 7.5 + 3.5);
+      doc.text('Venc.: ' + dataVcto, M + 5, y + 7.5);
 
+      // Valor alinhado à direita, centrado verticalmente
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
       doc.setTextColor(BR, BG, BB);
-      doc.text(p.valor.toLocaleString('pt-AO') + ' Kz', PW - M - 3, y + 1.5, { align: 'right' });
-      y += 7.5;
+      doc.text(p.valor.toLocaleString('pt-AO') + ' Kz', PW - M - 3, y + 5.5, { align: 'right' });
+      y += ROW_H;
     });
     y += 4;
   }
