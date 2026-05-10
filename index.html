@@ -3345,6 +3345,7 @@ async function saveVenda() {
     }
 
     // Se parcelada, criar cobrança + prestações (não fazem parte do RPC de venda)
+    let _cobParcelada = null;
     if(tipo === 'parcelada') {
       const nprest  = parseInt(document.getElementById('v-nprest').value) || 2;
       const valPrest = Math.ceil(total / nprest);
@@ -3367,6 +3368,7 @@ async function saveVenda() {
       }
       cob.prestacoes = prestsList;
       CACHE.cobrancas.unshift(cob);
+      _cobParcelada = cob;
     }
 
     // Recarregar venda completa do Supabase para ter itens
@@ -3397,7 +3399,8 @@ async function saveVenda() {
       mercado:   payload.p_mercado,
       obs:       payload.p_obs,
       total,
-      itens:     [...carrinho]   // cópia antes de limpar
+      itens:      [...carrinho],   // cópia antes de limpar
+      prestacoes: _cobParcelada?.prestacoes || []
     };
 
     closeModal('modal-venda');
@@ -3503,6 +3506,15 @@ function _gerarMensagemWhatsApp(venda, cliente) {
   const modalidade = venda.tipo === 'parcelada' ? 'Parcelado (credito)' : 'A Pronto';
   const obsLine    = venda.obs ? '\nObs: ' + venda.obs : '';
 
+  let linhasPrestacoes = '';
+  if(venda.tipo === 'parcelada' && venda.prestacoes && venda.prestacoes.length) {
+    linhasPrestacoes = '\n' + sep + '\n*PLANO DE PRESTAÇÕES*\n' +
+      venda.prestacoes.map(function(p) {
+        var dataVcto = p.data_vencimento ? _fmtDataExibir(p.data_vencimento) : 'data a definir';
+        return '  ' + p.numero + '. ' + dataVcto + ' — *' + p.valor.toLocaleString('pt-AO') + ' Kz*';
+      }).join('\n');
+  }
+
   return 'Ola ' + nome + '!\n\n' +
     'Obrigado por escolher a *Gumba Solucoes*. ' +
     'A sua compra foi registada com sucesso. Aqui esta o resumo:\n\n' +
@@ -3514,6 +3526,7 @@ function _gerarMensagemWhatsApp(venda, cliente) {
     '*TOTAL: ' + totalFmt + '*\n' +
     'Pagamento: ' + tipoPag + '\n' +
     'Modalidade: ' + modalidade + obsLine + '\n' +
+    linhasPrestacoes +
     sep + '\n\n' +
     'Qualquer questao, estamos sempre disponiveis para ajudar. Ate a proxima!\n\n' +
     '_Gumba Solucoes - Smartphones, Computadores & Acessorios_';
@@ -3670,6 +3683,52 @@ function descarregarReciboPDF() {
   doc.text('Pagamento: ' + (venda.pagamento || 'Dinheiro'), M, y + 4);
   doc.text('Modalidade: ' + (venda.tipo === 'parcelada' ? 'Parcelado' : 'A Pronto'), M, y + 9.5);
   y += 22;
+
+  // Plano de prestações (apenas para vendas parceladas)
+  if(venda.tipo === 'parcelada' && venda.prestacoes && venda.prestacoes.length) {
+    const prests = venda.prestacoes;
+    // Cabeçalho da secção
+    doc.setFillColor(240, 246, 253);
+    doc.roundedRect(M, y - 2, INNER, 7, 1.5, 1.5, 'F');
+    doc.setDrawColor(BR, BG, BB);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(M, y - 2, INNER, 7, 1.5, 1.5, 'S');
+    doc.setFillColor(BR, BG, BB);
+    doc.roundedRect(M, y - 2, 3, 7, 1, 1, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.5);
+    doc.setTextColor(BR, BG, BB);
+    doc.text('PLANO DE PRESTAÇÕES', M + 6, y + 3);
+    y += 10;
+
+    // Linhas de prestações
+    prests.forEach(function(p, idx) {
+      var bgR = idx % 2 === 0 ? 247 : 255;
+      var bgG = idx % 2 === 0 ? 251 : 255;
+      doc.setFillColor(bgR, bgG, 255);
+      doc.rect(M, y - 3, INNER, 7.5, 'F');
+      doc.setFillColor(BR, BG, BB);
+      doc.rect(M, y - 3, 2.5, 7.5, 'F');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(50, 50, 50);
+      doc.text('Prestação ' + p.numero, M + 5, y + 1.5);
+
+      var dataVcto = p.data_vencimento ? _fmtDataExibir(p.data_vencimento) : '—';
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(100, 100, 100);
+      doc.text('Venc.: ' + dataVcto, M + 5, y + 1.5 + 4.5 - 7.5 + 3.5);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(BR, BG, BB);
+      doc.text(p.valor.toLocaleString('pt-AO') + ' Kz', PW - M - 3, y + 1.5, { align: 'right' });
+      y += 7.5;
+    });
+    y += 4;
+  }
 
   if(venda.obs) {
     doc.setFont('helvetica', 'italic');
