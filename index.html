@@ -4924,7 +4924,7 @@ async function gerarRelatorio() {
     }
 
     // ─── CABECALHO ───
-    const titulos = { vendas: 'Relatorio de Vendas', caixa: 'Relatorio de Caixa', executivo: 'Relatorio Executivo' };
+    const titulos = { vendas: 'Relatório de Vendas', caixa: 'Relatório de Caixa', executivo: 'Relatório Executivo' };
     doc.setFillColor(...COR_PRIMARY);
     doc.rect(0, 0, pw, 28, 'F');
     doc.setTextColor(255, 255, 255);
@@ -4933,9 +4933,9 @@ async function gerarRelatorio() {
     doc.text('GUMBA SOLUCOES', 14, 12);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text('Comercio e Prestacao de Servicos', 14, 18);
+    doc.text('Comércio e Prestação de Serviços', 14, 18);
     doc.setFontSize(8);
-    doc.text('Relatorio gerado por AFC Criativa', 14, 24);
+    doc.text('Relatório gerado por AFC Criativa', 14, 24);
     const dataHoje = new Date().toLocaleDateString('pt-AO', {day:'2-digit',month:'long',year:'numeric'});
     doc.text(dataHoje, pw - 14, 18, { align: 'right' });
 
@@ -4943,7 +4943,7 @@ async function gerarRelatorio() {
     doc.setTextColor(...COR_DARK);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text((titulos[tipoDoc] || 'Relatorio') + ' — ' + periodo, 14, y);
+    doc.text((titulos[tipoDoc] || 'Relatório') + ' — ' + periodo, 14, y);
     if(mercadoFiltro !== 'todos') {
       y += 5;
       doc.setFont('helvetica', 'normal');
@@ -4969,13 +4969,13 @@ async function gerarRelatorio() {
       const margem = faturacao > 0 ? Math.round((lucro / faturacao) * 100) : 0;
       const pagas  = vendas.filter(v => v.estado === 'pago').length;
 
-      _titulo('RESUMO DO PERIODO');
+      _titulo('RESUMO DO PERÍODO');
       const kpis = [
         { label: 'Total de Vendas',   value: vendas.length + ' venda(s)',              cor: COR_PRIMARY },
-        { label: 'Faturacao Total',   value: Number(faturacao).toLocaleString('pt-AO') + ' Kz', cor: COR_PRIMARY },
+        { label: 'Faturação Total',   value: Number(faturacao).toLocaleString('pt-AO') + ' Kz', cor: COR_PRIMARY },
         { label: 'Lucro Bruto',       value: Number(lucro).toLocaleString('pt-AO') + ' Kz',     cor: COR_SUCCESS },
-        { label: 'Ticket Medio',      value: Number(ticket).toLocaleString('pt-AO') + ' Kz',    cor: COR_MUTED },
-        { label: 'Margem Media',      value: margem + '%',                             cor: margem >= 20 ? COR_SUCCESS : COR_WARNING },
+        { label: 'Ticket Médio',      value: Number(ticket).toLocaleString('pt-AO') + ' Kz',    cor: COR_MUTED },
+        { label: 'Margem Média',      value: margem + '%',                             cor: margem >= 20 ? COR_SUCCESS : COR_WARNING },
         { label: 'Vendas Pagas',      value: pagas + '/' + vendas.length,              cor: COR_MUTED },
       ];
       const cols = 3;
@@ -5034,7 +5034,7 @@ async function gerarRelatorio() {
         y = doc.lastAutoTable.finalY + 10;
       } else {
         doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(...COR_MUTED);
-        doc.text('Sem vendas no periodo seleccionado.', 14, y);
+        doc.text('Sem vendas no período seleccionado.', 14, y);
         y += 10;
       }
     }
@@ -5074,7 +5074,7 @@ async function gerarRelatorio() {
     // ─── TOP 5 CLIENTES ───
     if(incClientes && tipoDoc !== 'caixa' && vendas.length > 0) {
       _checkPage(60);
-      _titulo('TOP 5 CLIENTES POR FATURACAO');
+      _titulo('TOP 5 CLIENTES POR FATURAÇÃO');
       const stats = {};
       vendas.forEach(v => {
         const cid = v.cliente_id || 'desconhecido';
@@ -5108,7 +5108,7 @@ async function gerarRelatorio() {
     // ─── ANÁLISE POR MERCADO ───
     if(incMercado && tipoDoc !== 'caixa' && vendas.length > 0) {
       _checkPage(60);
-      _titulo('ANALISE POR MERCADO');
+      _titulo('ANÁLISE POR MERCADO');
       const stats = {};
       vendas.forEach(v => {
         const m = v.mercado || 'Não definido';
@@ -5138,7 +5138,7 @@ async function gerarRelatorio() {
         Number(totFat-totCusto).toLocaleString('pt-AO')+' Kz',
         totFat>0?Math.round(((totFat-totCusto)/totFat)*100)+'%':'0%']);
       doc.autoTable({
-        startY:y, head:[['Mercado','Vendas','% Receita','Faturacao','Custo','Lucro Bruto','Margem']],
+        startY:y, head:[['Mercado','Vendas','% Receita','Faturação','Custo','Lucro Bruto','Margem']],
         body:rows, theme:'grid',
         styles:{font:'helvetica',fontSize:8,cellPadding:3,textColor:COR_DARK},
         headStyles:{fillColor:COR_PRIMARY,textColor:[255,255,255],fontStyle:'bold'},
@@ -5161,7 +5161,7 @@ async function gerarRelatorio() {
       const cobPend = CACHE.cobrancas.filter(c => (c.prestacoes||[]).some(p=>!p.pago));
       if(cobPend.length > 0) {
         _checkPage(60);
-        _titulo('COBRANCAS PENDENTES', [186,26,26]);
+        _titulo('COBRANÇAS PENDENTES', [186,26,26]);
         const rows = cobPend.map(c => {
           const prests  = c.prestacoes||[];
           const pend    = prests.filter(p=>!p.pago);
@@ -5177,7 +5177,7 @@ async function gerarRelatorio() {
           ];
         });
         doc.autoTable({
-          startY:y, head:[['Cliente','Referencia','Total','Prestacoes','Val.Pendente','Atrasos','Prox.Vcto']],
+          startY:y, head:[['Cliente','Referência','Total','Prestações','Val.Pendente','Atrasos','Prox.Vcto']],
           body:rows, theme:'grid',
           styles:{font:'helvetica',fontSize:7.5,cellPadding:2.5,textColor:COR_DARK},
           headStyles:{fillColor:[186,26,26],textColor:[255,255,255],fontStyle:'bold'},
@@ -5207,8 +5207,8 @@ async function gerarRelatorio() {
       // Mini KPIs de caixa
       const kpisCaixa = [
         {label:'Total Entradas', value:Number(entradas).toLocaleString('pt-AO')+' Kz', cor:COR_SUCCESS},
-        {label:'Total Saidas',   value:Number(saidas).toLocaleString('pt-AO')+' Kz',   cor:COR_DANGER},
-        {label:'Saldo do Periodo',value:Number(entradas-saidas).toLocaleString('pt-AO')+' Kz', cor:entradas>=saidas?COR_SUCCESS:COR_DANGER},
+        {label:'Total Saídas',   value:Number(saidas).toLocaleString('pt-AO')+' Kz',   cor:COR_DANGER},
+        {label:'Saldo do Período',value:Number(entradas-saidas).toLocaleString('pt-AO')+' Kz', cor:entradas>=saidas?COR_SUCCESS:COR_DANGER},
       ];
       const kW = (pw-28-8)/3;
       kpisCaixa.forEach((k,i)=>{
@@ -5224,7 +5224,7 @@ async function gerarRelatorio() {
       if(movs.length>0){
         const rows = movs.map(m=>[
           m.data||'---', m.descricao||'---', m.categoria||'---',
-          m.tipo==='entrada'?'Entrada':'Saida',
+          m.tipo==='entrada'?'Entrada':'Saída',
           (m.tipo==='entrada'?'+':'-')+' '+Number(m.valor||0).toLocaleString('pt-AO')+' Kz'
         ]);
         doc.autoTable({
@@ -5280,7 +5280,7 @@ async function gerarRelatorio() {
         y=doc.lastAutoTable.finalY+10;
       } else {
         doc.setFont('helvetica','italic');doc.setFontSize(9);doc.setTextColor(...COR_MUTED);
-        doc.text('Sem despesas operacionais registadas para este periodo.',14,y);
+        doc.text('Sem despesas operacionais registadas para este período.',14,y);
         y+=10;
       }
     }
@@ -5288,7 +5288,7 @@ async function gerarRelatorio() {
     // ─── RESULTADO LÍQUIDO ───
     if(incResultado) {
       _checkPage(55);
-      _titulo('RESULTADO LIQUIDO DO PERIODO');
+      _titulo('RESULTADO LÍQUIDO DO PERÍODO');
       const faturacao  = vendas.reduce((s,v)=>s+Number(v.total||0),0);
       const custoTotal = vendas.reduce((s,v)=>s+(v.itens||[]).reduce((ss,it)=>{
         const p=CACHE.produtos.find(x=>x.id===it.produto_id);
@@ -5302,7 +5302,7 @@ async function gerarRelatorio() {
       const linhas = [
         {label:'Lucro Bruto',          val:lucroBruto, cor:COR_SUCCESS, sinal:'+'},
         {label:'(-) Despesas OpEx',    val:totalOpex,  cor:COR_WARNING, sinal:'-'},
-        {label:'= Resultado Liquido',  val:resultado,  cor:resultado>=0?COR_SUCCESS:COR_DANGER, sinal:'=', destaque:true},
+        {label:'= Resultado Líquido',  val:resultado,  cor:resultado>=0?COR_SUCCESS:COR_DANGER, sinal:'=', destaque:true},
       ];
       const lh=14, lpad=6;
       linhas.forEach((l,i)=>{
@@ -5335,12 +5335,12 @@ async function gerarRelatorio() {
       doc.setFillColor(...COR_PRIMARY);
       doc.rect(0,ph-10,pw,10,'F');
       doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(255,255,255);
-      doc.text('Gumba Solucoes — Sistema de Gestao AFC Criativa',14,ph-4);
-      doc.text('Pagina '+i+' de '+totalPages,pw-14,ph-4,{align:'right'});
+      doc.text('Gumba Soluções — Sistema de Gestão AFC Criativa',14,ph-4);
+      doc.text('Página '+i+' de '+totalPages,pw-14,ph-4,{align:'right'});
     }
 
     // ─── GUARDAR ───
-    const tipoLabel = {vendas:'Vendas',caixa:'Caixa',executivo:'Executivo'}[tipoDoc]||'Relatorio';
+    const tipoLabel = {vendas:'Vendas',caixa:'Caixa',executivo:'Executivo'}[tipoDoc]||'Relatório';
     const mercLabel = document.getElementById('rel-mercado')?.value !== 'todos' ? '-'+document.getElementById('rel-mercado').value : '';
     doc.save('Gumba-'+tipoLabel+'-'+periodo.replace(/[^a-zA-Z0-9]/g,'-')+mercLabel+'.pdf');
     closeModal('modal-relatorio');
