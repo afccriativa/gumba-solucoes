@@ -5034,7 +5034,7 @@ async function gerarRelatorio() {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
       doc.setTextColor(255,255,255);
-      doc.text('Gumba Solucoes — Sistema de Gestao AFC Criativa', 14, ph - 4);
+      doc.text('Gumba Soluções — Sistema de Gestão AFC Criativa', 14, ph - 4);
       doc.text('Pagina ' + pn + (total > 1 ? ' de ' + total : ''), pw - 14, ph - 4, { align: 'right' });
     }
 
@@ -5060,13 +5060,15 @@ async function gerarRelatorio() {
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
-    doc.text('GUMBA SOLUCOES', 14, 12);
+    doc.text('GUMBA SOLUÇÕES', 14, 12);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.text('Comércio e Prestação de Serviços', 14, 18);
     doc.setFontSize(8);
     doc.text('Relatório gerado por AFC Criativa', 14, 24);
-    const dataHoje = new Date().toLocaleDateString('pt-AO', {day:'2-digit',month:'long',year:'numeric'});
+    const _now = new Date();
+    const dataHoje = _now.toLocaleDateString('pt-AO', {day:'2-digit',month:'long',year:'numeric'})
+                   + ' ' + _now.toLocaleTimeString('pt-AO', {hour:'2-digit',minute:'2-digit'});
     doc.text(dataHoje, pw - 14, 18, { align: 'right' });
 
     y = 36;
