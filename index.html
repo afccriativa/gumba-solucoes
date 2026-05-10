@@ -1031,6 +1031,31 @@ textarea { resize: vertical; min-height: 70px; }
   font-size: .75rem; color: #707881;
 }
 
+/* ─── RELATORIO MODAL ─── */
+.rel-doc-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 7px;
+  border: 1px solid var(--border2); background: var(--surface2);
+  color: var(--text-dim); font-size: .78rem; font-weight: 600;
+  cursor: pointer; transition: all .15s; font-family: var(--font-body);
+}
+.rel-doc-btn:hover { background: var(--surface3); color: var(--text); }
+.rel-doc-btn.active {
+  background: var(--accent-glow); color: var(--accent2);
+  border-color: rgba(56,189,248,.35);
+}
+.rel-chk-lbl {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; font-size: .81rem;
+  text-transform: none; letter-spacing: 0; font-weight: 400;
+  padding: 6px 10px; border-radius: 6px; border: 1px solid transparent;
+  color: var(--text-dim); transition: all .13s;
+}
+.rel-chk-lbl:hover { background: var(--surface3); color: var(--text); border-color: var(--border); }
+.rel-chk-lbl input:checked ~ span, .rel-chk-lbl:has(input:checked) { color: var(--text); }
+.rel-chk-lbl:has(input:checked) { border-color: var(--border2); background: var(--surface2); }
+.rel-chk-icon { font-size: .85rem; }
+
 /* ─── TOAST NOTIFICATIONS ─── */
 #toast-container {
   position: fixed;
@@ -1835,53 +1860,154 @@ textarea { resize: vertical; min-height: 70px; }
 
 <!-- RELATORIO PDF -->
 <div class="modal-overlay" id="modal-relatorio">
-  <div class="modal" style="max-width:480px">
+  <div class="modal" style="max-width:680px;width:95vw">
     <div class="modal-header">
-      <h3>Exportar Relatorio de Vendas</h3>
+      <h3>Exportar Relatório PDF</h3>
       <button class="modal-close" onclick="closeModal('modal-relatorio')">x</button>
     </div>
-    <div class="modal-body">
-      <div class="form-grid form-grid-2">
-        <div class="form-group">
-          <label>Periodo</label>
-          <select id="rel-tipo" onchange="toggleRelPeriodo()">
-            <option value="mes">Mes especifico</option>
-            <option value="trimestre">Trimestre</option>
-            <option value="ano">Ano completo</option>
-            <option value="todos">Todos os registos</option>
-          </select>
+    <div class="modal-body" style="padding:20px 24px">
+
+      <!-- BLOCO A: Tipo de Relatório -->
+      <div style="margin-bottom:16px">
+        <label style="font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:8px">Tipo de Relatório</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="rel-tipo-doc-btns">
+          <button type="button" class="rel-doc-btn active" data-val="vendas" onclick="setRelTipoDoc('vendas')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="13" height="13"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            Vendas
+          </button>
+          <button type="button" class="rel-doc-btn" data-val="caixa" onclick="setRelTipoDoc('caixa')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="13" height="13"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+            Caixa / Fluxo
+          </button>
+          <button type="button" class="rel-doc-btn" data-val="executivo" onclick="setRelTipoDoc('executivo')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="13" height="13"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            Executivo Completo
+          </button>
         </div>
-        <div class="form-group" id="rel-mes-group">
-          <label>Mes</label>
-          <input type="month" id="rel-mes">
+        <input type="hidden" id="rel-tipo-doc" value="vendas">
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px">
+
+        <!-- COLUNA ESQUERDA -->
+        <div>
+          <!-- Período -->
+          <div style="margin-bottom:14px">
+            <label style="font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:8px">Período</label>
+            <select id="rel-tipo" onchange="toggleRelPeriodo()" style="width:100%;margin-bottom:8px">
+              <option value="mes">Mês específico</option>
+              <option value="custom">Intervalo personalizado</option>
+              <option value="trimestre">Trimestre</option>
+              <option value="ano">Ano completo</option>
+              <option value="todos">Todos os registos</option>
+            </select>
+            <div id="rel-mes-group">
+              <input type="month" id="rel-mes" style="width:100%">
+            </div>
+            <div id="rel-custom-group" style="display:none">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                <div>
+                  <label style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;display:block">De</label>
+                  <input type="date" id="rel-data-ini" style="width:100%">
+                </div>
+                <div>
+                  <label style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;display:block">Até</label>
+                  <input type="date" id="rel-data-fim" style="width:100%">
+                </div>
+              </div>
+            </div>
+            <div id="rel-trim-group" style="display:none">
+              <select id="rel-trimestre" style="width:100%;margin-bottom:6px">
+                <option value="1">1.º Trimestre (Jan–Mar)</option>
+                <option value="2">2.º Trimestre (Abr–Jun)</option>
+                <option value="3">3.º Trimestre (Jul–Set)</option>
+                <option value="4">4.º Trimestre (Out–Dez)</option>
+              </select>
+            </div>
+            <div id="rel-ano-group" style="display:none">
+              <input type="number" id="rel-ano" placeholder="2026" min="2020" max="2030" style="width:100%">
+            </div>
+          </div>
+
+          <!-- Filtros de Dados -->
+          <div>
+            <label style="font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:8px">Filtros de Dados</label>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <div>
+                <label style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;display:block">Mercado</label>
+                <select id="rel-mercado" style="width:100%">
+                  <option value="todos">Todos os mercados</option>
+                  <option value="Angola">Angola</option>
+                  <option value="Internacional">Internacional</option>
+                </select>
+              </div>
+              <div id="rel-cliente-group">
+                <label style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;display:block">Cliente</label>
+                <select id="rel-cliente" style="width:100%">
+                  <option value="">Todos os clientes</option>
+                </select>
+              </div>
+              <div id="rel-estado-group">
+                <label style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;display:block">Estado da venda</label>
+                <select id="rel-estado" style="width:100%">
+                  <option value="todos">Todos</option>
+                  <option value="pago">Pago</option>
+                  <option value="parcial">Parcial</option>
+                  <option value="pendente">Pendente</option>
+                </select>
+              </div>
+              <div id="rel-tipo-venda-group">
+                <label style="font-size:.7rem;color:var(--text-muted);margin-bottom:3px;display:block">Tipo de venda</label>
+                <select id="rel-tipo-venda" style="width:100%">
+                  <option value="todos">Todos</option>
+                  <option value="pronto">Pronto pagamento</option>
+                  <option value="parcelada">Parcelada</option>
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="form-group" id="rel-trim-group" style="display:none">
-          <label>Trimestre</label>
-          <select id="rel-trimestre">
-            <option value="1">1 Trimestre (Jan-Mar)</option>
-            <option value="2">2 Trimestre (Abr-Jun)</option>
-            <option value="3">3 Trimestre (Jul-Set)</option>
-            <option value="4">4 Trimestre (Out-Dez)</option>
-          </select>
-        </div>
-        <div class="form-group" id="rel-ano-group" style="display:none">
-          <label>Ano</label>
-          <input type="number" id="rel-ano" placeholder="2025" min="2020" max="2030">
-        </div>
-        <div class="form-group full">
-          <label>Incluir no relatorio</label>
-          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.82rem;text-transform:none;letter-spacing:0;font-weight:400">
-              <input type="checkbox" id="rel-inc-resumo" checked style="accent-color:var(--accent)"> Resumo executivo (KPIs)
+
+        <!-- COLUNA DIREITA: Secções -->
+        <div>
+          <label style="font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:8px">Secções a incluir</label>
+          <div style="display:flex;flex-direction:column;gap:6px" id="rel-seccoes">
+
+            <label class="rel-chk-lbl" id="lbl-inc-resumo">
+              <input type="checkbox" id="rel-inc-resumo" checked style="accent-color:var(--accent)">
+              <span class="rel-chk-icon">📊</span> Resumo executivo (KPIs)
             </label>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.82rem;text-transform:none;letter-spacing:0;font-weight:400">
-              <input type="checkbox" id="rel-inc-vendas" checked style="accent-color:var(--accent)"> Tabela de vendas detalhada
+            <label class="rel-chk-lbl" id="lbl-inc-vendas">
+              <input type="checkbox" id="rel-inc-vendas" checked style="accent-color:var(--accent)">
+              <span class="rel-chk-icon">🧾</span> Tabela de vendas detalhada
             </label>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.82rem;text-transform:none;letter-spacing:0;font-weight:400">
-              <input type="checkbox" id="rel-inc-produtos" checked style="accent-color:var(--accent)"> Top produtos vendidos
+            <label class="rel-chk-lbl" id="lbl-inc-produtos">
+              <input type="checkbox" id="rel-inc-produtos" checked style="accent-color:var(--accent)">
+              <span class="rel-chk-icon">📦</span> Top 10 produtos por volume
             </label>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.82rem;text-transform:none;letter-spacing:0;font-weight:400">
-              <input type="checkbox" id="rel-inc-cobr" style="accent-color:var(--accent)"> Cobranças pendentes
+            <label class="rel-chk-lbl" id="lbl-inc-clientes">
+              <input type="checkbox" id="rel-inc-clientes" style="accent-color:var(--accent)">
+              <span class="rel-chk-icon">👥</span> Top 5 clientes por facturação
+            </label>
+            <label class="rel-chk-lbl" id="lbl-inc-mercado">
+              <input type="checkbox" id="rel-inc-mercado" style="accent-color:var(--accent)">
+              <span class="rel-chk-icon">🌍</span> Análise por mercado
+            </label>
+            <label class="rel-chk-lbl" id="lbl-inc-cobr">
+              <input type="checkbox" id="rel-inc-cobr" style="accent-color:var(--accent)">
+              <span class="rel-chk-icon">⏰</span> Cobranças pendentes
+            </label>
+            <label class="rel-chk-lbl" id="lbl-inc-caixa" style="display:none">
+              <input type="checkbox" id="rel-inc-caixa" style="accent-color:var(--accent)">
+              <span class="rel-chk-icon">💳</span> Movimentos de caixa
+            </label>
+            <label class="rel-chk-lbl" id="lbl-inc-opex">
+              <input type="checkbox" id="rel-inc-opex" style="accent-color:var(--accent)">
+              <span class="rel-chk-icon">💸</span> Despesas operacionais
+            </label>
+            <label class="rel-chk-lbl" id="lbl-inc-resultado">
+              <input type="checkbox" id="rel-inc-resultado" style="accent-color:var(--accent)">
+              <span class="rel-chk-icon">📈</span> Resultado líquido (Lucro − OpEx)
             </label>
           </div>
         </div>
@@ -4601,52 +4727,127 @@ function aplicarMiniCalc() {
 //  RELATORIOS PDF — jsPDF + AutoTable
 // ===========================================================
 
-function toggleRelPeriodo() {
-  const tipo = document.getElementById('rel-tipo')?.value;
-  const mesG = document.getElementById('rel-mes-group');
-  const trimG = document.getElementById('rel-trim-group');
-  const anoG = document.getElementById('rel-ano-group');
-  if(mesG) mesG.style.display = tipo === 'mes' ? '' : 'none';
-  if(trimG) trimG.style.display = tipo === 'trimestre' ? '' : 'none';
-  if(anoG) anoG.style.display = (tipo === 'trimestre' || tipo === 'ano') ? '' : 'none';
+function setRelTipoDoc(val) {
+  document.getElementById('rel-tipo-doc').value = val;
+  document.querySelectorAll('.rel-doc-btn').forEach(b => b.classList.toggle('active', b.dataset.val === val));
+  // mostrar/ocultar secções relevantes
+  const isCaixa = val === 'caixa';
+  const isExec  = val === 'executivo';
+  const isVenda = val === 'vendas';
+  _relShow('lbl-inc-vendas',   !isCaixa);
+  _relShow('lbl-inc-produtos', !isCaixa);
+  _relShow('lbl-inc-clientes', !isCaixa);
+  _relShow('lbl-inc-mercado',  !isCaixa);
+  _relShow('rel-cliente-group',!isCaixa);
+  _relShow('rel-estado-group', !isCaixa);
+  _relShow('rel-tipo-venda-group', !isCaixa);
+  _relShow('lbl-inc-caixa',    !isVenda);
+  // Executivo: pré-seleccionar tudo
+  if(isExec) {
+    ['rel-inc-resumo','rel-inc-vendas','rel-inc-produtos','rel-inc-clientes',
+     'rel-inc-mercado','rel-inc-cobr','rel-inc-caixa','rel-inc-opex','rel-inc-resultado']
+      .forEach(id => { const el=document.getElementById(id); if(el) el.checked=true; });
+  }
+}
+function _relShow(id, show) {
+  const el = document.getElementById(id);
+  if(el) el.style.display = show ? '' : 'none';
 }
 
-function filtrarVendasPeriodo() {
-  const tipo = document.getElementById('rel-tipo').value;
-  const ano = document.getElementById('rel-ano')?.value || new Date().getFullYear();
+function toggleRelPeriodo() {
+  const tipo = document.getElementById('rel-tipo')?.value;
+  document.getElementById('rel-mes-group').style.display    = tipo === 'mes'       ? '' : 'none';
+  document.getElementById('rel-custom-group').style.display = tipo === 'custom'    ? '' : 'none';
+  document.getElementById('rel-trim-group').style.display   = tipo === 'trimestre' ? '' : 'none';
+  document.getElementById('rel-ano-group').style.display    = (tipo === 'trimestre' || tipo === 'ano') ? '' : 'none';
+}
+
+function _filtrarVendasRelatorio() {
+  const tipo     = document.getElementById('rel-tipo').value;
+  const ano      = document.getElementById('rel-ano')?.value || new Date().getFullYear();
+  const mercado  = document.getElementById('rel-mercado')?.value || 'todos';
+  const cliente  = document.getElementById('rel-cliente')?.value || '';
+  const estado   = document.getElementById('rel-estado')?.value || 'todos';
+  const tipoV    = document.getElementById('rel-tipo-venda')?.value || 'todos';
   let vendas = [...CACHE.vendas];
 
+  // — filtro período —
   if(tipo === 'mes') {
     const mes = document.getElementById('rel-mes').value;
     if(mes) vendas = vendas.filter(v => v.data?.startsWith(mes));
+  } else if(tipo === 'custom') {
+    const ini = document.getElementById('rel-data-ini').value;
+    const fim = document.getElementById('rel-data-fim').value;
+    if(ini) vendas = vendas.filter(v => v.data >= ini);
+    if(fim) vendas = vendas.filter(v => v.data <= fim);
   } else if(tipo === 'trimestre') {
     const trim = parseInt(document.getElementById('rel-trimestre').value);
-    const meses = [[(trim-1)*3+1, (trim-1)*3+2, (trim-1)*3+3]].flat();
+    const meses = [(trim-1)*3+1, (trim-1)*3+2, (trim-1)*3+3];
     vendas = vendas.filter(v => {
       if(!v.data) return false;
-      const m = parseInt(v.data.split('-')[1]);
-      const a = parseInt(v.data.split('-')[0]);
-      return parseInt(a) === parseInt(ano) && meses.includes(m);
+      return parseInt(v.data.split('-')[0]) === parseInt(ano) &&
+             meses.includes(parseInt(v.data.split('-')[1]));
     });
   } else if(tipo === 'ano') {
     vendas = vendas.filter(v => v.data?.startsWith(String(ano)));
   }
 
-  return vendas.sort((a,b) => b.data?.localeCompare(a.data));
+  // — filtros de dados —
+  if(mercado !== 'todos') vendas = vendas.filter(v => v.mercado === mercado);
+  if(cliente) vendas = vendas.filter(v => v.cliente_id === cliente);
+  if(estado !== 'todos') vendas = vendas.filter(v => v.estado === estado);
+  if(tipoV !== 'todos') vendas = vendas.filter(v => v.tipo === tipoV);
+
+  return vendas.sort((a,b) => (b.data||'').localeCompare(a.data||''));
+}
+
+// manter alias para compatibilidade com outras chamadas existentes
+function filtrarVendasPeriodo() { return _filtrarVendasRelatorio(); }
+
+function _filtrarCaixaPeriodo() {
+  const tipo = document.getElementById('rel-tipo').value;
+  const ano  = document.getElementById('rel-ano')?.value || new Date().getFullYear();
+  let movs = [...CACHE.caixa];
+  if(tipo === 'mes') {
+    const mes = document.getElementById('rel-mes').value;
+    if(mes) movs = movs.filter(m => m.data?.startsWith(mes));
+  } else if(tipo === 'custom') {
+    const ini = document.getElementById('rel-data-ini').value;
+    const fim = document.getElementById('rel-data-fim').value;
+    if(ini) movs = movs.filter(m => m.data >= ini);
+    if(fim) movs = movs.filter(m => m.data <= fim);
+  } else if(tipo === 'trimestre') {
+    const trim = parseInt(document.getElementById('rel-trimestre').value);
+    const meses = [(trim-1)*3+1, (trim-1)*3+2, (trim-1)*3+3];
+    movs = movs.filter(m => {
+      if(!m.data) return false;
+      return parseInt(m.data.split('-')[0]) === parseInt(ano) &&
+             meses.includes(parseInt(m.data.split('-')[1]));
+    });
+  } else if(tipo === 'ano') {
+    movs = movs.filter(m => m.data?.startsWith(String(ano)));
+  }
+  return movs.sort((a,b) => (b.data||'').localeCompare(a.data||''));
 }
 
 function getPeriodoLabel() {
   const tipo = document.getElementById('rel-tipo').value;
+  const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   if(tipo === 'mes') {
     const mes = document.getElementById('rel-mes').value;
     if(!mes) return 'Periodo nao definido';
     const [y, m] = mes.split('-');
-    const meses = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-    return meses[parseInt(m)-1] + ' ' + y;
+    return MESES[parseInt(m)-1] + ' ' + y;
+  }
+  if(tipo === 'custom') {
+    const ini = document.getElementById('rel-data-ini').value;
+    const fim = document.getElementById('rel-data-fim').value;
+    const fmt = d => d ? d.split('-').reverse().join('/') : '?';
+    return fmt(ini) + ' a ' + fmt(fim);
   }
   if(tipo === 'trimestre') {
     const trim = document.getElementById('rel-trimestre').value;
-    const ano = document.getElementById('rel-ano').value || new Date().getFullYear();
+    const ano  = document.getElementById('rel-ano').value || new Date().getFullYear();
     return trim + 'T ' + ano;
   }
   if(tipo === 'ano') {
@@ -4664,24 +4865,66 @@ async function gerarRelatorio() {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
-    const vendas = filtrarVendasPeriodo();
-    const periodo = getPeriodoLabel();
-    const incResumo = document.getElementById('rel-inc-resumo').checked;
-    const incVendas = document.getElementById('rel-inc-vendas').checked;
-    const incProdutos = document.getElementById('rel-inc-produtos').checked;
-    const incCobr = document.getElementById('rel-inc-cobr').checked;
 
-    // --- CORES E ESTILOS ---
-    const COR_PRIMARY = [0, 96, 150];      // #006096
-    const COR_DARK    = [13, 28, 46];      // #0d1c2e
-    const COR_MUTED   = [64, 72, 80];      // #404850
-    const COR_LIGHT   = [239, 244, 255];   // #eff4ff
+    const tipoDoc  = document.getElementById('rel-tipo-doc').value;
+    const vendas   = _filtrarVendasRelatorio();
+    const periodo  = getPeriodoLabel();
+    const mercadoFiltro = document.getElementById('rel-mercado')?.value || 'todos';
+
+    const incResumo    = document.getElementById('rel-inc-resumo')?.checked;
+    const incVendas    = document.getElementById('rel-inc-vendas')?.checked;
+    const incProdutos  = document.getElementById('rel-inc-produtos')?.checked;
+    const incClientes  = document.getElementById('rel-inc-clientes')?.checked;
+    const incMercado   = document.getElementById('rel-inc-mercado')?.checked;
+    const incCobr      = document.getElementById('rel-inc-cobr')?.checked;
+    const incCaixa     = document.getElementById('rel-inc-caixa')?.checked;
+    const incOpex      = document.getElementById('rel-inc-opex')?.checked;
+    const incResultado = document.getElementById('rel-inc-resultado')?.checked;
+
+    // ─── CORES ───
+    const COR_PRIMARY = [0, 96, 150];
+    const COR_DARK    = [13, 28, 46];
+    const COR_MUTED   = [64, 72, 80];
+    const COR_LIGHT   = [239, 244, 255];
     const COR_SUCCESS = [16, 185, 129];
+    const COR_WARNING = [245, 158, 11];
+    const COR_DANGER  = [239, 68, 68];
     const COR_BORDER  = [191, 199, 210];
 
-    let y = 0; // cursor vertical
+    const CATS_OPEX = ['Transporte','Alfândega','Salário','Aluguer','Comunicações','Bancário','Outro'];
+
+    let y = 0;
+
+    // ─── HELPER: rodapé por página ───
+    function _rodape(data) {
+      const pn = data ? data.pageNumber : doc.internal.getCurrentPageInfo().pageNumber;
+      const total = doc.internal.getNumberOfPages();
+      doc.setFillColor(...COR_PRIMARY);
+      doc.rect(0, ph - 10, pw, 10, 'F');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(255,255,255);
+      doc.text('Gumba Solucoes — Sistema de Gestao AFC Criativa', 14, ph - 4);
+      doc.text('Pagina ' + pn + (total > 1 ? ' de ' + total : ''), pw - 14, ph - 4, { align: 'right' });
+    }
+
+    // ─── HELPER: título de secção ───
+    function _titulo(texto, cor) {
+      if(y > ph - 50) { doc.addPage(); y = 20; }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...(cor || COR_PRIMARY));
+      doc.text(texto, 14, y);
+      y += 4;
+    }
+
+    // ─── HELPER: nova página se necessário ───
+    function _checkPage(espaco) {
+      if(y > ph - (espaco || 60)) { doc.addPage(); y = 20; }
+    }
 
     // ─── CABECALHO ───
+    const titulos = { vendas: 'Relatorio de Vendas', caixa: 'Relatorio de Caixa', executivo: 'Relatorio Executivo' };
     doc.setFillColor(...COR_PRIMARY);
     doc.rect(0, 0, pw, 28, 'F');
     doc.setTextColor(255, 255, 255);
@@ -4693,246 +4936,447 @@ async function gerarRelatorio() {
     doc.text('Comercio e Prestacao de Servicos', 14, 18);
     doc.setFontSize(8);
     doc.text('Relatorio gerado por AFC Criativa', 14, 24);
-    // Data no canto direito
-    doc.setFontSize(8);
     const dataHoje = new Date().toLocaleDateString('pt-AO', {day:'2-digit',month:'long',year:'numeric'});
     doc.text(dataHoje, pw - 14, 18, { align: 'right' });
 
-    // ─── TITULO DO RELATORIO ───
     y = 36;
     doc.setTextColor(...COR_DARK);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text('Relatorio de Vendas — ' + periodo, 14, y);
+    doc.text((titulos[tipoDoc] || 'Relatorio') + ' — ' + periodo, 14, y);
+    if(mercadoFiltro !== 'todos') {
+      y += 5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...COR_MUTED);
+      doc.text('Mercado: ' + mercadoFiltro, 14, y);
+    }
     y += 5;
     doc.setDrawColor(...COR_BORDER);
     doc.setLineWidth(0.3);
     doc.line(14, y, pw - 14, y);
     y += 8;
 
-    // ─── RESUMO EXECUTIVO (KPIs) ───
+    // ─── RESUMO EXECUTIVO ───
     if(incResumo) {
-      const totalVendas = vendas.length;
-      const faturacao = vendas.reduce((s,v) => s + Number(v.total||0), 0);
+      const faturacao  = vendas.reduce((s,v) => s + Number(v.total||0), 0);
       const custoTotal = vendas.reduce((s,v) => s + (v.itens||[]).reduce((ss,it) => {
         const p = CACHE.produtos.find(x => x.id === it.produto_id);
-        return ss + (p ? p.preco_custo * it.qty : 0);
+        return ss + (p ? (p.preco_custo||0) * (it.qty||1) : 0);
       }, 0), 0);
-      const lucro = faturacao - custoTotal;
-      const ticket = totalVendas > 0 ? Math.round(faturacao / totalVendas) : 0;
+      const lucro  = faturacao - custoTotal;
+      const ticket = vendas.length > 0 ? Math.round(faturacao / vendas.length) : 0;
+      const margem = faturacao > 0 ? Math.round((lucro / faturacao) * 100) : 0;
+      const pagas  = vendas.filter(v => v.estado === 'pago').length;
 
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(...COR_PRIMARY);
-      doc.text('RESUMO DO PERIODO', 14, y);
-      y += 6;
-
+      _titulo('RESUMO DO PERIODO');
       const kpis = [
-        { label: 'Total de Vendas', value: totalVendas + ' venda(s)', cor: COR_PRIMARY },
-        { label: 'Faturacao Total', value: Number(faturacao).toLocaleString('pt-AO') + ' Kz', cor: COR_PRIMARY },
-        { label: 'Lucro Bruto', value: Number(lucro).toLocaleString('pt-AO') + ' Kz', cor: COR_SUCCESS },
-        { label: 'Ticket Medio', value: Number(ticket).toLocaleString('pt-AO') + ' Kz', cor: COR_MUTED },
+        { label: 'Total de Vendas',   value: vendas.length + ' venda(s)',              cor: COR_PRIMARY },
+        { label: 'Faturacao Total',   value: Number(faturacao).toLocaleString('pt-AO') + ' Kz', cor: COR_PRIMARY },
+        { label: 'Lucro Bruto',       value: Number(lucro).toLocaleString('pt-AO') + ' Kz',     cor: COR_SUCCESS },
+        { label: 'Ticket Medio',      value: Number(ticket).toLocaleString('pt-AO') + ' Kz',    cor: COR_MUTED },
+        { label: 'Margem Media',      value: margem + '%',                             cor: margem >= 20 ? COR_SUCCESS : COR_WARNING },
+        { label: 'Vendas Pagas',      value: pagas + '/' + vendas.length,              cor: COR_MUTED },
       ];
-
-      const kpiW = (pw - 28 - 9) / 4;
+      const cols = 3;
+      const kpiW = (pw - 28 - (cols-1)*4) / cols;
       kpis.forEach((k, i) => {
-        const x = 14 + i * (kpiW + 3);
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = 14 + col * (kpiW + 4);
+        const yy = y + row * 22;
         doc.setFillColor(...COR_LIGHT);
-        doc.roundedRect(x, y, kpiW, 18, 2, 2, 'F');
+        doc.roundedRect(x, yy, kpiW, 18, 2, 2, 'F');
         doc.setDrawColor(...COR_BORDER);
-        doc.roundedRect(x, y, kpiW, 18, 2, 2, 'S');
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        doc.setTextColor(...COR_MUTED);
-        doc.text(k.label.toUpperCase(), x + kpiW/2, y + 5, { align: 'center' });
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(...k.cor);
-        doc.text(k.value, x + kpiW/2, y + 13, { align: 'center' });
+        doc.roundedRect(x, yy, kpiW, 18, 2, 2, 'S');
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...COR_MUTED);
+        doc.text(k.label.toUpperCase(), x + kpiW/2, yy + 5, { align: 'center' });
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...k.cor);
+        doc.text(k.value, x + kpiW/2, yy + 13, { align: 'center' });
       });
-      y += 26;
+      y += Math.ceil(kpis.length / cols) * 22 + 6;
     }
 
     // ─── TABELA DE VENDAS ───
-    if(incVendas && vendas.length > 0) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(...COR_PRIMARY);
-      doc.text('VENDAS DETALHADAS', 14, y);
-      y += 4;
-
-      const rows = vendas.map(v => [
-        v.data || '---',
-        nomeCliente(v.cliente_id) || '---',
-        (v.itens||[]).map(i => i.qty + 'x ' + i.nome_snapshot).join(', ') || '---',
-        Number(v.total||0).toLocaleString('pt-AO') + ' Kz',
-        v.pagamento || '---',
-        v.tipo === 'parcelada' ? 'Parcelada' : 'Pronto',
-      ]);
-
-      doc.autoTable({
-        startY: y,
-        head: [['Data', 'Cliente', 'Produtos', 'Total', 'Pagamento', 'Tipo']],
-        body: rows,
-        theme: 'grid',
-        styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 3, textColor: COR_DARK },
-        headStyles: { fillColor: COR_PRIMARY, textColor: [255,255,255], fontStyle: 'bold', fontSize: 8 },
-        alternateRowStyles: { fillColor: [248, 249, 255] },
-        columnStyles: {
-          0: { cellWidth: 20 },
-          1: { cellWidth: 32 },
-          2: { cellWidth: 'auto' },
-          3: { cellWidth: 28, halign: 'right' },
-          4: { cellWidth: 22 },
-          5: { cellWidth: 20 },
-        },
-        margin: { left: 14, right: 14 },
-        didDrawPage: (data) => {
-          // Rodape em cada pagina
-          doc.setFillColor(...COR_PRIMARY);
-          doc.rect(0, ph - 10, pw, 10, 'F');
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(7);
-          doc.setTextColor(255,255,255);
-          doc.text('Gumba Solucoes — Sistema de Gestao AFC Criativa', 14, ph - 4);
-          doc.text('Pagina ' + data.pageNumber, pw - 14, ph - 4, { align: 'right' });
-        }
-      });
-      y = doc.lastAutoTable.finalY + 10;
-    } else if(incVendas) {
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(9);
-      doc.setTextColor(...COR_MUTED);
-      doc.text('Sem vendas no periodo seleccionado.', 14, y);
-      y += 10;
+    if(incVendas && tipoDoc !== 'caixa') {
+      _checkPage();
+      _titulo('VENDAS DETALHADAS');
+      if(vendas.length > 0) {
+        const rows = vendas.map(v => {
+          const saldoObj = CACHE.vendasSaldo?.find(s => s.id === v.id);
+          const saldo = saldoObj ? Number(saldoObj.saldo_devedor||0) : 0;
+          return [
+            v.data || '---',
+            nomeCliente(v.cliente_id) || '---',
+            (v.itens||[]).map(i => i.qty+'x '+i.nome_snapshot).join(', ') || '---',
+            Number(v.total||0).toLocaleString('pt-AO') + ' Kz',
+            saldo > 0 ? Number(saldo).toLocaleString('pt-AO') + ' Kz' : '—',
+            v.estado ? v.estado.charAt(0).toUpperCase()+v.estado.slice(1) : '---',
+            v.pagamento || '---',
+            v.tipo === 'parcelada' ? 'Parcelada' : 'Pronto',
+          ];
+        });
+        doc.autoTable({
+          startY: y,
+          head: [['Data','Cliente','Produtos','Total','Saldo','Estado','Pagamento','Tipo']],
+          body: rows, theme: 'grid',
+          styles: { font:'helvetica', fontSize:7, cellPadding:2.5, textColor:COR_DARK },
+          headStyles: { fillColor:COR_PRIMARY, textColor:[255,255,255], fontStyle:'bold', fontSize:7.5 },
+          alternateRowStyles: { fillColor:[248,249,255] },
+          columnStyles: {
+            0:{cellWidth:18}, 1:{cellWidth:28}, 2:{cellWidth:'auto'},
+            3:{cellWidth:24,halign:'right'}, 4:{cellWidth:22,halign:'right'},
+            5:{cellWidth:16,halign:'center'}, 6:{cellWidth:20}, 7:{cellWidth:18}
+          },
+          margin:{left:14,right:14},
+          didDrawPage: _rodape
+        });
+        y = doc.lastAutoTable.finalY + 10;
+      } else {
+        doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(...COR_MUTED);
+        doc.text('Sem vendas no periodo seleccionado.', 14, y);
+        y += 10;
+      }
     }
 
-    // ─── TOP PRODUTOS ───
-    if(incProdutos && vendas.length > 0) {
-      // Nova pagina se pouco espaco
-      if(y > ph - 60) { doc.addPage(); y = 20; }
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(...COR_PRIMARY);
-      doc.text('TOP PRODUTOS VENDIDOS', 14, y);
-      y += 4;
-
-      const prodStats = {};
+    // ─── TOP 10 PRODUTOS ───
+    if(incProdutos && tipoDoc !== 'caixa' && vendas.length > 0) {
+      _checkPage(60);
+      _titulo('TOP 10 PRODUTOS VENDIDOS');
+      const stats = {};
       vendas.forEach(v => (v.itens||[]).forEach(it => {
-        const key = it.nome_snapshot || 'Desconhecido';
-        if(!prodStats[key]) prodStats[key] = { qty: 0, total: 0 };
-        prodStats[key].qty += it.qty || 1;
-        prodStats[key].total += (it.preco_unitario || 0) * (it.qty || 1);
+        const k = it.nome_snapshot || 'Desconhecido';
+        if(!stats[k]) stats[k] = { qty:0, total:0, custo:0 };
+        stats[k].qty   += it.qty || 1;
+        stats[k].total += (it.preco_unitario||0) * (it.qty||1);
+        const p = CACHE.produtos.find(x => x.id === it.produto_id);
+        if(p) stats[k].custo += (p.preco_custo||0) * (it.qty||1);
       }));
-
-      const topRows = Object.entries(prodStats)
-        .sort((a,b) => b[1].qty - a[1].qty)
-        .slice(0, 10)
-        .map(([nome, s], i) => [
-          i+1,
-          nome,
-          s.qty + ' unid.',
-          Number(s.total).toLocaleString('pt-AO') + ' Kz'
-        ]);
-
+      const rows = Object.entries(stats)
+        .sort((a,b) => b[1].qty - a[1].qty).slice(0, 10)
+        .map(([nome,s],i) => {
+          const margem = s.total > 0 ? Math.round(((s.total-s.custo)/s.total)*100) : 0;
+          return [i+1, nome, s.qty+' unid.', Number(s.total).toLocaleString('pt-AO')+' Kz',
+                  Number(s.custo).toLocaleString('pt-AO')+' Kz', margem+'%'];
+        });
       doc.autoTable({
-        startY: y,
-        head: [['#', 'Produto', 'Quantidade', 'Receita']],
-        body: topRows,
-        theme: 'grid',
-        styles: { font: 'helvetica', fontSize: 8, cellPadding: 3, textColor: COR_DARK },
-        headStyles: { fillColor: COR_PRIMARY, textColor: [255,255,255], fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [248, 249, 255] },
-        columnStyles: {
-          0: { cellWidth: 10, halign: 'center' },
-          2: { halign: 'center' },
-          3: { halign: 'right' },
+        startY:y, head:[['#','Produto','Volume','Receita','Custo','Margem']],
+        body:rows, theme:'grid',
+        styles:{font:'helvetica',fontSize:8,cellPadding:3,textColor:COR_DARK},
+        headStyles:{fillColor:COR_PRIMARY,textColor:[255,255,255],fontStyle:'bold'},
+        alternateRowStyles:{fillColor:[248,249,255]},
+        columnStyles:{0:{cellWidth:8,halign:'center'},2:{halign:'center'},3:{halign:'right'},4:{halign:'right'},5:{halign:'center'}},
+        margin:{left:14,right:14}, didDrawPage:_rodape
+      });
+      y = doc.lastAutoTable.finalY + 10;
+    }
+
+    // ─── TOP 5 CLIENTES ───
+    if(incClientes && tipoDoc !== 'caixa' && vendas.length > 0) {
+      _checkPage(60);
+      _titulo('TOP 5 CLIENTES POR FATURACAO');
+      const stats = {};
+      vendas.forEach(v => {
+        const cid = v.cliente_id || 'desconhecido';
+        if(!stats[cid]) stats[cid] = { nome: nomeCliente(cid)||'Desconhecido', count:0, total:0, pago:0 };
+        stats[cid].count++;
+        stats[cid].total += Number(v.total||0);
+        const sv = CACHE.vendasSaldo?.find(s=>s.id===v.id);
+        const saldo = sv ? Number(sv.saldo_devedor||0) : 0;
+        stats[cid].pago += Number(v.total||0) - saldo;
+      });
+      const rows = Object.values(stats)
+        .sort((a,b)=>b.total-a.total).slice(0,5)
+        .map((c,i)=>[
+          i+1, c.nome, c.count+' compra(s)',
+          Number(c.total).toLocaleString('pt-AO')+' Kz',
+          Number(c.pago).toLocaleString('pt-AO')+' Kz',
+          Number(c.total-c.pago).toLocaleString('pt-AO')+' Kz'
+        ]);
+      doc.autoTable({
+        startY:y, head:[['#','Cliente','Compras','Total Facturado','Total Pago','Saldo Pendente']],
+        body:rows, theme:'grid',
+        styles:{font:'helvetica',fontSize:8,cellPadding:3,textColor:COR_DARK},
+        headStyles:{fillColor:COR_PRIMARY,textColor:[255,255,255],fontStyle:'bold'},
+        alternateRowStyles:{fillColor:[248,249,255]},
+        columnStyles:{0:{cellWidth:8,halign:'center'},2:{halign:'center'},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'}},
+        margin:{left:14,right:14}, didDrawPage:_rodape
+      });
+      y = doc.lastAutoTable.finalY + 10;
+    }
+
+    // ─── ANÁLISE POR MERCADO ───
+    if(incMercado && tipoDoc !== 'caixa' && vendas.length > 0) {
+      _checkPage(60);
+      _titulo('ANALISE POR MERCADO');
+      const stats = {};
+      vendas.forEach(v => {
+        const m = v.mercado || 'Não definido';
+        if(!stats[m]) stats[m] = { count:0, total:0, custo:0 };
+        stats[m].count++;
+        stats[m].total += Number(v.total||0);
+        stats[m].custo += (v.itens||[]).reduce((s,it) => {
+          const p = CACHE.produtos.find(x=>x.id===it.produto_id);
+          return s + (p?(p.preco_custo||0)*(it.qty||1):0);
+        },0);
+      });
+      const totFat = Object.values(stats).reduce((s,x)=>s+x.total,0);
+      const rows = Object.entries(stats).map(([m,s]) => {
+        const lucro  = s.total - s.custo;
+        const margem = s.total>0 ? Math.round((lucro/s.total)*100) : 0;
+        const share  = totFat>0 ? Math.round((s.total/totFat)*100) : 0;
+        return [m, s.count+' venda(s)', share+'%',
+                Number(s.total).toLocaleString('pt-AO')+' Kz',
+                Number(s.custo).toLocaleString('pt-AO')+' Kz',
+                Number(lucro).toLocaleString('pt-AO')+' Kz', margem+'%'];
+      });
+      // Linha totais
+      const totCusto = Object.values(stats).reduce((s,x)=>s+x.custo,0);
+      rows.push(['TOTAL', vendas.length+' venda(s)', '100%',
+        Number(totFat).toLocaleString('pt-AO')+' Kz',
+        Number(totCusto).toLocaleString('pt-AO')+' Kz',
+        Number(totFat-totCusto).toLocaleString('pt-AO')+' Kz',
+        totFat>0?Math.round(((totFat-totCusto)/totFat)*100)+'%':'0%']);
+      doc.autoTable({
+        startY:y, head:[['Mercado','Vendas','% Receita','Faturacao','Custo','Lucro Bruto','Margem']],
+        body:rows, theme:'grid',
+        styles:{font:'helvetica',fontSize:8,cellPadding:3,textColor:COR_DARK},
+        headStyles:{fillColor:COR_PRIMARY,textColor:[255,255,255],fontStyle:'bold'},
+        alternateRowStyles:{fillColor:[248,249,255]},
+        bodyStyles:{},
+        didParseCell: (data) => {
+          if(data.row.index === rows.length-1) {
+            data.cell.styles.fontStyle='bold';
+            data.cell.styles.fillColor=[225,235,250];
+          }
         },
-        margin: { left: 14, right: 14 },
+        columnStyles:{1:{halign:'center'},2:{halign:'center'},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'},6:{halign:'center'}},
+        margin:{left:14,right:14}, didDrawPage:_rodape
       });
       y = doc.lastAutoTable.finalY + 10;
     }
 
     // ─── COBRANÇAS PENDENTES ───
     if(incCobr) {
-      const cobPend = CACHE.cobrancas.filter(c => {
-        const prests = c.prestacoes || [];
-        return prests.some(p => !p.pago);
-      });
-
+      const cobPend = CACHE.cobrancas.filter(c => (c.prestacoes||[]).some(p=>!p.pago));
       if(cobPend.length > 0) {
-        if(y > ph - 60) { doc.addPage(); y = 20; }
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.setTextColor(...COR_PRIMARY);
-        doc.text('COBRANÇAS PENDENTES', 14, y);
-        y += 4;
-
-        const cobrRows = cobPend.map(c => {
-          const prests = c.prestacoes || [];
-          const pendentes = prests.filter(p => !p.pago);
-          const proxVcto = pendentes[0]?.data_vencimento || '---';
-          const totalPend = pendentes.reduce((s,p) => s + Number(p.valor||0), 0);
+        _checkPage(60);
+        _titulo('COBRANCAS PENDENTES', [186,26,26]);
+        const rows = cobPend.map(c => {
+          const prests  = c.prestacoes||[];
+          const pend    = prests.filter(p=>!p.pago);
+          const vencidas = pend.filter(p => p.data_vencimento && p.data_vencimento < new Date().toISOString().slice(0,10));
+          const proxVcto = pend[0]?.data_vencimento||'---';
           return [
-            nomeCliente(c.cliente_id),
-            c.referencia || '---',
-            Number(c.valor_total||0).toLocaleString('pt-AO') + ' Kz',
-            pendentes.length + '/' + prests.length,
-            Number(totalPend).toLocaleString('pt-AO') + ' Kz',
-            proxVcto,
+            nomeCliente(c.cliente_id), c.referencia||'---',
+            Number(c.valor_total||0).toLocaleString('pt-AO')+' Kz',
+            pend.length+'/'+prests.length,
+            Number(pend.reduce((s,p)=>s+Number(p.valor||0),0)).toLocaleString('pt-AO')+' Kz',
+            vencidas.length > 0 ? vencidas.length+' vencida(s)' : '—',
+            proxVcto
           ];
         });
-
         doc.autoTable({
-          startY: y,
-          head: [['Cliente', 'Referencia', 'Total', 'Prestacoes', 'Valor Pendente', 'Prox. Vcto']],
-          body: cobrRows,
-          theme: 'grid',
-          styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 3, textColor: COR_DARK },
-          headStyles: { fillColor: [186, 26, 26], textColor: [255,255,255], fontStyle: 'bold' },
-          alternateRowStyles: { fillColor: [255, 248, 248] },
-          margin: { left: 14, right: 14 },
+          startY:y, head:[['Cliente','Referencia','Total','Prestacoes','Val.Pendente','Atrasos','Prox.Vcto']],
+          body:rows, theme:'grid',
+          styles:{font:'helvetica',fontSize:7.5,cellPadding:2.5,textColor:COR_DARK},
+          headStyles:{fillColor:[186,26,26],textColor:[255,255,255],fontStyle:'bold'},
+          alternateRowStyles:{fillColor:[255,248,248]},
+          didParseCell: (data) => {
+            if(data.column.index===5 && data.row.section==='body' && data.cell.raw && data.cell.raw !== '—')
+              data.cell.styles.textColor = COR_DANGER;
+          },
+          margin:{left:14,right:14}, didDrawPage:_rodape
         });
+        y = doc.lastAutoTable.finalY + 10;
+      } else {
+        _checkPage(30);
+        doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(...COR_SUCCESS);
+        doc.text('Sem cobranças pendentes.', 14, y);
+        y += 10;
       }
     }
 
-    // ─── RODAPE FINAL ───
+    // ─── MOVIMENTOS DE CAIXA ───
+    if(incCaixa && tipoDoc !== 'vendas') {
+      const movs = _filtrarCaixaPeriodo();
+      _checkPage(60);
+      _titulo('MOVIMENTOS DE CAIXA');
+      const entradas = movs.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+Number(m.valor||0),0);
+      const saidas   = movs.filter(m=>m.tipo==='saida').reduce((s,m)=>s+Number(m.valor||0),0);
+      // Mini KPIs de caixa
+      const kpisCaixa = [
+        {label:'Total Entradas', value:Number(entradas).toLocaleString('pt-AO')+' Kz', cor:COR_SUCCESS},
+        {label:'Total Saidas',   value:Number(saidas).toLocaleString('pt-AO')+' Kz',   cor:COR_DANGER},
+        {label:'Saldo do Periodo',value:Number(entradas-saidas).toLocaleString('pt-AO')+' Kz', cor:entradas>=saidas?COR_SUCCESS:COR_DANGER},
+      ];
+      const kW = (pw-28-8)/3;
+      kpisCaixa.forEach((k,i)=>{
+        const x=14+i*(kW+4);
+        doc.setFillColor(...COR_LIGHT); doc.roundedRect(x,y,kW,16,2,2,'F');
+        doc.setDrawColor(...COR_BORDER); doc.roundedRect(x,y,kW,16,2,2,'S');
+        doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...COR_MUTED);
+        doc.text(k.label.toUpperCase(),x+kW/2,y+5,{align:'center'});
+        doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...k.cor);
+        doc.text(k.value,x+kW/2,y+12,{align:'center'});
+      });
+      y+=22;
+      if(movs.length>0){
+        const rows = movs.map(m=>[
+          m.data||'---', m.descricao||'---', m.categoria||'---',
+          m.tipo==='entrada'?'Entrada':'Saida',
+          (m.tipo==='entrada'?'+':'-')+' '+Number(m.valor||0).toLocaleString('pt-AO')+' Kz'
+        ]);
+        doc.autoTable({
+          startY:y, head:[['Data','Descrição','Categoria','Tipo','Valor']],
+          body:rows, theme:'grid',
+          styles:{font:'helvetica',fontSize:7.5,cellPadding:2.5,textColor:COR_DARK},
+          headStyles:{fillColor:COR_PRIMARY,textColor:[255,255,255],fontStyle:'bold'},
+          alternateRowStyles:{fillColor:[248,249,255]},
+          didParseCell:(data)=>{
+            if(data.column.index===4&&data.row.section==='body'){
+              data.cell.styles.textColor=data.cell.raw.startsWith('+')?COR_SUCCESS:COR_DANGER;
+              data.cell.styles.halign='right';
+            }
+          },
+          columnStyles:{0:{cellWidth:18},3:{cellWidth:16,halign:'center'},4:{cellWidth:32,halign:'right'}},
+          margin:{left:14,right:14}, didDrawPage:_rodape
+        });
+        y = doc.lastAutoTable.finalY+10;
+      }
+    }
+
+    // ─── DESPESAS OPERACIONAIS ───
+    if(incOpex) {
+      const movsCaixa   = _filtrarCaixaPeriodo();
+      const despesas    = movsCaixa.filter(m=>m.tipo==='saida'&&CATS_OPEX.includes(m.categoria));
+      const totalOpex   = despesas.reduce((s,m)=>s+Number(m.valor||0),0);
+      _checkPage(60);
+      _titulo('DESPESAS OPERACIONAIS');
+      if(despesas.length>0){
+        const porCat={};
+        despesas.forEach(m=>{porCat[m.categoria]=(porCat[m.categoria]||0)+Number(m.valor||0);});
+        const rows=Object.entries(porCat).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>[
+          cat, despesas.filter(m=>m.categoria===cat).length+' mov.',
+          Number(val).toLocaleString('pt-AO')+' Kz',
+          totalOpex>0?Math.round((val/totalOpex)*100)+'%':'0%'
+        ]);
+        rows.push(['TOTAL',despesas.length+' mov.',Number(totalOpex).toLocaleString('pt-AO')+' Kz','100%']);
+        doc.autoTable({
+          startY:y, head:[['Categoria','Movimentos','Total (Kz)','% do Total']],
+          body:rows, theme:'grid',
+          styles:{font:'helvetica',fontSize:8,cellPadding:3,textColor:COR_DARK},
+          headStyles:{fillColor:[180,80,0],textColor:[255,255,255],fontStyle:'bold'},
+          alternateRowStyles:{fillColor:[255,250,240]},
+          didParseCell:(data)=>{
+            if(data.row.index===rows.length-1){
+              data.cell.styles.fontStyle='bold';
+              data.cell.styles.fillColor=[245,225,200];
+            }
+          },
+          columnStyles:{1:{halign:'center'},2:{halign:'right'},3:{halign:'center'}},
+          margin:{left:14,right:14}, didDrawPage:_rodape
+        });
+        y=doc.lastAutoTable.finalY+10;
+      } else {
+        doc.setFont('helvetica','italic');doc.setFontSize(9);doc.setTextColor(...COR_MUTED);
+        doc.text('Sem despesas operacionais registadas para este periodo.',14,y);
+        y+=10;
+      }
+    }
+
+    // ─── RESULTADO LÍQUIDO ───
+    if(incResultado) {
+      _checkPage(55);
+      _titulo('RESULTADO LIQUIDO DO PERIODO');
+      const faturacao  = vendas.reduce((s,v)=>s+Number(v.total||0),0);
+      const custoTotal = vendas.reduce((s,v)=>s+(v.itens||[]).reduce((ss,it)=>{
+        const p=CACHE.produtos.find(x=>x.id===it.produto_id);
+        return ss+(p?(p.preco_custo||0)*(it.qty||1):0);
+      },0),0);
+      const lucroBruto = faturacao-custoTotal;
+      const movsCaixa  = _filtrarCaixaPeriodo();
+      const totalOpex  = movsCaixa.filter(m=>m.tipo==='saida'&&CATS_OPEX.includes(m.categoria))
+                                   .reduce((s,m)=>s+Number(m.valor||0),0);
+      const resultado  = lucroBruto-totalOpex;
+      const linhas = [
+        {label:'Lucro Bruto',          val:lucroBruto, cor:COR_SUCCESS, sinal:'+'},
+        {label:'(-) Despesas OpEx',    val:totalOpex,  cor:COR_WARNING, sinal:'-'},
+        {label:'= Resultado Liquido',  val:resultado,  cor:resultado>=0?COR_SUCCESS:COR_DANGER, sinal:'=', destaque:true},
+      ];
+      const lh=14, lpad=6;
+      linhas.forEach((l,i)=>{
+        const ly=y+i*(lh+3);
+        if(l.destaque){
+          doc.setFillColor(...(resultado>=0?[230,255,245]:[255,235,235]));
+          doc.roundedRect(14,ly-lpad+1,pw-28,lh,2,2,'F');
+          doc.setDrawColor(...(resultado>=0?COR_SUCCESS:COR_DANGER));
+          doc.roundedRect(14,ly-lpad+1,pw-28,lh,2,2,'S');
+        }
+        doc.setFont('helvetica',l.destaque?'bold':'normal');
+        doc.setFontSize(l.destaque?10:9);
+        doc.setTextColor(...COR_DARK);
+        doc.text(l.label, 20, ly+2);
+        doc.setTextColor(...l.cor);
+        doc.setFont('helvetica','bold');
+        doc.text(l.sinal+' '+Number(l.val).toLocaleString('pt-AO')+' Kz', pw-18, ly+2, {align:'right'});
+        if(i<linhas.length-1){
+          doc.setDrawColor(...COR_BORDER); doc.setLineWidth(0.2);
+          doc.line(14, ly+lh-lpad+2, pw-14, ly+lh-lpad+2);
+        }
+      });
+      y += linhas.length*(lh+3)+10;
+    }
+
+    // ─── RODAPE TODAS AS PÁGINAS ───
     const totalPages = doc.internal.getNumberOfPages();
-    for(let i = 1; i <= totalPages; i++) {
+    for(let i=1;i<=totalPages;i++){
       doc.setPage(i);
       doc.setFillColor(...COR_PRIMARY);
-      doc.rect(0, ph - 10, pw, 10, 'F');
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.setTextColor(255,255,255);
-      doc.text('Gumba Solucoes — Sistema de Gestao AFC Criativa', 14, ph - 4);
-      doc.text('Pagina ' + i + ' de ' + totalPages, pw - 14, ph - 4, { align: 'right' });
+      doc.rect(0,ph-10,pw,10,'F');
+      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(255,255,255);
+      doc.text('Gumba Solucoes — Sistema de Gestao AFC Criativa',14,ph-4);
+      doc.text('Pagina '+i+' de '+totalPages,pw-14,ph-4,{align:'right'});
     }
 
     // ─── GUARDAR ───
-    const filename = 'Gumba-Relatorio-' + periodo.replace(/ /g, '-') + '.pdf';
-    doc.save(filename);
+    const tipoLabel = {vendas:'Vendas',caixa:'Caixa',executivo:'Executivo'}[tipoDoc]||'Relatorio';
+    const mercLabel = document.getElementById('rel-mercado')?.value !== 'todos' ? '-'+document.getElementById('rel-mercado').value : '';
+    doc.save('Gumba-'+tipoLabel+'-'+periodo.replace(/[^a-zA-Z0-9]/g,'-')+mercLabel+'.pdf');
     closeModal('modal-relatorio');
 
   } catch(e) {
-    alert('Erro ao gerar PDF: ' + e.message);
+    showToast('Erro ao gerar PDF: '+e.message,'danger');
     console.error(e);
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> Gerar PDF';
+    btn.disabled=false;
+    btn.innerHTML='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> Gerar PDF';
   }
 }
 
 // Init modal relatorio com mes actual
 function initRelatorioModal() {
+  const n = new Date();
+  const mesStr = n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
   const el = document.getElementById('rel-mes');
-  if(el) {
-    const n = new Date();
-    el.value = n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0');
-  }
+  if(el) el.value = mesStr;
   const anoEl = document.getElementById('rel-ano');
-  if(anoEl) anoEl.value = new Date().getFullYear();
+  if(anoEl) anoEl.value = n.getFullYear();
+  // intervalo personalizado: primeiro dia do mês → hoje
+  const iniEl = document.getElementById('rel-data-ini');
+  const fimEl = document.getElementById('rel-data-fim');
+  if(iniEl) iniEl.value = n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-01';
+  if(fimEl) fimEl.value = n.toISOString().slice(0,10);
+  // popular clientes
+  const selCli = document.getElementById('rel-cliente');
+  if(selCli) {
+    selCli.innerHTML = '<option value="">Todos os clientes</option>' +
+      (CACHE.clientes||[]).map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
+  }
+  // reset tipo doc para vendas
+  setRelTipoDoc('vendas');
+  // garantir estado inicial do período
+  toggleRelPeriodo();
 }
 
 
