@@ -2969,66 +2969,107 @@ function toggleParcelaFields(v){
 
 async function saveVenda() {
   if(!carrinho.length) return showToast('Adicione pelo menos um produto ao carrinho.','warning');
-  const cliente_id=document.getElementById('v-cliente').value;
+  const cliente_id = document.getElementById('v-cliente').value;
   if(!cliente_id) return showToast('Seleccione um cliente.','warning');
-  const total=carrinho.reduce((s,c)=>s+c.preco*c.qty,0);
-  const tipo=document.getElementById('v-tipo').value;
+  const total = carrinho.reduce((s,c) => s + c.preco * c.qty, 0);
+  const tipo  = document.getElementById('v-tipo').value;
+
+  // Validação de stock no frontend (a RPC faz validação server-side também)
+  for(const ci of carrinho) {
+    const p = CACHE.produtos.find(x => x.id === ci.id);
+    if(p && p.stock < ci.qty) {
+      return showToast('Stock insuficiente para: ' + ci.nome + ' (stock: ' + p.stock + ')', 'error');
+    }
+  }
+
+  const btnSave = document.querySelector('#modal-venda .btn-primary');
+  if(btnSave) { btnSave.disabled = true; btnSave.textContent = 'A registar...'; }
+
   try {
-    // 1. Inserir venda
-    const venda=await sbInsert('vendas',{
-      cliente_id, total, mercado:document.getElementById('v-mercado').value,
-      tipo, pagamento:document.getElementById('v-pagamento').value,
-      obs:document.getElementById('v-obs').value, data:document.getElementById('v-data').value
-    });
-    // 2. Inserir itens
-    for(const ci of carrinho){
-      await sbInsert('venda_itens',{venda_id:venda.id,produto_id:ci.id,nome_snapshot:ci.nome,qty:ci.qty,preco_unitario:ci.preco});
-      // 3. Baixar stock + registar movimento
-      const p=CACHE.produtos.find(x=>x.id===ci.id);
-      if(p){
-        const novoStock=Math.max(0,Number(p.stock||0)-ci.qty);
-        await sbUpdate('produtos',ci.id,{stock:novoStock});
-        await sbInsert('stock_movimentos',{produto_id:ci.id,tipo:'saida',quantidade:ci.qty,origem:'venda',referencia_id:venda.id});
-        p.stock=novoStock;
-      }
+    // ── VENDA ATÓMICA via RPC ──────────────────────────────────────
+    // processar_venda cria: venda + itens + stock + pagamento + caixa
+    // num único BEGIN/COMMIT — se falhar, reverte tudo
+    const payload = {
+      p_cliente_id:  cliente_id,
+      p_total:       total,
+      p_mercado:     document.getElementById('v-mercado').value,
+      p_tipo:        tipo,
+      p_pagamento:   document.getElementById('v-pagamento').value,
+      p_obs:         document.getElementById('v-obs').value || '',
+      p_data:        document.getElementById('v-data').value,
+      p_criado_por:  CURRENT_USER?.id,
+      p_itens:       carrinho.map(ci => ({
+        produto_id:     ci.id,
+        nome_snapshot:  ci.nome,
+        qty:            ci.qty,
+        preco_unitario: ci.preco
+      }))
+    };
+
+    const { data: rpcData, error: rpcError } = await sb.rpc('processar_venda', payload);
+    if(rpcError) throw new Error(rpcError.message);
+
+    const vendaId = rpcData.venda_id;
+
+    // Actualizar cache de produtos (stock baixado pelo RPC)
+    for(const ci of carrinho) {
+      const p = CACHE.produtos.find(x => x.id === ci.id);
+      if(p) p.stock = Math.max(0, p.stock - ci.qty);
     }
-    // 4. Registar pagamento (apenas para vendas a pronto — parceladas registam via cobranças)
-    if(tipo === 'pronto') {
-      await sbInsert('pagamentos',{venda_id:venda.id,valor:total,metodo:document.getElementById('v-pagamento').value,criado_por:CURRENT_USER?.id});
-    }
-    // 5. Se parcelada, criar cobrança
-    if(tipo==='parcelada'){
-      const nprest=parseInt(document.getElementById('v-nprest').value)||2;
-      const valPrest=Math.ceil(total/nprest);
-      const cob=await sbInsert('cobrancas',{
-        venda_id:venda.id,cliente_id,
-        referencia:carrinho.map(c=>c.nome).join(', '),
-        valor_total:total,entrada:0,
-        mercado:document.getElementById('v-mercado').value
+
+    // Se parcelada, criar cobrança + prestações (não fazem parte do RPC de venda)
+    if(tipo === 'parcelada') {
+      const nprest  = parseInt(document.getElementById('v-nprest').value) || 2;
+      const valPrest = Math.ceil(total / nprest);
+      const cob = await sbInsert('cobrancas', {
+        venda_id:    vendaId,
+        cliente_id,
+        referencia:  carrinho.map(c => c.nome).join(', '),
+        valor_total: total,
+        entrada:     0,
+        mercado:     document.getElementById('v-mercado').value
       });
-      const prestsList=[];
-      for(let i=1;i<=nprest;i++){
-        const vcto=document.getElementById(`v-vcto-${i}`)?.value||null;
-        const p=await sbInsert('prestacoes',{cobranca_id:cob.id,numero:i,valor:valPrest,data_vencimento:vcto,pago:false});
+      const prestsList = [];
+      for(let i = 1; i <= nprest; i++) {
+        const vcto = document.getElementById('v-vcto-' + i)?.value || null;
+        const p = await sbInsert('prestacoes', {
+          cobranca_id: cob.id, numero: i, valor: valPrest,
+          data_vencimento: vcto, pago: false
+        });
         prestsList.push(p);
       }
-      cob.prestacoes=prestsList;
+      cob.prestacoes = prestsList;
       CACHE.cobrancas.unshift(cob);
     }
-    // Actualizar cache
-    venda.itens=carrinho.map(c=>({produto_id:c.id,nome_snapshot:c.nome,qty:c.qty,preco_unitario:c.preco}));
-    CACHE.vendas.unshift(venda);
-    // Registar automaticamente na caixa se venda a pronto
-    if(tipo === 'pronto') {
-      const cliNome = CACHE.clientes.find(x=>x.id===cliente_id)?.nome || 'Cliente directo';
-      await registarEntradaCaixa(venda, cliNome);
-      // Recarregar vendasSaldo para reflectir pagamento imediato
-      try { CACHE.vendasSaldo = await sbGet('vendas_saldo'); } catch(e) {}
+
+    // Recarregar venda completa do Supabase para ter itens
+    const novaVenda = await sbGet('vendas');
+    const novoVendaObj = novaVenda.find(v => v.id === vendaId);
+    if(novoVendaObj) {
+      const itens = await sb.from('venda_itens').select('*').eq('venda_id', vendaId);
+      novoVendaObj.itens = itens.data || carrinho.map(c => ({
+        produto_id: c.id, nome_snapshot: c.nome, qty: c.qty, preco_unitario: c.preco
+      }));
+      CACHE.vendas.unshift(novoVendaObj);
     }
+
+    // Recarregar caixa e vendasSaldo
+    try {
+      const [novaCaixa, novoSaldo] = await Promise.all([sbGet('caixa'), sbGet('vendas_saldo')]);
+      CACHE.caixa = novaCaixa;
+      CACHE.vendasSaldo = novoSaldo;
+    } catch(e) {}
+
     closeModal('modal-venda');
-    renderVendas(); renderDashboard();
-    showToast('Venda registada! Total: ' + fmt(total),'success');
-  } catch(e){ showToast('Erro ao guardar venda: '+e.message,'error'); }
+    renderVendas();
+    renderDashboard();
+    showToast('Venda registada! Total: ' + fmt(total), 'success');
+
+  } catch(e) {
+    showToast('Erro: ' + e.message, 'error');
+  } finally {
+    if(btnSave) { btnSave.disabled = false; btnSave.textContent = 'Registar Venda'; }
+  }
 }
 
 async function deleteVenda(id) {
@@ -3363,7 +3404,7 @@ async function saveCobranca(){
   }catch(e){showToast('Erro: '+e.message,'error');}
 }
 async function pagarPrestacaoById(prestId, cobId){
-  // Verificar se já está paga
+  // Verificar cache local antes de confirmar
   const cobCheck = CACHE.cobrancas.find(x=>x.id===cobId);
   const prestCheck = (cobCheck?.prestacoes||[]).find(x=>x.id===prestId);
   if(prestCheck?.pago) {
@@ -3374,49 +3415,36 @@ async function pagarPrestacaoById(prestId, cobId){
 
   showConfirm('Confirmar o pagamento desta prestação?', async()=>{
     try{
-      await sbUpdate('prestacoes', prestId, {pago:true, data_pagamento:today()});
+      // ── PRESTAÇÃO ATÓMICA via RPC ────────────────────────────────
+      // pagar_prestacao: marca prestação, regista pagamento + caixa
+      // num único BEGIN/COMMIT — se falhar, reverte tudo
+      const { data: rpcData, error: rpcError } = await sb.rpc('pagar_prestacao', {
+        p_prestacao_id: prestId,
+        p_metodo:       'Dinheiro',
+        p_criado_por:   CURRENT_USER?.id
+      });
+      if(rpcError) throw new Error(rpcError.message);
 
-      // Actualizar cache local
+      // Actualizar cache local da prestação
       const c = CACHE.cobrancas.find(x=>x.id===cobId);
       if(c && c.prestacoes){
         const p = c.prestacoes.find(x=>x.id===prestId);
         if(p){ p.pago=true; p.data_pagamento=today(); }
       }
 
-      // Registar na caixa
-      if(c) {
-        const prest = (c.prestacoes||[]).find(x=>x.id===prestId);
-        const valPrest = prest ? Number(prest.valor||0) : 0;
-        if(valPrest > 0) {
-          const mov = await sbInsert('caixa', {
-            tipo: 'entrada',
-            categoria: 'Cobrança',
-            descricao: 'Prestação recebida — ' + nomeCliente(c.cliente_id) + ' (' + (c.referencia||'—') + ')',
-            valor: valPrest,
-            metodo: 'Dinheiro',
-            referencia_id: cobId,
-            referencia_tipo: 'prestacao',
-            data: today(),
-            criado_por: CURRENT_USER?.id
-          });
-          CACHE.caixa.unshift(mov);
-        }
-        // Registar na tabela pagamentos e recarregar vendasSaldo
-        if(c.venda_id && prest) {
-          await sbInsert('pagamentos', {
-            venda_id: c.venda_id,
-            valor: Number(prest.valor||0),
-            metodo: 'Dinheiro',
-            criado_por: CURRENT_USER?.id
-          });
-          try { CACHE.vendasSaldo = await sbGet('vendas_saldo'); } catch(e){}
-        }
-      }
+      // Recarregar caixa e vendasSaldo
+      const [novaCaixa, novoSaldo] = await Promise.all([
+        sbGet('caixa'),
+        sbGet('vendas_saldo')
+      ]);
+      CACHE.caixa = novaCaixa;
+      CACHE.vendasSaldo = novoSaldo;
 
       renderCobranças();
       renderDashboard();
       if(document.getElementById('s-caixa')?.classList.contains('active')) renderCaixa();
       showToast('Prestação registada como paga.','success');
+
     }catch(e){showToast('Erro: '+e.message,'error');}
   }, 'Confirmar pagamento');
 }
@@ -5151,52 +5179,32 @@ async function confirmarPagamentoVenda() {
   const data    = document.getElementById('pv-data').value;
   const obs     = document.getElementById('pv-obs').value;
 
-  if(!valor || valor <= 0) return alert('Introduza um valor válido.');
-  if(!data) return alert('Seleccione uma data.');
-
-  const venda = CACHE.vendas.find(v => v.id === vendaId);
-  if(!venda) return;
-
-  // Recarregar saldo REAL do Supabase antes de processar (previne duplicados)
-  try { CACHE.vendasSaldo = await sbGet('vendas_saldo'); } catch(e){}
-  const saldoActual = CACHE.vendasSaldo.find(s => s.id === vendaId);
-  const saldoPendente = saldoActual ? Math.max(0, Number(saldoActual.saldo_pendente||0)) : Number(venda.total||0);
-
-  if(saldoPendente <= 100) {
-    closeModal('modal-pag-venda');
-    renderVendas();
-    return showToast('Esta venda já está totalmente paga.', 'info');
-  }
-  if(valor > saldoPendente + 1) {
-    if(!confirm('O valor (' + fmt(valor) + ') é maior que o saldo pendente (' + fmt(saldoPendente) + '). Confirmar?')) return;
-  }
+  if(!valor || valor <= 0) return showToast('Introduza um valor válido.', 'warning');
+  if(!data) return showToast('Seleccione uma data.', 'warning');
 
   const btn = document.querySelector('#modal-pag-venda .btn-success');
   if(btn) { btn.disabled = true; btn.textContent = 'A registar...'; }
 
   try {
-    // 1. Registar pagamento
-    await sbInsert('pagamentos', {
-      venda_id: vendaId, valor, metodo, obs,
-      criado_por: CURRENT_USER?.id
+    // ── PAGAMENTO ATÓMICO via RPC ──────────────────────────────────
+    // registar_pagamento_venda verifica saldo, regista pagamento
+    // e entrada na caixa num único BEGIN/COMMIT
+    const { data: rpcData, error: rpcError } = await sb.rpc('registar_pagamento_venda', {
+      p_venda_id:   vendaId,
+      p_valor:      valor,
+      p_metodo:     metodo,
+      p_data:       data,
+      p_obs:        obs || '',
+      p_criado_por: CURRENT_USER?.id
     });
+    if(rpcError) throw new Error(rpcError.message);
 
-    // 2. Registar na caixa (uma única vez por pagamento)
-    const clienteNome = nomeCliente(venda.cliente_id);
-    const movCaixa = await sbInsert('caixa', {
-      tipo: 'entrada',
-      categoria: 'Cobrança',
-      descricao: 'Pagamento parcial/total — ' + clienteNome,
-      valor, metodo,
-      referencia_id: vendaId,
-      referencia_tipo: 'pagamento_venda',
-      data: data,
-      criado_por: CURRENT_USER?.id
-    });
-    CACHE.caixa.unshift(movCaixa);
-
-    // 3. Recarregar vendasSaldo directamente do Supabase (fonte da verdade)
-    const novoSaldo = await sbGet('vendas_saldo');
+    // Recarregar caixa e vendasSaldo (fonte da verdade)
+    const [novaCaixa, novoSaldo] = await Promise.all([
+      sbGet('caixa'),
+      sbGet('vendas_saldo')
+    ]);
+    CACHE.caixa = novaCaixa;
     CACHE.vendasSaldo = novoSaldo;
 
     closeModal('modal-pag-venda');
@@ -5204,8 +5212,9 @@ async function confirmarPagamentoVenda() {
     renderCaixa();
     renderDashboard();
     showToast('Pagamento de ' + fmt(valor) + ' registado!', 'success');
+
   } catch(e) {
-    alert('Erro: ' + e.message);
+    showToast('Erro: ' + e.message, 'error');
   } finally {
     if(btn) { btn.disabled = false; btn.textContent = 'Confirmar Pagamento'; }
   }
