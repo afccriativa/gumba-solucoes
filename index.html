@@ -3833,7 +3833,7 @@ function _calcPeriodMetrics(from, to, filtro) {
   const receita = vendas.reduce((s,v) => s + Number(v.total||0), 0);
   const cogs    = vendas.reduce((s,v) => s + (v.itens||[]).reduce((ss,it) => {
     const p = produtos.find(x => x.id === it.produto_id);
-    return ss + (p ? Number(p.preco_custo||0) * it.qty : 0);
+    return ss + (p ? Number(p.preco_custo||0) * Number(it.qty||0) : 0);
   }, 0), 0);
   const lucro   = receita - cogs;
   const opex    = CACHE.caixa.filter(m => {
@@ -3903,7 +3903,7 @@ function renderAnalise(_paged=false){
   vendas=_filterByPeriod(vendas);
   const produtos=CACHE.produtos;
   const custoTotal=vendas.reduce((s,v)=>s+(v.itens||[]).reduce((ss,it)=>{
-    const p=produtos.find(x=>x.id===it.produto_id);return ss+(p?p.preco_custo*it.qty:0);
+    const p=produtos.find(x=>x.id===it.produto_id);return ss+(p?Number(p.preco_custo||0)*Number(it.qty||0):0);
   },0),0);
   // Receita Facturada = total das vendas do período (base de cálculo do lucro)
   const receitaFacturada=vendas.reduce((s,v)=>s+Number(v.total||0),0);
@@ -5088,7 +5088,7 @@ async function gerarRelatorio() {
       const faturacao  = vendas.reduce((s,v) => s + Number(v.total||0), 0);
       const custoTotal = vendas.reduce((s,v) => s + (v.itens||[]).reduce((ss,it) => {
         const p = CACHE.produtos.find(x => x.id === it.produto_id);
-        return ss + (p ? (p.preco_custo||0) * (it.qty||1) : 0);
+        return ss + (p ? Number(p.preco_custo||0) * Number(it.qty||0) : 0);
       }, 0), 0);
       const lucro  = faturacao - custoTotal;
       const ticket = vendas.length > 0 ? Math.round(faturacao / vendas.length) : 0;
@@ -5173,10 +5173,10 @@ async function gerarRelatorio() {
       vendas.forEach(v => (v.itens||[]).forEach(it => {
         const k = it.nome_snapshot || 'Desconhecido';
         if(!stats[k]) stats[k] = { qty:0, total:0, custo:0 };
-        stats[k].qty   += it.qty || 1;
-        stats[k].total += (it.preco_unitario||0) * (it.qty||1);
+        stats[k].qty   += Number(it.qty||0);
+        stats[k].total += Number(it.preco_unitario||0) * Number(it.qty||0);
         const p = CACHE.produtos.find(x => x.id === it.produto_id);
-        if(p) stats[k].custo += (p.preco_custo||0) * (it.qty||1);
+        if(p) stats[k].custo += Number(p.preco_custo||0) * Number(it.qty||0);
       }));
       const rows = Object.entries(stats)
         .sort((a,b) => b[1].qty - a[1].qty).slice(0, 10)
@@ -5243,7 +5243,7 @@ async function gerarRelatorio() {
         stats[m].total += Number(v.total||0);
         stats[m].custo += (v.itens||[]).reduce((s,it) => {
           const p = CACHE.produtos.find(x=>x.id===it.produto_id);
-          return s + (p?(p.preco_custo||0)*(it.qty||1):0);
+          return s + (p ? Number(p.preco_custo||0) * Number(it.qty||0) : 0);
         },0);
       });
       const totFat = Object.values(stats).reduce((s,x)=>s+x.total,0);
@@ -5418,7 +5418,7 @@ async function gerarRelatorio() {
       const faturacao  = vendas.reduce((s,v)=>s+Number(v.total||0),0);
       const custoTotal = vendas.reduce((s,v)=>s+(v.itens||[]).reduce((ss,it)=>{
         const p=CACHE.produtos.find(x=>x.id===it.produto_id);
-        return ss+(p?(p.preco_custo||0)*(it.qty||1):0);
+        return ss+(p?Number(p.preco_custo||0)*Number(it.qty||0):0);
       },0),0);
       const lucroBruto = faturacao-custoTotal;
       const movsCaixa  = _filtrarCaixaPeriodo();
