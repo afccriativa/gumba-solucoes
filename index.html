@@ -3648,11 +3648,11 @@ function descarregarReciboPDF() {
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.text('GUMBA SOLUCOES', M + 27, 14);
+  doc.text('GUMBA SOLUÇÕES', M + 27, 14);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(190, 225, 255);
-  doc.text('Comercio e Prestacao de Servicos', M + 27, 20);
+  doc.text('Comércio e Prestação de Serviços', M + 27, 20);
 
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
@@ -3701,7 +3701,7 @@ function descarregarReciboPDF() {
   // Tabela de itens — autoTable (suporta nomes longos com wrap automático)
   doc.autoTable({
     startY: y,
-    head: [['PRODUTO / DESCRICAO', 'QTY', 'P. UNIT.', 'SUBTOTAL']],
+    head: [['PRODUTO / DESCRIÇÃO', 'QTY', 'P. UNIT.', 'SUBTOTAL']],
     body: venda.itens.map(function(item) {
       return [
         item.nome,
@@ -3824,11 +3824,11 @@ function descarregarReciboPDF() {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(255, 255, 255);
-  doc.text('Obrigado pela sua preferencia!', PW / 2, PH - 11, { align: 'center' });
+  doc.text('Obrigado pela sua preferência!', PW / 2, PH - 11, { align: 'center' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
   doc.setTextColor(170, 215, 255);
-  doc.text('Gumba Solucoes  |  Comercio e Prestacao de Servicos  |  Angola', PW / 2, PH - 6, { align: 'center' });
+  doc.text('Gumba Soluções  |  Comércio e Prestação de Serviços  |  Angola', PW / 2, PH - 6, { align: 'center' });
 
   doc.save('Recibo_Gumba_' + refId + '_' + (venda.data || '').replace(/-/g, '') + '.pdf');
   showToast('Recibo PDF gerado!', 'success');
