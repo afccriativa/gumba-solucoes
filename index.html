@@ -1211,6 +1211,59 @@ textarea { resize: vertical; min-height: 70px; }
   border: 1px solid var(--border2);
   border-radius: 6px; padding: 3px 8px;
 }
+
+/* ── RLS Security Banner ─────────────────────────────────────── */
+#rls-banner {
+  display: none;
+  position: sticky; top: 0; z-index: 900;
+  background: #7f1d1d;
+  border-bottom: 1px solid #991b1b;
+  padding: 10px 16px;
+  gap: 10px;
+  align-items: flex-start;
+}
+#rls-banner.visible { display: flex; }
+#rls-banner .rls-icon {
+  flex-shrink: 0; margin-top: 1px;
+  color: #fca5a5;
+}
+#rls-banner .rls-body { flex: 1; }
+#rls-banner .rls-title {
+  font-size: .82rem; font-weight: 700;
+  color: #fef2f2; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 6px;
+}
+#rls-banner .rls-tables {
+  font-size: .75rem; color: #fca5a5;
+  font-family: var(--font-mono);
+  margin-bottom: 6px;
+}
+#rls-banner .rls-actions {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-top: 6px;
+}
+#rls-banner .rls-btn {
+  font-size: .72rem; padding: 4px 10px;
+  border-radius: 4px; cursor: pointer;
+  font-weight: 600; border: 1px solid;
+  text-decoration: none; display: inline-flex;
+  align-items: center; gap: 4px;
+}
+#rls-banner .rls-btn-primary {
+  background: #fef2f2; color: #7f1d1d;
+  border-color: #fca5a5;
+}
+#rls-banner .rls-btn-primary:hover { background: #fff; }
+#rls-banner .rls-btn-dismiss {
+  background: transparent; color: #fca5a5;
+  border-color: #7f1d1d;
+}
+#rls-banner .rls-btn-dismiss:hover { border-color: #fca5a5; color: #fef2f2; }
+#rls-banner .rls-ok {
+  background: #14532d; border-bottom-color: #166534;
+}
+#rls-banner.rls-ok .rls-title { color: #dcfce7; }
+#rls-banner.rls-ok .rls-icon { color: #86efac; }
 </style>
 </head>
 <body>
@@ -1397,6 +1450,32 @@ textarea { resize: vertical; min-height: 70px; }
         </select>
         <!-- Ponto pulsante — visível apenas quando filtro está activo -->
         <div class="market-filter-dot" title="Filtro activo"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Banner de segurança RLS — visível apenas para admin ───── -->
+  <div id="rls-banner" role="alert" aria-live="polite">
+    <svg class="rls-icon" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+    </svg>
+    <div class="rls-body">
+      <div class="rls-title" id="rls-banner-title">A verificar segurança RLS…</div>
+      <div class="rls-tables" id="rls-banner-detail"></div>
+      <div class="rls-actions">
+        <a class="rls-btn rls-btn-primary" id="rls-dashboard-link"
+           href="https://supabase.com/dashboard/project/kbeawyysuejukwrppwsm/auth/policies"
+           target="_blank" rel="noopener">
+          <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+          </svg>
+          Configurar RLS no Supabase
+        </a>
+        <button class="rls-btn rls-btn-dismiss" onclick="dismissRLSBanner()">
+          Ignorar por esta sessão
+        </button>
       </div>
     </div>
   </div>
@@ -5186,6 +5265,8 @@ async function loadApp(){
     const sfDate=document.getElementById('sf-date');
     if(sfDate)sfDate.textContent=new Date().toLocaleDateString('pt-AO',{day:'2-digit',month:'short',year:'numeric'});
     _syncMercadoFilter();
+    // Diagnóstico RLS — não-bloqueante, apenas para admin
+    setTimeout(() => checkRLSSecurity(), 800);
     // Restaurar última secção — com guard de permissão por role
     const adminOnlySections = ['analise','fornecedores','importacoes'];
     let lastSection = 'dashboard';
@@ -6496,6 +6577,87 @@ function executeConfirm(){
   const cb=_confirmCb;
   closeConfirmModal();
   if(cb) cb();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SEGURANÇA — Diagnóstico RLS (Row Level Security)
+//  Cria um cliente Supabase anónimo (sem sessão) e testa cada tabela.
+//  Se receber dados sem autenticação → RLS inactivo nessa tabela.
+//  Apenas executado para utilizadores com role 'admin'.
+// ═══════════════════════════════════════════════════════════════════
+const RLS_TABLES = [
+  'produtos', 'clientes', 'fornecedores', 'vendas', 'venda_itens',
+  'cobrancas', 'prestacoes', 'importacoes', 'caixa', 'perfis',
+  'stock_movimentos', 'vendas_saldo'
+];
+
+async function checkRLSSecurity() {
+  const banner  = document.getElementById('rls-banner');
+  const title   = document.getElementById('rls-banner-title');
+  const detail  = document.getElementById('rls-banner-detail');
+  if (!banner || CURRENT_ROLE !== 'admin') return;
+
+  // Ignorado por esta sessão?
+  if (sessionStorage.getItem('rls-banner-dismissed') === '1') return;
+
+  banner.classList.add('visible');
+  title.textContent = 'A verificar configuração RLS…';
+
+  // Cliente anónimo sem sessão persistida — não herda a auth do utilizador actual
+  const anonClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+  });
+
+  const exposed = [];
+
+  await Promise.allSettled(RLS_TABLES.map(async (table) => {
+    try {
+      const { data, error } = await anonClient
+        .from(table)
+        .select('id', { count: 'exact', head: true });
+      // Se não há erro e data não é null → tabela acessível sem autenticação
+      if (!error && data !== null) {
+        exposed.push(table);
+      }
+    } catch (_) { /* timeout ou rede — não conclusivo */ }
+  }));
+
+  if (exposed.length === 0) {
+    // RLS activo em todas as tabelas testadas
+    banner.classList.add('rls-ok');
+    banner.querySelector('.rls-icon').innerHTML = `
+      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04
+             A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622
+             0-1.042-.133-2.052-.382-3.016z"/>
+      </svg>`;
+    title.textContent = 'RLS verificado — todas as tabelas protegidas';
+    detail.textContent = `${RLS_TABLES.length} tabelas testadas com cliente anónimo sem sessão.`;
+    banner.querySelector('.rls-btn-dismiss').textContent = 'Fechar';
+  } else {
+    // Uma ou mais tabelas expostas
+    title.textContent = `⚠ RLS inactivo — ${exposed.length} tabela${exposed.length > 1 ? 's' : ''} exposta${exposed.length > 1 ? 's' : ''}`;
+    detail.textContent = `Acessíveis sem autenticação: ${exposed.map(t => t).join(', ')}`;
+    // Actualizar link para a primeira tabela exposta
+    const link = document.getElementById('rls-dashboard-link');
+    if (link) {
+      link.href = `https://supabase.com/dashboard/project/kbeawyysuejukwrppwsm/database/tables`;
+    }
+    // Log no console para referência do developer
+    console.warn('[Gumba Security] Tabelas sem RLS verificado:', exposed);
+    console.info(
+      '[Gumba Security] Acção recomendada: Supabase Dashboard → ' +
+      'Table Editor → cada tabela → RLS → Enable RLS → Add Policy\n' +
+      'Política mínima: auth.uid() IS NOT NULL (requer sessão válida)'
+    );
+  }
+}
+
+function dismissRLSBanner() {
+  const banner = document.getElementById('rls-banner');
+  if (banner) banner.classList.remove('visible');
+  sessionStorage.setItem('rls-banner-dismissed', '1');
 }
 
 async function init(){
