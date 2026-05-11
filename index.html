@@ -4118,7 +4118,15 @@ async function saveCobranca(){
     showToast(`Cobrança criada com ${np} prestação${np!==1?'s':''}.`,'success');
   }catch(e){showToast('Erro: '+e.message,'error');}
 }
+const _prestacoesPagando = new Set();
+
 async function pagarPrestacaoById(prestId, cobId){
+  // Guard anti-double-submit: impede que a mesma prestação seja processada em paralelo
+  if(_prestacoesPagando.has(prestId)){
+    showToast('Pagamento desta prestação já está em curso.', 'info');
+    return;
+  }
+
   // Verificar cache local antes de confirmar
   const cobCheck = CACHE.cobrancas.find(x=>x.id===cobId);
   const prestCheck = (cobCheck?.prestacoes||[]).find(x=>x.id===prestId);
@@ -4129,6 +4137,7 @@ async function pagarPrestacaoById(prestId, cobId){
   }
 
   showConfirm('Confirmar o pagamento desta prestação?', async()=>{
+    _prestacoesPagando.add(prestId);
     try{
       // ── PRESTAÇÃO ATÓMICA via RPC ────────────────────────────────
       // pagar_prestacao: marca prestação, regista pagamento + caixa
@@ -4140,7 +4149,7 @@ async function pagarPrestacaoById(prestId, cobId){
       });
       if(rpcError) throw new Error(rpcError.message);
 
-      // Actualizar cache local da prestação
+      // Actualizar cache local da prestação imediatamente (barreira contra segundo pagamento)
       const c = CACHE.cobrancas.find(x=>x.id===cobId);
       if(c && c.prestacoes){
         const p = c.prestacoes.find(x=>x.id===prestId);
@@ -4160,7 +4169,11 @@ async function pagarPrestacaoById(prestId, cobId){
       if(document.getElementById('s-caixa')?.classList.contains('active')) renderCaixa();
       showToast('Prestação registada como paga.','success');
 
-    }catch(e){showToast('Erro: '+e.message,'error');}
+    }catch(e){
+      showToast('Erro: '+e.message,'error');
+    }finally{
+      _prestacoesPagando.delete(prestId);
+    }
   }, 'Confirmar pagamento');
 }
 async function deleteCobranca(id){
