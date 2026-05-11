@@ -3462,12 +3462,49 @@ async function saveVenda() {
 }
 
 async function deleteVenda(id) {
-  showConfirm('Esta venda será eliminada permanentemente. Continuar?', async()=>{
-    await sbDelete('vendas',id);
-    CACHE.vendas=CACHE.vendas.filter(x=>x.id!==id);
-    renderVendas(); renderDashboard();
-    showToast('Venda eliminada.','success');
-  });
+  showConfirm(
+    'Esta venda será anulada permanentemente.\n\nO stock será reposto e todos os movimentos financeiros serão revertidos. Continuar?',
+    async () => {
+      try {
+        const { error } = await sb.rpc('cancelar_venda', { p_venda_id: id });
+        if(error) throw new Error(error.message);
+
+        // Actualizar cache local — remover venda, itens, pagamentos, cobrança
+        CACHE.vendas          = CACHE.vendas.filter(x => x.id !== id);
+        CACHE.venda_itens     = (CACHE.venda_itens || []).filter(x => x.venda_id !== id);
+        CACHE.pagamentos      = (CACHE.pagamentos  || []).filter(x => x.venda_id !== id);
+        const cobAnulada      = (CACHE.cobrancas   || []).find(x => x.venda_id === id);
+        if(cobAnulada) {
+          CACHE.cobrancas     = CACHE.cobrancas.filter(x => x.venda_id !== id);
+          CACHE.prestacoes    = (CACHE.prestacoes  || []).filter(x => x.cobranca_id !== cobAnulada.id);
+        }
+
+        // Recarregar stock, caixa e vendas_saldo da fonte de verdade
+        const [novosProdutos, novaCaixa, novoSaldo, novosMovimentos] = await Promise.all([
+          sbGet('produtos'),
+          sbGet('caixa'),
+          sbGet('vendas_saldo'),
+          sbGet('stock_movimentos')
+        ]);
+        CACHE.produtos         = novosProdutos;
+        CACHE.caixa            = novaCaixa;
+        CACHE.vendasSaldo      = novoSaldo;
+        CACHE.stock_movimentos = novosMovimentos;
+
+        renderVendas();
+        renderDashboard();
+        if(document.getElementById('s-caixa')?.classList.contains('active')) renderCaixa();
+        if(document.getElementById('s-stock')?.classList.contains('active')) renderStock();
+        if(document.getElementById('s-cobrancas')?.classList.contains('active')) renderCobranças();
+
+        showToast('Venda anulada — stock e caixa repostos.', 'success');
+
+      } catch(e) {
+        showToast('Erro ao anular venda: ' + e.message, 'error');
+      }
+    },
+    'Anular venda'
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════
