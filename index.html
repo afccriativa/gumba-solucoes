@@ -2871,6 +2871,17 @@ const SUPABASE_URL = 'https://kbeawyysuejukwrppwsm.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiZWF3eXlzdWVqdWt3cnBwd3NtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5OTQ1MjQsImV4cCI6MjA5MzU3MDUyNH0.BfYtZqMaDZlrYsQN8VTJIQcd1_U0pEc08X7tLaJEYv4';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+
+// ═══════════════════════════════════════════════════════════════════
+//  SEGURANÇA — Sanitização de output (XSS prevention)
+//  Usar esc() em TODOS os valores de BD inseridos via innerHTML
+// ═══════════════════════════════════════════════════════════════════
+function esc(str) {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(String(str ?? '')));
+  return d.innerHTML;
+}
+
 // ═══════════════════════════════════════════════════════════════════
 //  CACHE em memória (carregado do Supabase no init)
 // ═══════════════════════════════════════════════════════════════════
@@ -3012,24 +3023,24 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 // ─── POPULATE SELECTS ───
 function populateVendaSelects() {
   const vc = document.getElementById('v-cliente');
-  vc.innerHTML = '<option value="">— Seleccionar cliente —</option>' + CACHE.clientes.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
+  vc.innerHTML = '<option value="">— Seleccionar cliente —</option>' + CACHE.clientes.map(c=>`<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
   document.getElementById('v-data').value = today();
   initProdutoTypeahead();
 }
 function populateCobrancaSelects() {
   const sel = document.getElementById('cb-cliente');
-  sel.innerHTML = '<option value="">— Seleccionar —</option>' + CACHE.clientes.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
+  sel.innerHTML = '<option value="">— Seleccionar —</option>' + CACHE.clientes.map(c=>`<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
   // Gerar campos de vencimento iniciais (2 prestações por defeito)
   calcParcela();
 }
 function populateImportacaoSelects() {
   const sel = document.getElementById('i-forn');
-  sel.innerHTML = '<option value="">— Seleccionar —</option>' + CACHE.fornecedores.map(f=>`<option value="${f.id}">${f.nome} (${f.pais})</option>`).join('');
+  sel.innerHTML = '<option value="">— Seleccionar —</option>' + CACHE.fornecedores.map(f=>`<option value="${esc(f.id)}">${esc(f.nome)} (${esc(f.pais)})</option>`).join('');
   document.getElementById('i-data-enc').value = today();
 }
 function populateProdutoFornSelect() {
   const sel = document.getElementById('p-forn');
-  sel.innerHTML = '<option value="">— Seleccionar —</option>' + CACHE.fornecedores.map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');
+  sel.innerHTML = '<option value="">— Seleccionar —</option>' + CACHE.fornecedores.map(f=>`<option value="${esc(f.id)}">${esc(f.nome)}</option>`).join('');
 }
 
 // ─── TYPEAHEAD ───
@@ -3048,15 +3059,15 @@ function initProdutoTypeahead() {
     if (!q) { dropdown.classList.remove('open'); return; }
     const results = CACHE.produtos.filter(p => p.nome.toLowerCase().includes(q)).slice(0, 12);
     if (!results.length) {
-      dropdown.innerHTML = `<div class="typeahead-empty">Nenhum produto encontrado para "<strong>${query}</strong>"</div>`;
+      dropdown.innerHTML = `<div class="typeahead-empty">Nenhum produto encontrado para "<strong>${esc(query)}</strong>"</div>`;
       dropdown.classList.add('open'); return;
     }
     dropdown.innerHTML = results.map(p => {
       const baixo = Number(p.stock||0) <= Number(p.stock_minimo||1);
       const zero  = Number(p.stock||0) === 0;
       const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
-      const nomeHL = p.nome.replace(re, '<mark style="background:rgba(37,99,235,.35);color:var(--text);border-radius:2px">$1</mark>');
-      return `<div class="typeahead-item" onmousedown="selectProdutoTypeahead('${p.id}','${p.nome.replace(/'/g,"\\'")}',${p.preco_venda})">
+      const nomeHL = esc(p.nome).replace(re, '<mark style="background:rgba(37,99,235,.35);color:var(--text);border-radius:2px">$1</mark>');
+      return `<div class="typeahead-item" onmousedown="selectProdutoTypeahead('${esc(p.id)}','${esc(p.nome).replace(/'/g,"&#39;")}',${parseFloat(p.preco_venda)||0})">
         <div class="ta-nome">${nomeHL}</div>
         <span class="ta-preco">${fmt(p.preco_venda)}</span>
         <span class="ta-stock ${zero||baixo?'low':'ok'}">${zero?'Esgotado':p.stock+'x'}</span>
@@ -3241,7 +3252,7 @@ function renderDashboard() {
   document.getElementById('top-produtos').innerHTML=topP.length?topP.map(([nome,qty],i)=>`
     <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);${i===topP.length-1?'border-bottom:none':''}">
       <span style="font-family:var(--font-mono);font-size:.75rem;color:var(--text-muted);width:16px">${i+1}</span>
-      <span style="flex:1;font-size:.83rem;color:var(--text)">${nome}</span>
+      <span style="flex:1;font-size:.83rem;color:var(--text)">${esc(nome)}</span>
       <span class="badge badge-info">${qty}x</span>
     </div>`).join(''):'<div class="empty-state" style="padding:20px"><p>Sem dados de vendas</p></div>';
   // Cobranças dash
@@ -3253,13 +3264,13 @@ function renderDashboard() {
       const proxPend = prests.filter(function(p){return !p.pago;}).sort(function(a,b){return (a.data_vencimento||'').localeCompare(b.data_vencimento||'');});
       const proxVcto = proxPend[0]?.data_vencimento || '—';
       const vencido = proxPend.some(function(p){return p.data_vencimento && p.data_vencimento < today();});
-      return '<tr><td><strong>' + nomeCliente(c.cliente_id) + '</strong></td><td>' + (c.referencia||'—') + '</td><td class="mono">' + proxVcto + '</td><td><span class="badge ' + (vencido?'badge-danger':'badge-warning') + '">' + (vencido?'Vencida':'Pendente') + '</span></td></tr>';
+      return '<tr><td><strong>' + esc(nomeCliente(c.cliente_id)) + '</strong></td><td>' + esc(c.referencia||'—') + '</td><td class="mono">' + esc(proxVcto) + '</td><td><span class="badge ' + (vencido?'badge-danger':'badge-warning') + '">' + (vencido?'Vencida':'Pendente') + '</span></td></tr>';
     }).join('') +
     '</tbody></table>'
     : '<div class="empty-state" style="padding:20px"><p>Sem cobranças pendentes 🎉</p></div>';
   // Stock alerts
   const alertStock=produtos.filter(p=>Number(p.stock||0)<=Number(p.stock_minimo||1));
-  document.getElementById('dash-stock-alerts').innerHTML=alertStock.length?`<table><thead><tr><th>Produto</th><th>Stock</th><th>Mínimo</th><th>Status</th></tr></thead><tbody>${alertStock.map(p=>`<tr><td><strong>${p.nome}</strong></td><td class="mono text-danger">${p.stock}</td><td class="mono">${p.stock_minimo}</td><td><span class="badge ${p.stock==0?'badge-danger':'badge-warning'}">${p.stock==0?'Esgotado':'Stock baixo'}</span></td></tr>`).join('')}</tbody></table>`:'<div class="empty-state" style="padding:20px"><p>Stock em níveis normais ✓</p></div>';
+  document.getElementById('dash-stock-alerts').innerHTML=alertStock.length?`<table><thead><tr><th>Produto</th><th>Stock</th><th>Mínimo</th><th>Status</th></tr></thead><tbody>${alertStock.map(p=>`<tr><td><strong>${esc(p.nome)}</strong></td><td class="mono text-danger">${esc(p.stock)}</td><td class="mono">${esc(p.stock_minimo)}</td><td><span class="badge ${p.stock==0?'badge-danger':'badge-warning'}">${p.stock==0?'Esgotado':'Stock baixo'}</span></td></tr>`).join('')}</tbody></table>`:'<div class="empty-state" style="padding:20px"><p>Stock em níveis normais ✓</p></div>';
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -3290,16 +3301,16 @@ function renderVendas(q='', _paged=false) {
     const btnDelete = '<button class="btn btn-danger btn-sm" onclick="deleteVenda(\'' + vid + '\')" >&#128465;</button>';
     // Botão pagamento só aparece se saldo > 100 Kz (evita floating point e vendas já pagas)
     const btnPag = saldoPend > 100 ? '<button class="btn btn-success btn-sm" onclick="registarPagamentoVenda(\'' + vid + '\',' + Math.round(saldoPend) + ')" title="Registar pagamento">&#128176;</button>' : '';
-    const produtos = (v.itens||[]).map(function(i){return '<span class="prod-chip">'+i.qty+'x '+i.nome_snapshot+'</span>';}).join('') || '—';
+    const produtos = (v.itens||[]).map(function(i){return '<span class="prod-chip">'+esc(i.qty)+'x '+esc(i.nome_snapshot)+'</span>';}).join('') || '—';
     return '<tr>' +
       '<td class="mono">' + (v.data||'—') + '</td>' +
-      '<td><strong>' + nomeCliente(v.cliente_id) + '</strong></td>' +
+      '<td><strong>' + esc(nomeCliente(v.cliente_id)) + '</strong></td>' +
       '<td>' + produtos + '</td>' +
       '<td class="mono text-success"><strong>' + fmt(v.total) + '</strong></td>' +
       '<td class="mono text-success">' + fmt(totalPago) + '</td>' +
       '<td class="mono ' + (saldoPend>0?'text-danger':'text-muted') + '">' + (saldoPend>0?fmt(saldoPend):'—') + '</td>' +
       '<td><span class="badge ' + estadoBadge + '">' + estadoPag + '</span></td>' +
-      '<td><span class="badge badge-neutral">' + (v.pagamento||'—') + '</span></td>' +
+      '<td><span class="badge badge-neutral">' + esc(v.pagamento||'—') + '</span></td>' +
       '<td><span class="badge ' + (v.tipo==='parcelada'?'badge-warning':'badge-success') + '">' + (v.tipo==='parcelada'?'Parcelada':'Pronto') + '</span></td>' +
       '<td>' + btnDelete + btnPag + '</td>' +
     '</tr>';
@@ -3327,7 +3338,7 @@ function renderCarrinho() {
   document.getElementById('v-total-display').textContent=fmt(total);
   if(!carrinho.length){div.innerHTML='<span style="color:var(--text-muted);font-size:.8rem">Carrinho vazio</span>';return;}
   div.innerHTML=carrinho.map((c,i)=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-    <span style="flex:1;font-size:.82rem">${c.qty}x ${c.nome}</span>
+    <span style="flex:1;font-size:.82rem">${esc(c.qty)}x ${esc(c.nome)}</span>
     <span class="mono" style="font-size:.82rem;color:var(--success)">${fmt(c.preco*c.qty)}</span>
     <button style="border:none;background:var(--danger-bg);color:var(--danger);border-radius:4px;padding:2px 6px;cursor:pointer;font-size:.75rem" onclick="carrinho.splice(${i},1);renderCarrinho()">✕</button>
   </div>`).join('');
@@ -3528,7 +3539,7 @@ function mostrarSucessoVenda(venda, cliente) {
   document.getElementById('vs-total-header').textContent = fmt(venda.total);
   const badges = [venda.pagamento, venda.tipo === 'parcelada' ? 'Parcelada' : 'A Pronto', _fmtDataExibir(venda.data)];
   document.getElementById('vs-meta').innerHTML = badges
-    .map(b => `<span style="display:inline-flex;align-items:center;gap:3px">${b}</span>`)
+    .map(b => `<span style="display:inline-flex;align-items:center;gap:3px">${esc(b)}</span>`)
     .join('<span style="opacity:.4;margin:0 2px">·</span>');
 
   document.getElementById('vs-cliente-nome').textContent = cliente.nome || 'Cliente';
@@ -3537,8 +3548,8 @@ function mostrarSucessoVenda(venda, cliente) {
   const itensHTML = venda.itens.map((i, idx) => {
     const bg = idx % 2 !== 0 ? 'background:var(--surface2)' : '';
     return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 14px;' + bg + '">' +
-      '<div><span style="font-size:.82rem;font-weight:600;color:var(--text)">' + i.nome + '</span>' +
-      '<span style="font-size:.74rem;color:var(--text-muted);margin-left:6px">x ' + i.qty + '</span></div>' +
+      '<div><span style="font-size:.82rem;font-weight:600;color:var(--text)">' + esc(i.nome) + '</span>' +
+      '<span style="font-size:.74rem;color:var(--text-muted);margin-left:6px">x ' + esc(i.qty) + '</span></div>' +
       '<span style="font-family:var(--font-mono);font-size:.82rem;font-weight:600;color:var(--text);white-space:nowrap">' + fmt(i.preco * i.qty) + '</span>' +
       '</div>';
   }).join('');
@@ -3848,9 +3859,9 @@ function renderStock(q='', _paged=false) {
     const baixo=Number(p.stock||0)<=Number(p.stock_minimo||1);
     const pct=p.stock>0?Math.min(100,Math.round(p.stock/(p.stock+5)*100)):0;
     return `<tr>
-      <td><strong>${p.nome}</strong>${p.obs?`<br><span class="text-xs text-muted">${p.obs}</span>`:''}</td>
-      <td><span class="badge badge-neutral">${p.categoria||'—'}</span></td>
-      <td><span class="badge badge-info">${p.origem||'—'}</span></td>
+      <td><strong>${esc(p.nome)}</strong>${p.obs?`<br><span class="text-xs text-muted">${esc(p.obs)}</span>`:''}</td>
+      <td><span class="badge badge-neutral">${esc(p.categoria||'—')}</span></td>
+      <td><span class="badge badge-info">${esc(p.origem||'—')}</span></td>
       <td class="mono">${fmt(p.preco_custo)}</td>
       <td class="mono text-success"><strong>${fmt(p.preco_venda)}</strong></td>
       <td><span class="mono ${margem>30?'text-success':margem>15?'text-warning':'text-danger'}">${margem}%</span></td>
@@ -3860,9 +3871,9 @@ function renderStock(q='', _paged=false) {
       </td>
       <td><span class="badge ${p.stock==0?'badge-danger':baixo?'badge-warning':'badge-success'}">${p.stock==0?'Esgotado':baixo?'Stock Baixo':'Disponível'}</span></td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">
-        <button class="btn btn-ghost btn-sm" onclick="editProduto('${p.id}')">✏️</button>
-        <button class="btn btn-ghost btn-sm" onclick="ajustarStock('${p.id}')">+/-</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteProduto('${p.id}')">🗑</button>
+        <button class="btn btn-ghost btn-sm" onclick="editProduto('${esc(p.id)}')">✏️</button>
+        <button class="btn btn-ghost btn-sm" onclick="ajustarStock('${esc(p.id)}')">+/-</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProduto('${esc(p.id)}')">🗑</button>
       </td>
     </tr>`;
   }).join('');
@@ -3947,15 +3958,15 @@ function renderClientes(q='', _paged=false){
     const cVendas=vendas.filter(v=>v.cliente_id===c.id);
     const totalGasto=cVendas.reduce((s,v)=>s+Number(v.total||0),0);
     return `<tr>
-      <td><strong>${c.nome}</strong><br><span class="text-xs text-muted">${c.profissao||''}</span></td>
-      <td class="mono">${c.telefone||'—'}</td>
-      <td><span class="badge badge-info">${c.localizacao||'—'}</span></td>
+      <td><strong>${esc(c.nome)}</strong><br><span class="text-xs text-muted">${esc(c.profissao||'')}  </span></td>
+      <td class="mono">${esc(c.telefone||'—')}</td>
+      <td><span class="badge badge-info">${esc(c.localizacao||'—')}</span></td>
       <td class="mono">${cVendas.length}</td>
       <td class="mono text-success">${fmt(totalGasto)}</td>
       <td><span class="badge ${c.credito==='confianca'?'badge-success':'badge-neutral'}">${c.credito==='confianca'?'Crédito':'Normal'}</span></td>
       <td style="display:flex;gap:4px">
-        <button class="btn btn-ghost btn-sm" onclick="verHistorico('${c.id}')">👁</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteCliente('${c.id}')">🗑</button>
+        <button class="btn btn-ghost btn-sm" onclick="verHistorico('${esc(c.id)}')">👁</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCliente('${esc(c.id)}')">🗑</button>
       </td>
     </tr>`;
   }).join('');
@@ -4002,7 +4013,7 @@ function verHistorico(clienteId){
     ${vendas.length?`<table><thead><tr><th>Data</th><th>Produtos</th><th>Total</th><th>Tipo</th></tr></thead><tbody>
     ${vendas.sort((a,b)=>b.data?.localeCompare(a.data)).map(v=>`<tr>
       <td class="mono">${v.data}</td>
-      <td>${(v.itens||[]).map(i=>`${i.qty}x ${i.nome_snapshot}`).join(', ')}</td>
+      <td>${(v.itens||[]).map(i=>`${esc(i.qty)}x ${esc(i.nome_snapshot)}`).join(', ')}</td>
       <td class="mono text-success">${fmt(v.total)}</td>
       <td><span class="badge ${v.tipo==='parcelada'?'badge-warning':'badge-success'}">${v.tipo==='parcelada'?'Parcelada':'Pronto'}</span></td>
     </tr>`).join('')}</tbody></table>`:'<p class="text-muted text-sm">Sem vendas registadas.</p>'}`;
@@ -4041,21 +4052,21 @@ function renderCobranças(_paged=false){
     const statusLabel=c._pago_total?'Pago Total':c._vencidas>0?'Vencida':'Pendente';
     const pagoLabel=c._pago_total?'Total':c._total===0?'—':`${c._pagas}/${c._total} paga${c._pagas!==1?'s':''}`;
     const prestBtns=(c.prestacoes||[]).filter(p=>!p.pago).slice(0,3).map(p=>
-      `<button class="btn btn-success btn-sm" onclick="pagarPrestacaoById('${p.id}','${c.id}')" title="Pagar ${p.numero}ª — ${fmt(p.valor)}">✓${p.numero}</button>`
+      `<button class="btn btn-success btn-sm" onclick="pagarPrestacaoById('${esc(p.id)}','${esc(c.id)}')" title="Pagar ${esc(p.numero)}ª — ${fmt(p.valor)}">✓${esc(p.numero)}</button>`
     ).join('');
     return `<tr style="${c._vencidas>0&&!c._pago_total?'background:rgba(239,68,68,.05)':''}">
-      <td><strong>${nomeCliente(c.cliente_id)}</strong></td>
-      <td>${c.referencia||'—'}</td>
+      <td><strong>${esc(nomeCliente(c.cliente_id))}</strong></td>
+      <td>${esc(c.referencia||'—')}</td>
       <td class="mono">${fmt(c.valor_total)}</td>
       <td class="mono">${c._total}</td>
       <td class="mono text-warning"><strong>${fmt(valPrest)}</strong></td>
-      <td class="mono ${c._vencidas>0?'text-danger':''}">${c._proxVcto}</td>
-      <td>${pagoLabel}</td>
+      <td class="mono ${c._vencidas>0?'text-danger':''}">${esc(c._proxVcto)}</td>
+      <td>${esc(pagoLabel)}</td>
       <td><span class="badge ${statusBadge}">${statusLabel}</span></td>
       <td style="display:flex;gap:3px;flex-wrap:wrap">
         ${prestBtns}
-        <button class="btn btn-ghost btn-sm" onclick="verPrestacoes('${c.id}')">👁</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteCobranca('${c.id}')">🗑</button>
+        <button class="btn btn-ghost btn-sm" onclick="verPrestacoes('${esc(c.id)}')">👁</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCobranca('${esc(c.id)}')">🗑</button>
       </td>
     </tr>`;
   }).join('');
@@ -4067,14 +4078,14 @@ function verPrestacoes(cobId){
   if(!c)return;
   const prests=c.prestacoes||[];
   const html=`<div style="padding:8px">
-    <h4 style="margin-bottom:12px">Prestações — ${nomeCliente(c.cliente_id)} (${c.referencia||'—'})</h4>
+    <h4 style="margin-bottom:12px">Prestações — ${esc(nomeCliente(c.cliente_id))} (${esc(c.referencia||'—')})</h4>
     <table><thead><tr><th>#</th><th>Valor</th><th>Vencimento</th><th>Estado</th><th>Pago em</th></tr></thead>
     <tbody>${prests.map(p=>`<tr>
-      <td>${p.numero}ª</td>
+      <td>${esc(p.numero)}ª</td>
       <td class="mono">${fmt(p.valor)}</td>
-      <td class="mono ${!p.pago&&p.data_vencimento<today()?'text-danger':''}">${p.data_vencimento||'—'}</td>
+      <td class="mono ${!p.pago&&p.data_vencimento<today()?'text-danger':''}">${esc(p.data_vencimento||'—')}</td>
       <td><span class="badge ${p.pago?'badge-success':'badge-warning'}">${p.pago?'Pago':'Pendente'}</span></td>
-      <td class="mono text-muted">${p.data_pagamento||'—'}</td>
+      <td class="mono text-muted">${esc(p.data_pagamento||'—')}</td>
     </tr>`).join('')}</tbody></table>
   </div>`;
   document.getElementById('hist-title').textContent='Detalhe de Prestações';
@@ -4611,7 +4622,7 @@ function renderAnalise(_paged=false){
     const m=s.venda>0?Math.round((s.venda-s.custo)/s.venda*100):0;
     const mCor = m>30?'var(--success)':m>15?'var(--warning)':'var(--danger)';
     return `<tr>
-      <td><strong>${nome}</strong></td>
+      <td><strong>${esc(nome)}</strong></td>
       <td class="mono" style="text-align:right;color:var(--text-dim)">${s.qty}×</td>
       <td class="mono" style="text-align:right">${fmt(s.custo)}</td>
       <td class="mono text-success" style="text-align:right">${fmt(s.venda)}</td>
@@ -4647,7 +4658,7 @@ function renderAnalise(_paged=false){
               const barPct=Math.round(val/maxVal*100);
               return `<div style="margin-bottom:12px">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                  <span style="font-size:.82rem">${catIcons[cat]||'📋'} ${cat}</span>
+                  <span style="font-size:.82rem">${catIcons[esc(cat)]||'📋'} ${esc(cat)}</span>
                   <span style="font-family:var(--font-mono);font-size:.8rem;color:var(--text-dim)">${fmt(val)} <span style="color:var(--text-muted);font-size:.72rem">(${pct}%)</span></span>
                 </div>
                 <div style="background:var(--border);border-radius:3px;height:5px;overflow:hidden">
@@ -4716,7 +4727,7 @@ function renderAnalise(_paged=false){
       const cor        = margemPct > 30 ? 'var(--success)' : margemPct > 15 ? 'var(--warning)' : 'var(--danger)';
       return `<div style="margin-bottom:14px">
         <div style="display:grid;grid-template-columns:1fr 80px 80px 60px;gap:8px;align-items:center;margin-bottom:5px">
-          <span style="font-size:.83rem;font-weight:600">${mk}
+          <span style="font-size:.83rem;font-weight:600">${esc(mk)}
             <span style="font-size:.68rem;color:var(--text-muted);font-weight:400;margin-left:4px">${d.numVendas} venda(s)</span>
           </span>
           <span style="font-family:var(--font-mono);font-size:.75rem;text-align:right;color:var(--text-dim)">${fmt(d.receita)}</span>
@@ -4946,13 +4957,13 @@ function renderFornecedores(_paged=false){
   tbody.innerHTML=_slice(forn,'forn').map(f=>{
     const ultImp=CACHE.importacoes.filter(i=>i.fornecedor_id===f.id).sort((a,b)=>b.data_encomenda?.localeCompare(a.data_encomenda))[0];
     return `<tr>
-      <td><strong>${f.nome}</strong></td>
-      <td><span class="badge badge-info">${f.pais||'—'}</span></td>
-      <td class="mono">${f.contacto||'—'}</td>
-      <td>${f.produtos||'—'}</td>
-      <td class="mono">${ultImp?.data_encomenda||'—'}</td>
+      <td><strong>${esc(f.nome)}</strong></td>
+      <td><span class="badge badge-info">${esc(f.pais||'—')}</span></td>
+      <td class="mono">${esc(f.contacto||'—')}</td>
+      <td>${esc(f.produtos||'—')}</td>
+      <td class="mono">${esc(ultImp?.data_encomenda||'—')}</td>
       <td style="display:flex;gap:4px">
-        <button class="btn btn-danger btn-sm" onclick="deleteFornecedor('${f.id}')">🗑</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteFornecedor('${esc(f.id)}')">🗑</button>
       </td>
     </tr>`;
   }).join('');
@@ -5000,16 +5011,16 @@ function renderImportacoes(_paged=false){
     const statusColor={'Chegou':'badge-success','Em trânsito':'badge-info','Encomendado':'badge-warning','Alfândega':'badge-danger'}[i.status]||'badge-neutral';
     return `<tr>
       <td class="mono text-muted">#${String(_offset+idx+1).padStart(3,'0')}</td>
-      <td><strong>${nomeFornecedor(i.fornecedor_id)}</strong></td>
-      <td><span class="badge badge-info">${CACHE.fornecedores.find(f=>f.id===i.fornecedor_id)?.pais||'—'}</span></td>
-      <td>${i.produtos||'—'}</td>
+      <td><strong>${esc(nomeFornecedor(i.fornecedor_id))}</strong></td>
+      <td><span class="badge badge-info">${esc(CACHE.fornecedores.find(f=>f.id===i.fornecedor_id)?.pais||'—')}</span></td>
+      <td>${esc(i.produtos||'—')}</td>
       <td class="mono">${fmtN(Math.round(custKz))} Kz<br><span class="text-xs text-muted">${fmtN(custUSD)} USD</span></td>
-      <td class="mono">${i.data_encomenda||'—'}</td>
-      <td class="mono">${i.data_previsao||'—'}</td>
-      <td><span class="badge ${statusColor}">${i.status||'—'}</span></td>
+      <td class="mono">${esc(i.data_encomenda||'—')}</td>
+      <td class="mono">${esc(i.data_previsao||'—')}</td>
+      <td><span class="badge ${statusColor}">${esc(i.status||'—')}</span></td>
       <td style="display:flex;gap:4px">
-        <button class="btn btn-ghost btn-sm" onclick="updateImportStatus('${i.id}')">⟳</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteImportacao('${i.id}')">🗑</button>
+        <button class="btn btn-ghost btn-sm" onclick="updateImportStatus('${esc(i.id)}')">⟳</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteImportacao('${esc(i.id)}')">🗑</button>
       </td>
     </tr>`;
   }).join('');
@@ -5281,7 +5292,7 @@ function openAplicarPreco() {
   const sel = document.getElementById('ap-produto');
   if(sel) {
     sel.innerHTML = '<option value="">-- Seleccionar produto --</option>' +
-      CACHE.produtos.map(p => '<option value="' + p.id + '">' + p.nome + ' (custo: ' + fmtCalc(p.preco_custo) + ' Kz)</option>').join('');
+      CACHE.produtos.map(p => '<option value="' + esc(p.id) + '">' + esc(p.nome) + ' (custo: ' + fmtCalc(p.preco_custo) + ' Kz)</option>').join('');
   }
   const elP = document.getElementById('ap-preco-novo');
   if(elP) elP.textContent = fmtCalc(window._calcResult.precoVenda) + ' Kz';
@@ -6150,15 +6161,15 @@ function renderCaixa() {
       const label    = isEntrada ? '↑ Entrada' : '↓ Saída';
       const rowCls   = isEntrada ? 'caixa-row-entrada' : 'caixa-row-saida';
       const canDelete = CURRENT_ROLE === 'admin' || m.criado_por === CURRENT_USER?.id;
-      const descHtml  = m.descricao || `<span style="color:var(--text-dim);font-style:italic">sem descrição</span>`;
+      const descHtml  = m.descricao ? esc(m.descricao) : `<span style="color:var(--text-dim);font-style:italic">sem descrição</span>`;
       return `<tr class="${rowCls}">
         <td class="mono" style="font-size:.8rem;color:var(--text-muted)">${_fmtDataExibir(m.data)||'—'}</td>
         <td><span class="badge ${badge}" style="font-size:.7rem">${label}</span></td>
-        <td><span class="badge badge-neutral" style="font-size:.7rem">${m.categoria||'—'}</span></td>
+        <td><span class="badge badge-neutral" style="font-size:.7rem">${esc(m.categoria||'—')}</span></td>
         <td style="font-size:.82rem;color:var(--text)">${descHtml}</td>
-        <td><span class="badge badge-info" style="font-size:.7rem">${m.metodo||'—'}</span></td>
+        <td><span class="badge badge-info" style="font-size:.7rem">${esc(m.metodo||'—')}</span></td>
         <td class="mono" style="font-weight:700;color:${cor};text-align:right;font-size:.88rem">${sinal} ${fmt(m.valor)}</td>
-        <td style="text-align:center">${canDelete ? `<button class="btn btn-danger btn-sm" onclick="deleteCaixaMovimento('${m.id}')" title="Eliminar" style="padding:5px 8px">${trashSVG}</button>` : ''}</td>
+        <td style="text-align:center">${canDelete ? `<button class="btn btn-danger btn-sm" onclick="deleteCaixaMovimento('${esc(m.id)}')" title="Eliminar" style="padding:5px 8px">${trashSVG}</button>` : ''}</td>
       </tr>`;
     }).join('');
   }
@@ -6462,7 +6473,7 @@ function showToast(msg, type='info', duration=3500){
   const container=document.getElementById('toast-container');
   const toast=document.createElement('div');
   toast.className=`toast toast-${type}`;
-  toast.innerHTML=`<svg class="toast-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">${_TOAST_ICONS[type]||_TOAST_ICONS.info}</svg><span>${msg}</span>`;
+  toast.innerHTML=`<svg class="toast-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">${_TOAST_ICONS[type]||_TOAST_ICONS.info}</svg><span>${esc(msg)}</span>`;
   container.appendChild(toast);
   setTimeout(()=>{
     toast.classList.add('leaving');
