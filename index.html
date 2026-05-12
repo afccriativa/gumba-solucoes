@@ -1212,6 +1212,57 @@ textarea { resize: vertical; min-height: 70px; }
   border-radius: 6px; padding: 3px 8px;
 }
 
+/* ── Cache staleness indicator ───────────────────────────────── */
+#cache-status {
+  display: none;
+  align-items: center; gap: 5px;
+  font-size: .72rem; font-family: var(--font-mono);
+  color: var(--text-dim);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 3px 10px 3px 8px;
+  cursor: pointer;
+  transition: border-color .2s, color .2s;
+  white-space: nowrap;
+  user-select: none;
+}
+#cache-status.visible { display: flex; }
+#cache-status:hover { border-color: var(--accent2); color: var(--text); }
+#cache-status.stale {
+  border-color: #d97706; color: #d97706;
+  background: rgba(217,119,6,.08);
+}
+#cache-status.stale:hover { background: rgba(217,119,6,.16); }
+#cache-status.refreshing { opacity: .6; cursor: not-allowed; pointer-events: none; }
+#cache-status .cs-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--success); flex-shrink: 0;
+  transition: background .3s;
+}
+#cache-status.stale .cs-dot { background: #d97706; }
+#cache-status.refreshing .cs-dot {
+  background: var(--accent2);
+  animation: btn-spin .7s linear infinite;
+  border: 1.5px solid transparent;
+  border-top-color: var(--accent2);
+}
+#realtime-badge {
+  display: none; align-items: center; gap: 4px;
+  font-size: .68rem; color: var(--success);
+  font-family: var(--font-mono);
+}
+#realtime-badge.visible { display: flex; }
+#realtime-badge .rt-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--success);
+  animation: rt-pulse 2s ease-in-out infinite;
+}
+@keyframes rt-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .4; transform: scale(.7); }
+}
+
 /* ── Loading granular ─────────────────────────────────────────── */
 /* Spinner inline em botões */
 @keyframes btn-spin { to { transform: rotate(360deg); } }
@@ -1502,6 +1553,19 @@ textarea { resize: vertical; min-height: 70px; }
         <!-- Ponto pulsante — visível apenas quando filtro está activo -->
         <div class="market-filter-dot" title="Filtro activo"></div>
       </div>
+
+      <!-- Indicador de staleness do CACHE — clique para refresh manual -->
+      <div id="cache-status" title="Clique para actualizar dados" onclick="refreshCacheManual()">
+        <span class="cs-dot"></span>
+        <span id="cache-status-text">Actualizado</span>
+      </div>
+
+      <!-- Badge Realtime activo -->
+      <div id="realtime-badge" title="Supabase Realtime activo — dados sincronizados em tempo real">
+        <span class="rt-dot"></span>
+        <span>live</span>
+      </div>
+
     </div>
   </div>
 
@@ -3092,7 +3156,14 @@ function showSection(name, el) {
   document.getElementById('page-title').textContent = TITLES[name] || name;
   closeSidebar(); // fecha sidebar automaticamente em mobile
   try { localStorage.setItem('gumba_last_section', name); } catch(_) {}
-  renderSection(name);
+  // TTL check — se alguma tabela desta secção estiver stale, refrescar silenciosamente
+  const staleTables = (SECTION_TABLES[name] || []).filter(isCacheStale);
+  if (staleTables.length > 0) {
+    renderSection(name); // render imediato com dados actuais
+    silentRefreshTables(staleTables); // depois actualiza em background
+  } else {
+    renderSection(name);
+  }
 }
 function renderSection(name) {
   if(name==='dashboard')    renderDashboard();
@@ -3588,6 +3659,7 @@ async function saveVenda() {
       prestacoes: _cobParcelada?.prestacoes || []
     };
 
+    stampCache('vendas','venda_itens','caixa','prestacoes');
     closeModal('modal-venda');
     renderVendas();
     renderDashboard();
@@ -3613,6 +3685,7 @@ async function deleteVenda(id) {
         if(error) throw new Error(error.message);
 
         // Actualizar cache local — remover venda, itens, pagamentos, cobrança
+        stampCache('vendas','venda_itens','caixa');
         CACHE.vendas          = CACHE.vendas.filter(x => x.id !== id);
         CACHE.venda_itens     = (CACHE.venda_itens || []).filter(x => x.venda_id !== id);
         CACHE.pagamentos      = (CACHE.pagamentos  || []).filter(x => x.venda_id !== id);
@@ -4036,7 +4109,7 @@ async function ajustarStock(id){
   try {
     await sbUpdate('produtos',id,{stock:novo});
     await sbInsert('stock_movimentos',{produto_id:id,tipo:d>0?'entrada':'saida',quantidade:Math.abs(d),origem:'ajuste_manual'});
-    p.stock=novo; renderStock(); renderDashboard();
+    p.stock=novo; stampCache('produtos'); renderStock(); renderDashboard();
     showToast(`Stock actualizado: ${d>0?'+':''}${d} unidade${Math.abs(d)!==1?'s':''}. Novo total: ${novo}`,'success');
   } catch(e) { renderStock(); showToast('Erro ao ajustar stock: '+e.message,'error'); }
 }
@@ -4074,7 +4147,7 @@ async function saveProduto(){
 async function deleteProduto(id){
   showConfirm('Este produto será eliminado permanentemente. Continuar?', async()=>{
     const _rD=btnLoading(document.getElementById('confirm-ok-btn'),'A eliminar...');
-    try{await sbDelete('produtos',id);CACHE.produtos=CACHE.produtos.filter(x=>x.id!==id);renderStock();renderDashboard();showToast('Produto eliminado.','success');}catch(e){showToast('Erro: '+e.message,'error');}finally{_rD();}
+    try{await sbDelete('produtos',id);CACHE.produtos=CACHE.produtos.filter(x=>x.id!==id);stampCache('produtos');renderStock();renderDashboard();showToast('Produto eliminado.','success');}catch(e){showToast('Erro: '+e.message,'error');}finally{_rD();}
   });
 }
 
@@ -4122,6 +4195,7 @@ async function saveCliente(){
       obs:document.getElementById('c-obs').value
     });
     CACHE.clientes.unshift(novo);
+    stampCache('clientes');
     closeModal('modal-cliente');renderClientes();renderDashboard();
     showToast(`Cliente "${nome}" adicionado com sucesso.`,'success');
   }catch(e){showToast('Erro: '+e.message,'error');}finally{_restoreC();}
@@ -4129,7 +4203,7 @@ async function saveCliente(){
 async function deleteCliente(id){
   showConfirm('Este cliente será eliminado permanentemente. Continuar?', async()=>{
     const _rD=btnLoading(document.getElementById('confirm-ok-btn'),'A eliminar...');
-    try{await sbDelete('clientes',id);CACHE.clientes=CACHE.clientes.filter(x=>x.id!==id);renderClientes();renderDashboard();showToast('Cliente eliminado.','success');}catch(e){showToast('Erro: '+e.message,'error');}finally{_rD();}
+    try{await sbDelete('clientes',id);CACHE.clientes=CACHE.clientes.filter(x=>x.id!==id);stampCache('clientes');renderClientes();renderDashboard();showToast('Cliente eliminado.','success');}catch(e){showToast('Erro: '+e.message,'error');}finally{_rD();}
   });
 }
 function verHistorico(clienteId){
@@ -4298,6 +4372,7 @@ async function saveCobranca(){
     cob.prestacoes=prestacoes;
     cob.cliente_nome=nomeCliente(cliente_id);
     CACHE.cobrancas.unshift(cob);
+    stampCache('cobrancas','prestacoes');
     closeModal('modal-cobranca');
     renderCobranças();renderDashboard();
     showToast(`Cobrança criada com ${np} prestação${np!==1?'s':''}.`,'success');
@@ -4349,6 +4424,7 @@ async function pagarPrestacaoById(prestId, cobId){
       ]);
       CACHE.caixa = novaCaixa;
       CACHE.vendasSaldo = novoSaldo;
+      stampCache('caixa','prestacoes','cobrancas','vendas_saldo');
 
       renderCobranças();
       renderDashboard();
@@ -4366,7 +4442,7 @@ async function pagarPrestacaoById(prestId, cobId){
 async function deleteCobranca(id){
   showConfirm('Esta cobrança e todas as suas prestações serão eliminadas. Continuar?', async()=>{
     const _rD=btnLoading(document.getElementById('confirm-ok-btn'),'A eliminar...');
-    try{await sbDelete('cobrancas',id);CACHE.cobrancas=CACHE.cobrancas.filter(x=>x.id!==id);renderCobranças();renderDashboard();showToast('Cobrança eliminada.','success');}catch(e){showToast('Erro: '+e.message,'error');}finally{_rD();}
+    try{await sbDelete('cobrancas',id);CACHE.cobrancas=CACHE.cobrancas.filter(x=>x.id!==id);stampCache('cobrancas');renderCobranças();renderDashboard();showToast('Cobrança eliminada.','success');}catch(e){showToast('Erro: '+e.message,'error');}finally{_rD();}
   });
 }
 
@@ -5121,6 +5197,7 @@ async function saveFornecedor(){
       obs:document.getElementById('f-obs').value
     });
     CACHE.fornecedores.unshift(novo);
+    stampCache('fornecedores');
     closeModal('modal-fornecedor');renderFornecedores();
     showToast(`Fornecedor "${nome}" adicionado com sucesso.`,'success');
   }catch(e){showToast('Erro: '+e.message,'error');}finally{_restoreF();}
@@ -5128,7 +5205,7 @@ async function saveFornecedor(){
 async function deleteFornecedor(id){
   showConfirm('Este fornecedor será eliminado permanentemente. Continuar?', async()=>{
     const _rD=btnLoading(document.getElementById('confirm-ok-btn'),'A eliminar...');
-    try{await sbDelete('fornecedores',id);CACHE.fornecedores=CACHE.fornecedores.filter(x=>x.id!==id);renderFornecedores();showToast('Fornecedor eliminado.','success');}catch(e){showToast('Erro: '+e.message,'error');}finally{_rD();}
+    try{await sbDelete('fornecedores',id);CACHE.fornecedores=CACHE.fornecedores.filter(x=>x.id!==id);stampCache('fornecedores');renderFornecedores();showToast('Fornecedor eliminado.','success');}catch(e){showToast('Erro: '+e.message,'error');}finally{_rD();}
   });
 }
 
@@ -5173,7 +5250,7 @@ async function updateImportStatus(id){
       const upd={status:next};
       if(next==='Chegou')upd.data_chegada=today();
       await sbUpdate('importacoes',id,upd);
-      Object.assign(i,upd);renderImportacoes();
+      Object.assign(i,upd);stampCache('importacoes');renderImportacoes();
       showToast(`Status actualizado: ${next}`,'success');
     }catch(e){showToast('Erro: '+e.message,'error');}finally{_rU();}
   }, 'Actualizar status');
@@ -5195,6 +5272,7 @@ async function saveImportacao(){
       obs:document.getElementById('i-obs').value
     });
     CACHE.importacoes.unshift(novo);
+    stampCache('importacoes');
     closeModal('modal-importacao');renderImportacoes();
     showToast('Importação registada com sucesso.','success');
   }catch(e){showToast('Erro: '+e.message,'error');}finally{_restoreImp();}
@@ -5321,6 +5399,8 @@ async function loadApp(){
       setLoadProgress(pct, label);
     }));
     setLoadProgress(100, 'Pronto.');
+    // Registar timestamps de carga para TTL
+    stampCache('produtos','clientes','fornecedores','vendas','venda_itens','cobrancas','prestacoes','importacoes','caixa','vendas_saldo');
     const {
       produtos, clientes, fornecedores, vendas,
       venda_itens, cobrancas, prestacoes, importacoes,
@@ -5349,6 +5429,8 @@ async function loadApp(){
     _syncMercadoFilter();
     // Diagnóstico RLS — não-bloqueante, apenas para admin
     setTimeout(() => checkRLSSecurity(), 800);
+    // Iniciar Realtime subscriptions
+    setupRealtimeSubscriptions();
     // Restaurar última secção — com guard de permissão por role
     const adminOnlySections = ['analise','fornecedores','importacoes'];
     let lastSection = 'dashboard';
@@ -5377,6 +5459,10 @@ function applyPermissions(){
 
 async function doLogout(){
   await sb.auth.signOut();
+  Object.keys(CACHE_META).forEach(k=>CACHE_META[k]=0);
+  await teardownRealtimeSubscriptions();
+  const _pill=document.getElementById('cache-status');
+  if(_pill){_pill.classList.remove('visible','stale');}
   CURRENT_USER=null;CURRENT_ROLE=null;
   Object.keys(CACHE).forEach(k=>CACHE[k]=[]);
   document.getElementById('sidebar').style.display='none';
@@ -6482,6 +6568,7 @@ async function deleteCaixaMovimento(id) {
     try {
       await sbDelete('caixa', id);
       CACHE.caixa = CACHE.caixa.filter(x => x.id !== id);
+      stampCache('caixa');
       renderCaixa();
       renderDashboard();
       showToast('Movimento eliminado.', 'success');
@@ -6665,6 +6752,263 @@ function executeConfirm(){
   const cb=_confirmCb;
   closeConfirmModal();
   if(cb) cb();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CACHE — meta, TTL, Realtime e invalidação
+// ═══════════════════════════════════════════════════════════════════
+
+// Timestamp da última carga por tabela (ms epoch)
+const CACHE_META = {
+  produtos: 0, clientes: 0, fornecedores: 0, vendas: 0,
+  venda_itens: 0, cobrancas: 0, prestacoes: 0, importacoes: 0,
+  caixa: 0, vendas_saldo: 0
+};
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+
+// Tabelas por secção — usadas para TTL check on showSection()
+const SECTION_TABLES = {
+  dashboard:    ['produtos','vendas','cobrancas','caixa'],
+  vendas:       ['vendas','venda_itens','clientes','produtos'],
+  stock:        ['produtos'],
+  clientes:     ['clientes','vendas'],
+  'cobranças':  ['cobrancas','prestacoes'],
+  analise:      ['vendas','venda_itens','produtos'],
+  fornecedores: ['fornecedores'],
+  importacoes:  ['importacoes','fornecedores'],
+  caixa:        ['caixa'],
+};
+
+// Referência ao channel Realtime (para cleanup no logout)
+let _realtimeChannel = null;
+
+/**
+ * Marca uma tabela como "acabou de carregar agora".
+ * Chamada em loadApp() e em refreshes parciais.
+ */
+function stampCache(...tables) {
+  const now = Date.now();
+  tables.forEach(t => { if (t in CACHE_META) CACHE_META[t] = now; });
+  _updateCacheStatusUI();
+}
+
+/**
+ * Devolve true se a tabela tem dados que excedem o TTL.
+ */
+function isCacheStale(table) {
+  const loaded = CACHE_META[table];
+  if (!loaded) return true;
+  return (Date.now() - loaded) > CACHE_TTL_MS;
+}
+
+/**
+ * getActiveSection() — devolve o nome da secção actualmente visível.
+ */
+function getActiveSection() {
+  const el = document.querySelector('.section.active');
+  return el ? el.id.replace('s-', '') : 'dashboard';
+}
+
+/**
+ * silentRefreshTables(tables) — recarrega as tabelas indicadas do Supabase
+ * sem mostrar loading screen. Actualiza CACHE e re-renderiza secção activa.
+ */
+async function silentRefreshTables(tables) {
+  if (!tables || !tables.length) return;
+  const unique = [...new Set(tables)];
+  try {
+    await Promise.allSettled(unique.map(async (table) => {
+      const select = table === 'venda_itens' ? '*' : undefined;
+      const rows   = select ? await sbGet(table, select) : await sbGet(table);
+      CACHE[table === 'vendas_saldo' ? 'vendasSaldo' : table] = rows;
+      CACHE_META[table] = Date.now();
+    }));
+    // Re-juntar venda_itens às vendas se ambas foram recarregadas
+    if (unique.includes('vendas') || unique.includes('venda_itens')) {
+      CACHE.vendas.forEach(v => {
+        v.itens = (CACHE.venda_itens || []).filter(it => it.venda_id === v.id);
+      });
+    }
+    // Re-juntar prestacoes às cobrancas
+    if (unique.includes('cobrancas') || unique.includes('prestacoes')) {
+      CACHE.cobrancas.forEach(c => {
+        c.prestacoes = (CACHE.prestacoes || [])
+          .filter(p => p.cobranca_id === c.id)
+          .sort((a, b) => a.numero - b.numero);
+      });
+    }
+    renderSection(getActiveSection());
+    _updateCacheStatusUI();
+  } catch (e) {
+    console.warn('[Cache] Erro no silent refresh:', e.message);
+  }
+}
+
+/**
+ * refreshCacheManual() — chamado pelo clique no pill do topbar.
+ * Recarrega todas as tabelas relevantes para a secção activa.
+ */
+async function refreshCacheManual() {
+  const btn = document.getElementById('cache-status');
+  if (btn?.classList.contains('refreshing')) return;
+  if (btn) btn.classList.add('refreshing');
+  const section  = getActiveSection();
+  const tables   = SECTION_TABLES[section] || Object.keys(CACHE_META);
+  await silentRefreshTables(tables);
+  if (btn) btn.classList.remove('refreshing');
+}
+
+/**
+ * _updateCacheStatusUI() — actualiza o pill do topbar com a idade
+ * do dado mais antigo no CACHE. Chamada após cada carga/patch.
+ */
+function _updateCacheStatusUI() {
+  const pill    = document.getElementById('cache-status');
+  const label   = document.getElementById('cache-status-text');
+  if (!pill || !label) return;
+
+  const now     = Date.now();
+  const stamps  = Object.values(CACHE_META).filter(t => t > 0);
+  if (!stamps.length) return;
+
+  const oldest  = Math.min(...stamps);
+  const ageMs   = now - oldest;
+  const ageMins = Math.floor(ageMs / 60000);
+
+  pill.classList.add('visible');
+  pill.classList.remove('stale');
+
+  if (ageMins < 1) {
+    label.textContent = 'Actualizado';
+  } else if (ageMins < 5) {
+    label.textContent = `há ${ageMins} min`;
+  } else {
+    label.textContent = `há ${ageMins} min`;
+    pill.classList.add('stale');
+  }
+}
+
+// Actualiza o pill a cada 60 s (sem fazer fetch — só recalcula a idade)
+setInterval(_updateCacheStatusUI, 60_000);
+
+/**
+ * Aplica um patch de Realtime num array do CACHE.
+ * event: 'INSERT' | 'UPDATE' | 'DELETE'
+ */
+function _patchCache(cacheKey, event, newRecord, oldRecord) {
+  const arr = CACHE[cacheKey];
+  if (!Array.isArray(arr)) return;
+  if (event === 'INSERT') {
+    // Só adicionar se não existir já (evitar duplicado com a nossa própria mutação)
+    if (!arr.find(x => x.id === newRecord.id)) arr.unshift(newRecord);
+  } else if (event === 'UPDATE') {
+    const idx = arr.findIndex(x => x.id === newRecord.id);
+    if (idx >= 0) Object.assign(arr[idx], newRecord);
+    else arr.unshift(newRecord);
+  } else if (event === 'DELETE') {
+    const id = oldRecord?.id;
+    if (id) { const i = arr.findIndex(x => x.id === id); if (i >= 0) arr.splice(i, 1); }
+  }
+  CACHE_META[cacheKey === 'vendasSaldo' ? 'vendas_saldo' : cacheKey] = Date.now();
+}
+
+/**
+ * setupRealtimeSubscriptions() — subscreve postgres_changes nas tabelas críticas.
+ * Apenas activo depois do login. Limpo no logout.
+ */
+function setupRealtimeSubscriptions() {
+  if (_realtimeChannel) return; // já activo
+
+  _realtimeChannel = sb.channel('gumba-cache-sync', {
+    config: { broadcast: { self: false } }  // não recebe os próprios eventos
+  });
+
+  // ── produtos ────────────────────────────────────────────────────
+  _realtimeChannel.on('postgres_changes',
+    { event: '*', schema: 'public', table: 'produtos' },
+    ({ eventType, new: n, old: o }) => {
+      _patchCache('produtos', eventType, n, o);
+      const s = getActiveSection();
+      if (['stock','dashboard','analise','vendas'].includes(s)) renderSection(s);
+    }
+  );
+
+  // ── vendas + venda_itens (refetch conjunto — itens dependem de vendas) ──
+  _realtimeChannel.on('postgres_changes',
+    { event: '*', schema: 'public', table: 'vendas' },
+    () => { silentRefreshTables(['vendas','venda_itens','vendas_saldo']); }
+  );
+
+  // ── cobrancas ───────────────────────────────────────────────────
+  _realtimeChannel.on('postgres_changes',
+    { event: '*', schema: 'public', table: 'cobrancas' },
+    ({ eventType, new: n, old: o }) => {
+      _patchCache('cobrancas', eventType, n, o);
+      const s = getActiveSection();
+      if (['cobranças','dashboard'].includes(s)) renderSection(s);
+    }
+  );
+
+  // ── prestacoes (patch + re-join com cobrancas) ──────────────────
+  _realtimeChannel.on('postgres_changes',
+    { event: '*', schema: 'public', table: 'prestacoes' },
+    ({ eventType, new: n, old: o }) => {
+      _patchCache('prestacoes', eventType, n, o);
+      // Re-join prestacoes → cobrancas
+      CACHE.cobrancas.forEach(c => {
+        c.prestacoes = CACHE.prestacoes
+          .filter(p => p.cobranca_id === c.id)
+          .sort((a, b) => a.numero - b.numero);
+      });
+      CACHE_META.prestacoes = Date.now();
+      const s = getActiveSection();
+      if (['cobranças','dashboard'].includes(s)) renderSection(s);
+    }
+  );
+
+  // ── caixa ────────────────────────────────────────────────────────
+  _realtimeChannel.on('postgres_changes',
+    { event: '*', schema: 'public', table: 'caixa' },
+    ({ eventType, new: n, old: o }) => {
+      _patchCache('caixa', eventType, n, o);
+      const s = getActiveSection();
+      if (['caixa','dashboard'].includes(s)) renderSection(s);
+    }
+  );
+
+  // ── clientes ─────────────────────────────────────────────────────
+  _realtimeChannel.on('postgres_changes',
+    { event: '*', schema: 'public', table: 'clientes' },
+    ({ eventType, new: n, old: o }) => {
+      _patchCache('clientes', eventType, n, o);
+      const s = getActiveSection();
+      if (['clientes','dashboard'].includes(s)) renderSection(s);
+    }
+  );
+
+  _realtimeChannel.subscribe((status) => {
+    const badge = document.getElementById('realtime-badge');
+    if (status === 'SUBSCRIBED') {
+      console.info('[Realtime] Canal activo — 6 tabelas subscritas');
+      if (badge) badge.classList.add('visible');
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      console.warn('[Realtime] Canal com erro:', status);
+      if (badge) badge.classList.remove('visible');
+    }
+  });
+}
+
+/**
+ * teardownRealtimeSubscriptions() — chamado no logout.
+ */
+async function teardownRealtimeSubscriptions() {
+  if (_realtimeChannel) {
+    await sb.removeChannel(_realtimeChannel);
+    _realtimeChannel = null;
+    const badge = document.getElementById('realtime-badge');
+    if (badge) badge.classList.remove('visible');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
