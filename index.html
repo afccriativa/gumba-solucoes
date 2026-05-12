@@ -1212,6 +1212,57 @@ textarea { resize: vertical; min-height: 70px; }
   border-radius: 6px; padding: 3px 8px;
 }
 
+/* ── Loading granular ─────────────────────────────────────────── */
+/* Spinner inline em botões */
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+.btn-spinner {
+  display: inline-block; width: 13px; height: 13px;
+  border: 2px solid rgba(255,255,255,.35);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: btn-spin .6s linear infinite;
+  vertical-align: middle; margin-right: 5px; flex-shrink: 0;
+}
+.btn[disabled] { opacity: .65; cursor: not-allowed; }
+
+/* Ecrã de loading — barra de progresso e mensagem granular */
+#loading-screen .ls-progress-wrap {
+  width: 200px; height: 3px;
+  background: var(--border2); border-radius: 2px; overflow: hidden;
+  margin-top: 4px;
+}
+#loading-screen .ls-progress-bar {
+  height: 100%; border-radius: 2px;
+  background: var(--accent2);
+  transition: width .3s ease;
+  width: 0%;
+}
+#loading-screen .ls-step {
+  font-size: .72rem; color: var(--text-dim);
+  font-family: var(--font-mono);
+  min-height: 1.2em; text-align: center;
+}
+
+/* Skeleton rows para tabelas durante carregamento inicial */
+@keyframes skel-shimmer {
+  0%   { background-position: -300px 0; }
+  100% { background-position: 300px 0; }
+}
+.skel-row td {
+  padding: 10px 12px !important;
+}
+.skel-cell {
+  height: 13px; border-radius: 4px;
+  background: linear-gradient(90deg, var(--surface2) 25%, var(--border2) 50%, var(--surface2) 75%);
+  background-size: 600px 100%;
+  animation: skel-shimmer 1.4s infinite linear;
+}
+.skel-cell.w-40  { width: 40%; }
+.skel-cell.w-60  { width: 60%; }
+.skel-cell.w-25  { width: 25%; }
+.skel-cell.w-80  { width: 80%; }
+.skel-cell.w-icon { width: 28px; height: 28px; border-radius: 6px; }
+
 /* ── RLS Security Banner ─────────────────────────────────────── */
 #rls-banner {
   display: none;
@@ -1292,7 +1343,7 @@ textarea { resize: vertical; min-height: 70px; }
   </div>
 </div>
 
-<div id="loading-screen"><div class="spinner"></div><h2>Gumba<span> Soluções</span></h2><p>A carregar dados da nuvem...</p></div>
+<div id="loading-screen"><div class="spinner"></div><h2>Gumba<span> Soluções</span></h2><p id="ls-msg">A carregar dados da nuvem...</p><div class="ls-progress-wrap"><div class="ls-progress-bar" id="ls-progress-bar"></div></div><div class="ls-step" id="ls-step"></div></div>
 
 <!-- LOGIN SCREEN -->
 <div id="login-screen">
@@ -3444,7 +3495,7 @@ async function saveVenda() {
   }
 
   const btnSave = document.querySelector('#modal-venda .btn-primary');
-  if(btnSave) { btnSave.disabled = true; btnSave.textContent = 'A registar...'; }
+  const _restoreVenda = btnLoading(btnSave, 'A registar venda...');
 
   try {
     // ── VENDA ATÓMICA via RPC ──────────────────────────────────────
@@ -3547,7 +3598,7 @@ async function saveVenda() {
   } catch(e) {
     showToast('Erro: ' + e.message, 'error');
   } finally {
-    if(btnSave) { btnSave.disabled = false; btnSave.textContent = 'Registar Venda'; }
+    _restoreVenda();
   }
 }
 
@@ -3555,6 +3606,8 @@ async function deleteVenda(id) {
   showConfirm(
     'Esta venda será anulada permanentemente.\n\nO stock será reposto e todos os movimentos financeiros serão revertidos. Continuar?',
     async () => {
+      const _btnConfirm = document.getElementById('confirm-ok-btn');
+      const _restoreDV = btnLoading(_btnConfirm, 'A anular...');
       try {
         const { error } = await sb.rpc('cancelar_venda', { p_venda_id: id });
         if(error) throw new Error(error.message);
@@ -3591,7 +3644,7 @@ async function deleteVenda(id) {
 
       } catch(e) {
         showToast('Erro ao anular venda: ' + e.message, 'error');
-      }
+      } finally { _restoreDV(); }
     },
     'Anular venda'
   );
@@ -3979,10 +4032,13 @@ async function ajustarStock(id){
   if(!delta)return;const d=parseInt(delta);if(isNaN(d))return showToast('Valor inválido.','warning');
   const p=CACHE.produtos.find(x=>x.id===id);if(!p)return;
   const novo=Math.max(0,Number(p.stock||0)+d);
-  await sbUpdate('produtos',id,{stock:novo});
-  await sbInsert('stock_movimentos',{produto_id:id,tipo:d>0?'entrada':'saida',quantidade:Math.abs(d),origem:'ajuste_manual'});
-  p.stock=novo;renderStock();renderDashboard();
-  showToast(`Stock actualizado: ${d>0?'+':''}${d} unidade${Math.abs(d)!==1?'s':''}. Novo total: ${novo}`,'success');
+  sectionLoadingTable('tbody-stock', 9);
+  try {
+    await sbUpdate('produtos',id,{stock:novo});
+    await sbInsert('stock_movimentos',{produto_id:id,tipo:d>0?'entrada':'saida',quantidade:Math.abs(d),origem:'ajuste_manual'});
+    p.stock=novo; renderStock(); renderDashboard();
+    showToast(`Stock actualizado: ${d>0?'+':''}${d} unidade${Math.abs(d)!==1?'s':''}. Novo total: ${novo}`,'success');
+  } catch(e) { renderStock(); showToast('Erro ao ajustar stock: '+e.message,'error'); }
 }
 async function saveProduto(){
   const nome=document.getElementById('p-nome').value.trim();
@@ -3997,6 +4053,8 @@ async function saveProduto(){
     fornecedor_id:document.getElementById('p-forn').value||null,
     obs:document.getElementById('p-obs').value
   };
+  const _btn1 = document.querySelector('#modal-produto .btn-primary');
+  const _restore1 = btnLoading(_btn1, editingProduto ? 'A actualizar...' : 'A guardar...');
   try{
     if(editingProduto){
       await sbUpdate('produtos',editingProduto,data);
@@ -4011,14 +4069,12 @@ async function saveProduto(){
       closeModal('modal-produto');renderStock();renderDashboard();
       showToast(`Produto "${data.nome}" criado com sucesso.`,'success');
     }
-  }catch(e){showToast('Erro: '+e.message,'error');}
+  }catch(e){showToast('Erro: '+e.message,'error');}finally{_restore1();}
 }
 async function deleteProduto(id){
   showConfirm('Este produto será eliminado permanentemente. Continuar?', async()=>{
-    await sbDelete('produtos',id);
-    CACHE.produtos=CACHE.produtos.filter(x=>x.id!==id);
-    renderStock();renderDashboard();
-    showToast('Produto eliminado.','success');
+    const _rD=btnLoading(document.getElementById('confirm-ok-btn'),'A eliminar...');
+    try{await sbDelete('produtos',id);CACHE.produtos=CACHE.produtos.filter(x=>x.id!==id);renderStock();renderDashboard();showToast('Produto eliminado.','success');}catch(e){showToast('Erro: '+e.message,'error');}finally{_rD();}
   });
 }
 
@@ -4054,6 +4110,8 @@ function renderClientes(q='', _paged=false){
 async function saveCliente(){
   const nome=document.getElementById('c-nome').value.trim();
   if(!nome)return showToast('Nome é obrigatório.','warning');
+  const _btnC = document.querySelector('#modal-cliente .btn-primary');
+  const _restoreC = btnLoading(_btnC, 'A guardar...');
   try{
     const novo=await sbInsert('clientes',{
       nome,telefone:document.getElementById('c-tel').value,
@@ -4066,14 +4124,12 @@ async function saveCliente(){
     CACHE.clientes.unshift(novo);
     closeModal('modal-cliente');renderClientes();renderDashboard();
     showToast(`Cliente "${nome}" adicionado com sucesso.`,'success');
-  }catch(e){showToast('Erro: '+e.message,'error');}
+  }catch(e){showToast('Erro: '+e.message,'error');}finally{_restoreC();}
 }
 async function deleteCliente(id){
   showConfirm('Este cliente será eliminado permanentemente. Continuar?', async()=>{
-    await sbDelete('clientes',id);
-    CACHE.clientes=CACHE.clientes.filter(x=>x.id!==id);
-    renderClientes();renderDashboard();
-    showToast('Cliente eliminado.','success');
+    const _rD=btnLoading(document.getElementById('confirm-ok-btn'),'A eliminar...');
+    try{await sbDelete('clientes',id);CACHE.clientes=CACHE.clientes.filter(x=>x.id!==id);renderClientes();renderDashboard();showToast('Cliente eliminado.','success');}catch(e){showToast('Erro: '+e.message,'error');}finally{_rD();}
   });
 }
 function verHistorico(clienteId){
@@ -4214,6 +4270,8 @@ async function saveCobranca(){
   const np=parseInt(document.getElementById('cb-nprest').value)||2;
   const entrada=parseFloat(document.getElementById('cb-entrada').value)||0;
   const valPrest=Math.ceil((total-entrada)/np);
+  const _btnCob = document.querySelector('#modal-cobranca .btn-primary');
+  const _restoreCob = btnLoading(_btnCob, 'A registar...');
   try{
     // 1. Criar cabeçalho da cobrança
     const cob=await sbInsert('cobrancas',{
@@ -4243,7 +4301,7 @@ async function saveCobranca(){
     closeModal('modal-cobranca');
     renderCobranças();renderDashboard();
     showToast(`Cobrança criada com ${np} prestação${np!==1?'s':''}.`,'success');
-  }catch(e){showToast('Erro: '+e.message,'error');}
+  }catch(e){showToast('Erro: '+e.message,'error');}finally{_restoreCob();}
 }
 const _prestacoesPagando = new Set();
 
@@ -4264,6 +4322,7 @@ async function pagarPrestacaoById(prestId, cobId){
   }
 
   showConfirm('Confirmar o pagamento desta prestação?', async()=>{
+    const _rP=btnLoading(document.getElementById('confirm-ok-btn'),'A processar...');
     _prestacoesPagando.add(prestId);
     try{
       // ── PRESTAÇÃO ATÓMICA via RPC ────────────────────────────────
@@ -4300,15 +4359,14 @@ async function pagarPrestacaoById(prestId, cobId){
       showToast('Erro: '+e.message,'error');
     }finally{
       _prestacoesPagando.delete(prestId);
+      _rP();
     }
   }, 'Confirmar pagamento');
 }
 async function deleteCobranca(id){
   showConfirm('Esta cobrança e todas as suas prestações serão eliminadas. Continuar?', async()=>{
-    await sbDelete('cobrancas',id);
-    CACHE.cobrancas=CACHE.cobrancas.filter(x=>x.id!==id);
-    renderCobranças();renderDashboard();
-    showToast('Cobrança eliminada.','success');
+    const _rD=btnLoading(document.getElementById('confirm-ok-btn'),'A eliminar...');
+    try{await sbDelete('cobrancas',id);CACHE.cobrancas=CACHE.cobrancas.filter(x=>x.id!==id);renderCobranças();renderDashboard();showToast('Cobrança eliminada.','success');}catch(e){showToast('Erro: '+e.message,'error');}finally{_rD();}
   });
 }
 
@@ -5051,6 +5109,8 @@ function renderFornecedores(_paged=false){
 async function saveFornecedor(){
   const nome=document.getElementById('f-nome').value.trim();
   if(!nome)return showToast('Nome é obrigatório.','warning');
+  const _btnF = document.querySelector('#modal-fornecedor .btn-primary');
+  const _restoreF = btnLoading(_btnF, 'A guardar...');
   try{
     const novo=await sbInsert('fornecedores',{
       nome,pais:document.getElementById('f-pais').value,
@@ -5063,14 +5123,12 @@ async function saveFornecedor(){
     CACHE.fornecedores.unshift(novo);
     closeModal('modal-fornecedor');renderFornecedores();
     showToast(`Fornecedor "${nome}" adicionado com sucesso.`,'success');
-  }catch(e){showToast('Erro: '+e.message,'error');}
+  }catch(e){showToast('Erro: '+e.message,'error');}finally{_restoreF();}
 }
 async function deleteFornecedor(id){
   showConfirm('Este fornecedor será eliminado permanentemente. Continuar?', async()=>{
-    await sbDelete('fornecedores',id);
-    CACHE.fornecedores=CACHE.fornecedores.filter(x=>x.id!==id);
-    renderFornecedores();
-    showToast('Fornecedor eliminado.','success');
+    const _rD=btnLoading(document.getElementById('confirm-ok-btn'),'A eliminar...');
+    try{await sbDelete('fornecedores',id);CACHE.fornecedores=CACHE.fornecedores.filter(x=>x.id!==id);renderFornecedores();showToast('Fornecedor eliminado.','success');}catch(e){showToast('Erro: '+e.message,'error');}finally{_rD();}
   });
 }
 
@@ -5110,14 +5168,19 @@ async function updateImportStatus(id){
   const i=CACHE.importacoes.find(x=>x.id===id);if(!i)return;
   const next=statuses[(statuses.indexOf(i.status)+1)%statuses.length];
   showConfirm(`Actualizar o status para "${next}"?`, async()=>{
-    const upd={status:next};
-    if(next==='Chegou')upd.data_chegada=today();
-    await sbUpdate('importacoes',id,upd);
-    Object.assign(i,upd);renderImportacoes();
-    showToast(`Status actualizado: ${next}`,'success');
+    const _rU=btnLoading(document.getElementById('confirm-ok-btn'),'A actualizar...');
+    try{
+      const upd={status:next};
+      if(next==='Chegou')upd.data_chegada=today();
+      await sbUpdate('importacoes',id,upd);
+      Object.assign(i,upd);renderImportacoes();
+      showToast(`Status actualizado: ${next}`,'success');
+    }catch(e){showToast('Erro: '+e.message,'error');}finally{_rU();}
   }, 'Actualizar status');
 }
 async function saveImportacao(){
+  const _btnImp = document.querySelector('#modal-importacao .btn-primary');
+  const _restoreImp = btnLoading(_btnImp, 'A registar...');
   try{
     const novo=await sbInsert('importacoes',{
       fornecedor_id:document.getElementById('i-forn').value||null,
@@ -5134,7 +5197,7 @@ async function saveImportacao(){
     CACHE.importacoes.unshift(novo);
     closeModal('modal-importacao');renderImportacoes();
     showToast('Importação registada com sucesso.','success');
-  }catch(e){showToast('Erro: '+e.message,'error');}
+  }catch(e){showToast('Erro: '+e.message,'error');}finally{_restoreImp();}
 }
 async function deleteImportacao(id){
   showConfirm('Esta importação será eliminada permanentemente. Continuar?', async()=>{
@@ -5236,14 +5299,33 @@ async function loadApp(){
     applyPermissions();
 
     // 3. Carregar dados (independente de erros individuais)
-    const results = await Promise.allSettled([
-      sbGet('produtos'),sbGet('clientes'),sbGet('fornecedores'),
-      sbGet('vendas'),sbGet('venda_itens','*'),
-      sbGet('cobrancas'),sbGet('prestacoes'),sbGet('importacoes'),
-      sbGet('caixa'),sbGet('vendas_saldo')
-    ]);
-    const [produtos,clientes,fornecedores,vendas,venda_itens,cobrancas,prestacoes,importacoes,caixa,vendasSaldo]
-      = results.map(r=>r.status==='fulfilled'?r.value:[]);
+    // Fetches individuais com progresso granular no ecrã de loading
+    const _steps = [
+      ['produtos',     'produtos',     10, 'Produtos...'],
+      ['clientes',     'clientes',     20, 'Clientes...'],
+      ['fornecedores', 'fornecedores', 30, 'Fornecedores...'],
+      ['vendas',       'vendas',       42, 'Vendas...'],
+      ['venda_itens',  'venda_itens',  54, 'Itens de venda...'],
+      ['cobrancas',    'cobrancas',    64, 'Cobranças...'],
+      ['prestacoes',   'prestacoes',   72, 'Prestações...'],
+      ['importacoes',  'importacoes',  80, 'Importações...'],
+      ['caixa',        'caixa',        88, 'Caixa...'],
+      ['vendas_saldo', 'vendas_saldo', 96, 'Saldos...'],
+    ];
+    const _fetched = {};
+    await Promise.allSettled(_steps.map(async ([table, key, pct, label]) => {
+      const select = table === 'venda_itens' ? '*' : undefined;
+      try {
+        _fetched[key] = select ? await sbGet(table, select) : await sbGet(table);
+      } catch(_) { _fetched[key] = []; }
+      setLoadProgress(pct, label);
+    }));
+    setLoadProgress(100, 'Pronto.');
+    const {
+      produtos, clientes, fornecedores, vendas,
+      venda_itens, cobrancas, prestacoes, importacoes,
+      caixa, vendas_saldo: vendasSaldo
+    } = _fetched;
 
     vendas.forEach(v=>{v.itens=venda_itens.filter(it=>it.venda_id===v.id);});
     cobrancas.forEach(c=>{c.prestacoes=prestacoes.filter(p=>p.cobranca_id===c.id).sort((a,b)=>a.numero-b.numero);});
@@ -6369,9 +6451,12 @@ async function saveCaixaMovimento(tipo) {
   const metodo= document.getElementById(prefix + '-metodo').value;
   const data  = document.getElementById(prefix + '-data').value;
 
-  if(!valor || valor <= 0) return alert('Introduza um valor válido.');
-  if(!data) return alert('Seleccione uma data.');
-
+  if(!valor || valor <= 0) return showToast('Introduza um valor válido.','warning');
+  if(!data) return showToast('Seleccione uma data.','warning');
+  const _btnCx = document.querySelector(
+    tipo==='entrada' ? '#modal-entrada-caixa .btn-success' : '#modal-saida-caixa .btn-danger'
+  );
+  const _restoreCx = btnLoading(_btnCx, tipo==='entrada' ? 'A registar entrada...' : 'A registar saída...');
   try {
     const novo = await sbInsert('caixa', {
       tipo, categoria: cat, descricao: desc,
@@ -6387,18 +6472,21 @@ async function saveCaixaMovimento(tipo) {
     document.getElementById(prefix + '-valor').value = '';
     renderCaixa();
     renderDashboard();
-    alert((tipo==='entrada' ? 'Entrada' : 'Saída') + ' registada com sucesso!');
-  } catch(e) { alert('Erro: ' + e.message); }
+    showToast((tipo==='entrada' ? 'Entrada' : 'Saída') + ' registada com sucesso!', 'success');
+  } catch(e) { showToast('Erro: ' + e.message, 'error'); } finally { _restoreCx(); }
 }
 
 async function deleteCaixaMovimento(id) {
-  if(!confirm('Confirmar eliminação deste movimento?')) return;
-  try {
-    await sbDelete('caixa', id);
-    CACHE.caixa = CACHE.caixa.filter(x => x.id !== id);
-    renderCaixa();
-    renderDashboard();
-  } catch(e) { alert('Erro: ' + e.message); }
+  showConfirm('Este movimento será eliminado permanentemente. Continuar?', async () => {
+    const _rDC=btnLoading(document.getElementById('confirm-ok-btn'),'A eliminar...');
+    try {
+      await sbDelete('caixa', id);
+      CACHE.caixa = CACHE.caixa.filter(x => x.id !== id);
+      renderCaixa();
+      renderDashboard();
+      showToast('Movimento eliminado.', 'success');
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); } finally { _rDC(); }
+  });
 }
 
 // Registar automaticamente entrada de caixa ao fazer uma venda a pronto
@@ -6577,6 +6665,60 @@ function executeConfirm(){
   const cb=_confirmCb;
   closeConfirmModal();
   if(cb) cb();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  LOADING GRANULAR — utilitários
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * btnLoading(btn, text?) — coloca um botão em estado de loading.
+ * Devolve restore() que repõe o estado original.
+ * Uso:
+ *   const restore = btnLoading(btn, 'A guardar...');
+ *   try { await op(); } finally { restore(); }
+ */
+function btnLoading(btn, loadingText) {
+  if (!btn) return () => {};
+  const origText    = btn.innerHTML;
+  const origDisabled = btn.disabled;
+  btn.disabled  = true;
+  btn.innerHTML = `<span class="btn-spinner"></span>${loadingText || 'A processar...'}`;
+  return function restore() {
+    btn.disabled  = origDisabled;
+    btn.innerHTML = origText;
+  };
+}
+
+/**
+ * setLoadProgress(pct, step?) — actualiza a barra de progresso
+ * do ecrã de loading inicial.
+ */
+function setLoadProgress(pct, step) {
+  const bar  = document.getElementById('ls-progress-bar');
+  const lbl  = document.getElementById('ls-step');
+  if (bar) bar.style.width = Math.min(100, pct) + '%';
+  if (lbl && step) lbl.textContent = step;
+}
+
+/**
+ * sectionLoadingTable(tbodyId, cols) — coloca skeleton rows numa tabela
+ * enquanto os dados carregam. Devolve clear() para limpar.
+ */
+function sectionLoadingTable(tbodyId, cols) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return () => {};
+  const skelRow = () => {
+    const widths = ['w-60','w-40','w-25','w-80','w-40','w-25','w-60'];
+    const cells = Array.from({length: cols}, (_,i) =>
+      `<td><div class="skel-cell ${widths[i % widths.length]}"></div></td>`
+    ).join('');
+    return `<tr class="skel-row">${cells}</tr>`;
+  };
+  tbody.innerHTML = Array.from({length: 5}, skelRow).join('');
+  return function clear() {
+    // limpo pelo próprio render — não precisa de acção explícita
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════
