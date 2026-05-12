@@ -1212,6 +1212,23 @@ textarea { resize: vertical; min-height: 70px; }
   border-radius: 6px; padding: 3px 8px;
 }
 
+/* ── Draft persistence indicator ──────────────────────────────── */
+.draft-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: .68rem; font-weight: 500;
+  color: #92400e; background: rgba(217,119,6,.12);
+  border: 1px solid rgba(217,119,6,.3);
+  border-radius: 10px; padding: 2px 8px;
+  margin-left: 8px; vertical-align: middle;
+  cursor: default;
+}
+.draft-badge svg { flex-shrink: 0; }
+.draft-discard {
+  margin-left: 4px; opacity: .6; cursor: pointer;
+  font-size: .8rem; line-height: 1;
+}
+.draft-discard:hover { opacity: 1; }
+
 /* ── Cache staleness indicator ───────────────────────────────── */
 #cache-status {
   display: none;
@@ -3211,11 +3228,21 @@ function openModal(id) {
   if(id==='modal-cobranca')   populateCobrancaSelects();
   if(id==='modal-importacao') populateImportacaoSelects();
   if(id==='modal-produto')    populateProdutoFornSelect();
+  // Restaurar rascunho — só para criação (não edição)
+  if (_DRAFT_FIELDS[id]) {
+    const isEditing = (id === 'modal-produto' && editingProduto);
+    if (!isEditing) {
+      // Pequeno delay para garantir que selects estão populados
+      setTimeout(() => _restoreDraft(id), 80);
+    }
+  }
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
   if(id==='modal-venda')   { carrinho=[]; renderCarrinho(); }
   if(id==='modal-produto') { editingProduto=null; clearProdutoForm(); document.getElementById('modal-produto-title').textContent='Novo Produto'; }
+  // Esconder badge de rascunho (o draft permanece em sessionStorage para restauro futuro)
+  _hideDraftBadge(id);
 }
 document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if(e.target===m) closeModal(m.id); });
@@ -3659,6 +3686,7 @@ async function saveVenda() {
       prestacoes: _cobParcelada?.prestacoes || []
     };
 
+    clearDraft('modal-venda');
     stampCache('vendas','venda_itens','caixa','prestacoes');
     closeModal('modal-venda');
     renderVendas();
@@ -4087,7 +4115,7 @@ function renderStock(q='', _paged=false) {
 function clearProdutoForm(){['p-nome','p-custo','p-venda','p-stock','p-minimo','p-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});}
 function editProduto(id){
   const p=CACHE.produtos.find(x=>x.id===id);if(!p)return;
-  editingProduto=id;populateProdutoFornSelect();
+  editingProduto=id;_hideDraftBadge('modal-produto');populateProdutoFornSelect();
   document.getElementById('modal-produto-title').textContent='Editar Produto';
   document.getElementById('p-nome').value=p.nome||'';
   document.getElementById('p-cat').value=p.categoria||'Smartphone';
@@ -4133,13 +4161,13 @@ async function saveProduto(){
       await sbUpdate('produtos',editingProduto,data);
       const idx=CACHE.produtos.findIndex(x=>x.id===editingProduto);
       if(idx>=0) CACHE.produtos[idx]={...CACHE.produtos[idx],...data};
-      closeModal('modal-produto');renderStock();renderDashboard();
+      clearDraft('modal-produto');closeModal('modal-produto');renderStock();renderDashboard();
       showToast(`Produto "${data.nome}" actualizado com sucesso.`,'success');
     }else{
       const novo=await sbInsert('produtos',data);
       if(data.stock>0) await sbInsert('stock_movimentos',{produto_id:novo.id,tipo:'entrada',quantidade:data.stock,origem:'cadastro_inicial'});
       CACHE.produtos.unshift(novo);
-      closeModal('modal-produto');renderStock();renderDashboard();
+      clearDraft('modal-produto');closeModal('modal-produto');renderStock();renderDashboard();
       showToast(`Produto "${data.nome}" criado com sucesso.`,'success');
     }
   }catch(e){showToast('Erro: '+e.message,'error');}finally{_restore1();}
@@ -4195,6 +4223,7 @@ async function saveCliente(){
       obs:document.getElementById('c-obs').value
     });
     CACHE.clientes.unshift(novo);
+    clearDraft('modal-cliente');
     stampCache('clientes');
     closeModal('modal-cliente');renderClientes();renderDashboard();
     showToast(`Cliente "${nome}" adicionado com sucesso.`,'success');
@@ -4372,6 +4401,7 @@ async function saveCobranca(){
     cob.prestacoes=prestacoes;
     cob.cliente_nome=nomeCliente(cliente_id);
     CACHE.cobrancas.unshift(cob);
+    clearDraft('modal-cobranca');
     stampCache('cobrancas','prestacoes');
     closeModal('modal-cobranca');
     renderCobranças();renderDashboard();
@@ -5197,6 +5227,7 @@ async function saveFornecedor(){
       obs:document.getElementById('f-obs').value
     });
     CACHE.fornecedores.unshift(novo);
+    clearDraft('modal-fornecedor');
     stampCache('fornecedores');
     closeModal('modal-fornecedor');renderFornecedores();
     showToast(`Fornecedor "${nome}" adicionado com sucesso.`,'success');
@@ -5272,6 +5303,7 @@ async function saveImportacao(){
       obs:document.getElementById('i-obs').value
     });
     CACHE.importacoes.unshift(novo);
+    clearDraft('modal-importacao');
     stampCache('importacoes');
     closeModal('modal-importacao');renderImportacoes();
     showToast('Importação registada com sucesso.','success');
@@ -5431,6 +5463,8 @@ async function loadApp(){
     setTimeout(() => checkRLSSecurity(), 800);
     // Iniciar Realtime subscriptions
     setupRealtimeSubscriptions();
+    // Instalar listeners de auto-save de rascunhos
+    Object.keys(_DRAFT_FIELDS).forEach(modalId => _setupDraftListeners(modalId));
     // Restaurar última secção — com guard de permissão por role
     const adminOnlySections = ['analise','fornecedores','importacoes'];
     let lastSection = 'dashboard';
@@ -6752,6 +6786,171 @@ function executeConfirm(){
   const cb=_confirmCb;
   closeConfirmModal();
   if(cb) cb();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  DRAFT PERSISTENCE — rascunhos de formulários em sessionStorage
+//  Activo apenas para criação (não edição). Limpo no save com sucesso.
+//  Draft sobrevive a: refresh, fechar modal acidentalmente, navegação.
+//  Draft morre com: save com sucesso, descarte explícito, fechar browser.
+// ═══════════════════════════════════════════════════════════════════
+
+const _DRAFT_PREFIX = 'gumba_draft_';
+
+// Campos a monitorizar por modal
+const _DRAFT_FIELDS = {
+  'modal-venda':      ['v-data','v-mercado','v-cliente','v-tipo','v-pagamento','v-nprest','v-obs'],
+  'modal-produto':    ['p-nome','p-cat','p-origem','p-custo','p-venda','p-stock','p-minimo','p-obs','p-forn'],
+  'modal-cliente':    ['c-nome','c-tel','c-local','c-prof','c-credito','c-origem','c-obs'],
+  'modal-fornecedor': ['f-nome','f-pais','f-contacto','f-produtos','f-prazo','f-moeda','f-obs'],
+  'modal-importacao': ['i-forn','i-produtos','i-valor','i-frete','i-alfandega','i-cambio','i-data-enc','i-data-prev','i-status'],
+  'modal-cobranca':   ['cb-cliente','cb-ref','cb-total','cb-nprest','cb-entrada','cb-mercado','cb-obs'],
+};
+
+const _draftTimers = {}; // debounce timers por modal
+
+/** Lê o valor de um campo de formulário (input, select, textarea) */
+function _fieldValue(id) {
+  const el = document.getElementById(id);
+  if (!el) return undefined;
+  return el.value;
+}
+
+/** Grava o rascunho do modal em sessionStorage (debounced 600ms) */
+function _saveDraft(modalId) {
+  clearTimeout(_draftTimers[modalId]);
+  _draftTimers[modalId] = setTimeout(() => {
+    const fields = _DRAFT_FIELDS[modalId];
+    if (!fields) return;
+    const values = {};
+    let hasContent = false;
+    fields.forEach(id => {
+      const v = _fieldValue(id);
+      if (v !== undefined) {
+        values[id] = v;
+        if (v && v !== '' && v !== '0') hasContent = true;
+      }
+    });
+    // Para modal-venda, persistir também o carrinho
+    if (modalId === 'modal-venda' && carrinho.length > 0) {
+      values.__carrinho = JSON.stringify(carrinho);
+      hasContent = true;
+    }
+    if (hasContent) {
+      values.__ts = Date.now();
+      try { sessionStorage.setItem(_DRAFT_PREFIX + modalId, JSON.stringify(values)); } catch(_) {}
+    }
+  }, 600);
+}
+
+/** Lê o rascunho guardado, ou null */
+function _loadDraft(modalId) {
+  try {
+    const raw = sessionStorage.getItem(_DRAFT_PREFIX + modalId);
+    return raw ? JSON.parse(raw) : null;
+  } catch(_) { return null; }
+}
+
+/** Apaga o rascunho — chamado no save com sucesso ou descarte explícito */
+function clearDraft(modalId) {
+  try { sessionStorage.removeItem(_DRAFT_PREFIX + modalId); } catch(_) {}
+  _hideDraftBadge(modalId);
+}
+
+/** Formata a hora do rascunho para exibição */
+function _draftAge(ts) {
+  const diff = Math.round((Date.now() - ts) / 60000);
+  if (diff < 1)  return 'agora mesmo';
+  if (diff < 60) return `há ${diff} min`;
+  return new Date(ts).toLocaleTimeString('pt-AO', { hour: '2-digit', minute: '2-digit' });
+}
+
+/** Mostra o badge de rascunho no título do modal */
+function _showDraftBadge(modalId, ts) {
+  // Encontrar o elemento de título do modal
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+  const header = modal.querySelector('.modal-header h3, .modal-header h2');
+  if (!header) return;
+  // Remover badge anterior se existir
+  modal.querySelector('.draft-badge')?.remove();
+  const badge = document.createElement('span');
+  badge.className = 'draft-badge';
+  badge.innerHTML = `<svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+  </svg>Rascunho ${_draftAge(ts)}<span class="draft-discard" title="Descartar rascunho" onclick="discardDraft('${modalId}')">✕</span>`;
+  header.appendChild(badge);
+}
+
+function _hideDraftBadge(modalId) {
+  document.getElementById(modalId)?.querySelector('.draft-badge')?.remove();
+}
+
+/** Descarte explícito pelo utilizador (clique no ✕ do badge) */
+function discardDraft(modalId) {
+  clearDraft(modalId);
+  // Limpar os campos visualmente
+  const fields = _DRAFT_FIELDS[modalId] || [];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = el.tagName === 'SELECT' ? el.options[0]?.value || '' : '';
+  });
+  if (modalId === 'modal-venda') { carrinho = []; renderCarrinho(); }
+}
+
+/**
+ * Restaura o rascunho guardado nos campos do modal.
+ * Chamado em openModal() quando o modal é para criação.
+ * Devolve true se havia rascunho.
+ */
+function _restoreDraft(modalId) {
+  const draft = _loadDraft(modalId);
+  if (!draft || !draft.__ts) return false;
+  const fields = _DRAFT_FIELDS[modalId] || [];
+  let restored = false;
+  fields.forEach(id => {
+    if (draft[id] === undefined) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Só restaurar se o campo está vazio (não sobrepor valores de edição)
+    if (el.value === '' || el.value === el.options?.[0]?.value) {
+      el.value = draft[id];
+      restored = true;
+    }
+  });
+  // Restaurar carrinho da venda
+  if (modalId === 'modal-venda' && draft.__carrinho) {
+    try {
+      const saved = JSON.parse(draft.__carrinho);
+      if (saved.length > 0) { carrinho = saved; renderCarrinho(); restored = true; }
+    } catch(_) {}
+  }
+  if (restored) {
+    _showDraftBadge(modalId, draft.__ts);
+    // Disparar change nos selects para recalcular dependências (ex: v-tipo → prestações)
+    fields.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.tagName === 'SELECT') el.dispatchEvent(new Event('change'));
+    });
+  }
+  return restored;
+}
+
+/**
+ * Instala os listeners de auto-save num modal.
+ * Chamado uma vez após o DOM estar pronto.
+ */
+function _setupDraftListeners(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+  const fields = _DRAFT_FIELDS[modalId] || [];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input',  () => _saveDraft(modalId));
+    el.addEventListener('change', () => _saveDraft(modalId));
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════
