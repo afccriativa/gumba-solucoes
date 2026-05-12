@@ -1212,6 +1212,44 @@ textarea { resize: vertical; min-height: 70px; }
   border-radius: 6px; padding: 3px 8px;
 }
 
+/* ── Garantia (venda) ─────────────────────────────────────────── */
+.garantia-toggle-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color .2s, background .2s;
+}
+.garantia-toggle-row:hover { border-color: var(--accent2); }
+.garantia-toggle-row input[type="checkbox"] {
+  width: 16px; height: 16px; accent-color: var(--accent2);
+  cursor: pointer; flex-shrink: 0;
+}
+.garantia-toggle-row .gt-label {
+  font-size: .82rem; font-weight: 600; color: var(--text);
+}
+.garantia-toggle-row .gt-sub {
+  font-size: .72rem; color: var(--text-muted); margin-left: auto;
+}
+.garantia-fields {
+  display: none; margin-top: 10px;
+  padding: 14px;
+  border: 1px solid var(--border2);
+  border-top: none; border-radius: 0 0 8px 8px;
+  background: var(--surface2);
+  gap: 10px;
+}
+.garantia-fields.open { display: grid; }
+.garantia-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: .68rem; padding: 2px 7px; border-radius: 10px;
+  background: rgba(37,99,235,.12); color: #60a5fa;
+  border: 1px solid rgba(37,99,235,.2);
+  font-weight: 600; white-space: nowrap;
+}
+
 /* ── Draft persistence indicator ──────────────────────────────── */
 .draft-badge {
   display: inline-flex; align-items: center; gap: 5px;
@@ -2634,6 +2672,31 @@ textarea { resize: vertical; min-height: 70px; }
           <label>Observações</label>
           <textarea id="v-obs" rows="2" placeholder="Notas adicionais (opcional)..."></textarea>
         </div>
+
+        <!-- ── Garantia (opcional) ─────────────────────────────── -->
+        <div class="form-group full">
+          <label for="v-garantia-toggle" style="cursor:pointer">
+            <div class="garantia-toggle-row" onclick="toggleGarantiaFields()">
+              <input type="checkbox" id="v-garantia-toggle" onclick="event.stopPropagation();toggleGarantiaFields()">
+              <span class="gt-label">
+                <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:4px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                Esta venda tem garantia
+              </span>
+              <span class="gt-sub">opcional</span>
+            </div>
+          </label>
+          <div class="garantia-fields form-grid-2" id="garantia-fields">
+            <div class="form-group">
+              <label>Válida até</label>
+              <input type="date" id="v-garantia-prazo" min="">
+            </div>
+            <div class="form-group">
+              <label>Descrição da garantia</label>
+              <input type="text" id="v-garantia-desc" placeholder="ex: Garantia de fábrica — 12 meses" maxlength="120">
+            </div>
+          </div>
+        </div>
+
       </div>
       <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
         <span style="color:var(--text-muted);font-size:.82rem">Total da Venda:</span>
@@ -2690,6 +2753,16 @@ textarea { resize: vertical; min-height: 70px; }
           <span style="font-size:.78rem;color:var(--text-muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em">Total da Venda</span>
           <span id="vs-total-foot" style="font-family:var(--font-mono);font-weight:800;font-size:1.05rem;color:var(--success)"></span>
         </div>
+      </div>
+
+      <!-- Garantia (se aplicável) -->
+      <div id="vs-garantia-block" style="display:none;margin-bottom:14px;padding:11px 14px;border-radius:9px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.2)">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+          <svg width="13" height="13" fill="none" stroke="#60a5fa" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          <span style="font-size:.75rem;font-weight:700;color:#60a5fa">GARANTIA</span>
+          <span id="vs-garantia-prazo" class="garantia-badge" style="margin-left:auto"></span>
+        </div>
+        <div id="vs-garantia-desc" style="font-size:.78rem;color:var(--text-dim);line-height:1.4"></div>
       </div>
 
       <!-- Aviso sem telefone -->
@@ -3239,7 +3312,7 @@ function openModal(id) {
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
-  if(id==='modal-venda')   { carrinho=[]; renderCarrinho(); }
+  if(id==='modal-venda')   { carrinho=[]; renderCarrinho(); const _gc=document.getElementById('v-garantia-toggle');if(_gc){_gc.checked=false;document.getElementById('garantia-fields')?.classList.remove('open');document.getElementById('v-garantia-prazo').value='';document.getElementById('v-garantia-desc').value='';} }
   if(id==='modal-produto') { editingProduto=null; clearProdutoForm(); document.getElementById('modal-produto-title').textContent='Novo Produto'; }
   // Esconder badge de rascunho (o draft permanece em sessionStorage para restauro futuro)
   _hideDraftBadge(id);
@@ -3540,7 +3613,7 @@ function renderVendas(q='', _paged=false) {
       '<td><span class="badge ' + estadoBadge + '">' + estadoPag + '</span></td>' +
       '<td><span class="badge badge-neutral">' + esc(v.pagamento||'—') + '</span></td>' +
       '<td><span class="badge ' + (v.tipo==='parcelada'?'badge-warning':'badge-success') + '">' + (v.tipo==='parcelada'?'Parcelada':'Pronto') + '</span></td>' +
-      '<td>' + btnDelete + btnPag + '</td>' +
+      '<td>' + (v.garantia_prazo ? '<span class="garantia-badge" title="' + esc(v.garantia_desc||'Garantia') + '">&#x1F6E1; ' + _fmtDataExibir(v.garantia_prazo) + '</span> ' : '') + btnDelete + btnPag + '</td>' +
     '</tr>';
   }).join('');
   _renderPG('pg-vendas',total,'vendas',()=>renderVendas(q,true));
@@ -3599,6 +3672,10 @@ async function saveVenda() {
     // ── VENDA ATÓMICA via RPC ──────────────────────────────────────
     // processar_venda cria: venda + itens + stock + pagamento + caixa
     // num único BEGIN/COMMIT — se falhar, reverte tudo
+    const _garantiaAtiva = document.getElementById('v-garantia-toggle')?.checked;
+    const _garantiaPrazo = _garantiaAtiva ? (document.getElementById('v-garantia-prazo').value || null) : null;
+    const _garantiaDesc  = _garantiaAtiva ? (document.getElementById('v-garantia-desc').value.trim() || null) : null;
+
     const payload = {
       p_cliente_id:  cliente_id,
       p_total:       total,
@@ -3620,6 +3697,14 @@ async function saveVenda() {
     if(rpcError) throw new Error(rpcError.message);
 
     const vendaId = rpcData.venda_id;
+
+    // Persistir garantia (campos não fazem parte da RPC — update separado)
+    if (_garantiaPrazo || _garantiaDesc) {
+      await sbUpdate('vendas', vendaId, {
+        garantia_prazo: _garantiaPrazo,
+        garantia_desc:  _garantiaDesc
+      });
+    }
 
     // Actualizar cache de produtos (stock baixado pelo RPC)
     for(const ci of carrinho) {
@@ -3675,15 +3760,17 @@ async function saveVenda() {
     // Guardar snapshot para o modal de sucesso / WhatsApp / PDF
     const clienteObj  = CACHE.clientes.find(c => c.id === cliente_id) || {};
     const vendaSnap   = {
-      id:        vendaId,
-      data:      payload.p_data,
-      pagamento: payload.p_pagamento,
-      tipo:      tipo,
-      mercado:   payload.p_mercado,
-      obs:       payload.p_obs,
+      id:             vendaId,
+      data:           payload.p_data,
+      pagamento:      payload.p_pagamento,
+      tipo:           tipo,
+      mercado:        payload.p_mercado,
+      obs:            payload.p_obs,
       total,
-      itens:      [...carrinho],   // cópia antes de limpar
-      prestacoes: _cobParcelada?.prestacoes || []
+      itens:          [...carrinho],   // cópia antes de limpar
+      prestacoes:     _cobParcelada?.prestacoes || [],
+      garantia_prazo: _garantiaPrazo,
+      garantia_desc:  _garantiaDesc
     };
 
     clearDraft('modal-venda');
@@ -3789,6 +3876,18 @@ function mostrarSucessoVenda(venda, cliente) {
   document.getElementById('vs-itens').innerHTML = itensHTML;
   document.getElementById('vs-total-foot').textContent = fmt(venda.total);
 
+  // Bloco de garantia
+  const _gBlock = document.getElementById('vs-garantia-block');
+  if (venda.garantia_prazo || venda.garantia_desc) {
+    _gBlock.style.display = 'block';
+    const prazoFmt = venda.garantia_prazo ? _fmtDataExibir(venda.garantia_prazo) : null;
+    document.getElementById('vs-garantia-prazo').textContent = prazoFmt ? 'Válida até ' + prazoFmt : '';
+    document.getElementById('vs-garantia-prazo').style.display = prazoFmt ? '' : 'none';
+    document.getElementById('vs-garantia-desc').textContent  = venda.garantia_desc || '';
+  } else {
+    _gBlock.style.display = 'none';
+  }
+
   const btnWA = document.getElementById('btn-whatsapp');
   if(temTel) {
     btnWA.disabled = false; btnWA.style.opacity = '1'; btnWA.style.cursor = 'pointer';
@@ -3830,6 +3929,10 @@ function _gerarMensagemWhatsApp(venda, cliente) {
   const tipoPag    = venda.pagamento || 'Dinheiro';
   const modalidade = venda.tipo === 'parcelada' ? 'Parcelado (credito)' : 'A Pronto';
   const obsLine    = venda.obs ? '\nObs: ' + venda.obs : '';
+  const garantiaLine = (venda.garantia_prazo || venda.garantia_desc) ?
+    '\n' + sep + '\n*GARANTIA*\n' +
+    (venda.garantia_desc ? '  ' + venda.garantia_desc + '\n' : '') +
+    (venda.garantia_prazo ? '  Valida ate: *' + _fmtDataExibir(venda.garantia_prazo) + '*' : '') : '';
 
   let linhasPrestacoes = '';
   if(venda.tipo === 'parcelada' && venda.prestacoes && venda.prestacoes.length) {
@@ -3851,7 +3954,7 @@ function _gerarMensagemWhatsApp(venda, cliente) {
     '*TOTAL: ' + totalFmt + '*\n' +
     'Pagamento: ' + tipoPag + '\n' +
     'Modalidade: ' + modalidade + obsLine + '\n' +
-    linhasPrestacoes +
+    linhasPrestacoes + garantiaLine +
     sep + '\n\n' +
     'Qualquer questao, estamos sempre disponiveis para ajudar. Ate a proxima!\n\n' +
     '_Gumba Solucoes - Smartphones, Computadores & Acessorios_';
@@ -6799,7 +6902,7 @@ const _DRAFT_PREFIX = 'gumba_draft_';
 
 // Campos a monitorizar por modal
 const _DRAFT_FIELDS = {
-  'modal-venda':      ['v-data','v-mercado','v-cliente','v-tipo','v-pagamento','v-nprest','v-obs'],
+  'modal-venda':      ['v-data','v-mercado','v-cliente','v-tipo','v-pagamento','v-nprest','v-obs','v-garantia-prazo','v-garantia-desc'],
   'modal-produto':    ['p-nome','p-cat','p-origem','p-custo','p-venda','p-stock','p-minimo','p-obs','p-forn'],
   'modal-cliente':    ['c-nome','c-tel','c-local','c-prof','c-credito','c-origem','c-obs'],
   'modal-fornecedor': ['f-nome','f-pais','f-contacto','f-produtos','f-prazo','f-moeda','f-obs'],
@@ -7262,6 +7365,27 @@ function sectionLoadingTable(tbodyId, cols) {
   return function clear() {
     // limpo pelo próprio render — não precisa de acção explícita
   };
+}
+
+// ── Garantia — toggle secção no modal de venda ──────────────────
+function toggleGarantiaFields() {
+  const chk    = document.getElementById('v-garantia-toggle');
+  const fields = document.getElementById('garantia-fields');
+  if (!chk || !fields) return;
+  // Se clicado no label externo (não no checkbox directo), inverter o estado
+  chk.checked = chk.checked; // já actualizado pelo click no checkbox
+  fields.classList.toggle('open', chk.checked);
+  if (chk.checked) {
+    // Definir min date como hoje
+    const prazo = document.getElementById('v-garantia-prazo');
+    if (prazo && !prazo.min) prazo.min = today();
+    // Foco na descrição
+    setTimeout(() => document.getElementById('v-garantia-desc')?.focus(), 50);
+  } else {
+    // Limpar campos ao desmarcar
+    document.getElementById('v-garantia-prazo').value = '';
+    document.getElementById('v-garantia-desc').value  = '';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
