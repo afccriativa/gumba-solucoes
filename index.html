@@ -2325,6 +2325,270 @@ input:focus:not(:focus-visible) { outline: none; }
     to   { opacity: 1; transform: translateY(0); }
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   FASE 3 — Filtros Sheet · Paginação Touch · Toasts · Análise
+   Compacta · Pull-to-Refresh
+═══════════════════════════════════════════════════════════════ */
+
+/* ── 1. OVERLAY PARTILHADO PARA FILTER SHEETS ───────────────── */
+#filter-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(8,11,18,.72);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 255;
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+#filter-overlay.visible { display: block; opacity: 1; }
+
+/* Sheet base */
+.filter-sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-bottom: none;
+  border-radius: 22px 22px 0 0;
+  z-index: 260;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(105%);
+  transition: transform .3s cubic-bezier(.22,1,.36,1);
+  box-shadow: 0 -8px 40px rgba(0,0,0,.5);
+  max-height: 85vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.filter-sheet.open { transform: translateY(0); }
+
+.fs-handle {
+  width: 40px; height: 4px;
+  background: var(--border2); border-radius: 2px;
+  margin: 10px auto 0;
+}
+.fs-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.fs-title { font-family: var(--font-display); font-size: .9rem; font-weight: 700; color: var(--text); }
+.fs-subtitle { font-size: .68rem; color: var(--text-muted); margin-top: 2px; }
+.fs-close {
+  width: 30px; height: 30px;
+  border: 1px solid var(--border2); background: var(--surface2);
+  border-radius: 50%; color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; touch-action: manipulation; transition: all .15s;
+}
+.fs-close:hover { background: var(--surface3); color: var(--text); }
+
+/* Opções de lista */
+.fs-options { padding: 6px 0; }
+.fs-option {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 20px;
+  cursor: pointer; border: none;
+  background: none; width: 100%; text-align: left;
+  color: var(--text-dim); font-family: var(--font-body);
+  transition: background .13s; touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent; min-height: 56px;
+}
+.fs-option:hover, .fs-option:active { background: var(--surface2); }
+.fs-option.selected { color: var(--accent2); }
+
+.fs-option-icon {
+  width: 42px; height: 42px; flex-shrink: 0;
+  border-radius: 13px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.15rem; transition: all .13s;
+}
+.fs-option.selected .fs-option-icon { background: var(--accent-glow); border-color: rgba(56,189,248,.3); }
+
+.fs-option-body { flex: 1; }
+.fs-option-body strong { display: block; font-size: .85rem; font-weight: 600; color: inherit; }
+.fs-option-body span { font-size: .72rem; color: var(--text-muted); margin-top: 1px; display: block; }
+
+.fs-check {
+  width: 22px; height: 22px; flex-shrink: 0;
+  border: 2px solid var(--border2); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s; color: transparent;
+}
+.fs-option.selected .fs-check {
+  background: var(--accent2); border-color: var(--accent2); color: var(--bg);
+}
+
+/* Bloco de datas custom (período) */
+.fs-period-custom {
+  display: none; flex-direction: column;
+  gap: 10px; padding: 14px 20px 4px;
+  border-top: 1px solid var(--border); margin-top: 4px;
+}
+.fs-period-custom.visible { display: flex; }
+.fs-period-custom label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); }
+.fs-period-custom input[type="date"] {
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text); border-radius: 8px;
+  padding: 10px 12px; font-size: 16px;
+  font-family: var(--font-body); width: 100%; outline: none;
+}
+.fs-period-custom input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.fs-apply-btn {
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 8px;
+  padding: 12px; font-size: .85rem; font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer; touch-action: manipulation; min-height: 44px; margin-top: 4px;
+}
+
+/* Botão topbar que abre sheet de mercado (mobile) */
+#market-filter-btn {
+  display: none;
+  align-items: center; gap: 6px;
+  padding: 6px 10px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 8px; color: var(--text-dim);
+  font-size: .78rem; font-weight: 600; font-family: var(--font-body);
+  cursor: pointer; touch-action: manipulation; transition: all .15s;
+  white-space: nowrap;
+}
+#market-filter-btn.is-filtered { border-color: rgba(56,189,248,.4); color: var(--accent2); }
+
+/* Botão que substitui period-bar em mobile */
+#period-sheet-btn {
+  display: none;
+  align-items: center; gap: 8px;
+  padding: 10px 16px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 10px; color: var(--text);
+  font-family: var(--font-body); font-size: .83rem; font-weight: 600;
+  cursor: pointer; touch-action: manipulation;
+  margin-bottom: 14px; width: 100%; transition: all .15s;
+}
+#period-sheet-btn:hover { border-color: var(--accent2); }
+.psb-period { flex: 1; text-align: left; }
+.psb-label { font-size: .62rem; text-transform: uppercase; letter-spacing: .6px; color: var(--text-muted); display: block; margin-bottom: 2px; }
+.psb-value { font-size: .85rem; font-weight: 700; color: var(--accent2); }
+.psb-arrow { color: var(--text-muted); }
+
+/* Search clear button */
+.search-wrap { position: relative; display: flex; flex: 1; min-width: 0; }
+.search-wrap .search-bar { width: 100%; padding-right: 32px; }
+.search-clear {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--text-muted);
+  cursor: pointer; padding: 4px; border-radius: 4px;
+  display: none; align-items: center; touch-action: manipulation;
+  line-height: 1;
+}
+.search-clear.visible { display: flex; }
+.search-clear:hover { color: var(--text); }
+
+/* ── 2. PAGINAÇÃO TOUCH-FIRST ───────────────────────────────── */
+.pg-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 0 0 var(--radius, 10px) var(--radius, 10px);
+  gap: 12px;
+}
+.pg-info { font-size: .72rem; color: var(--text-muted); font-family: var(--font-mono); letter-spacing: .3px; }
+.pg-info strong { color: var(--text-dim); }
+.pg-ctrl { display: flex; align-items: center; gap: 6px; }
+.pg-num {
+  font-size: .75rem; color: var(--text-dim); font-family: var(--font-mono);
+  min-width: 60px; text-align: center;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 6px; padding: 4px 8px;
+}
+.pg-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 7px; color: var(--text-dim);
+  font-size: .78rem; font-weight: 600; font-family: var(--font-body);
+  cursor: pointer; transition: all .15s;
+  touch-action: manipulation; min-height: 34px;
+}
+.pg-btn:hover:not(:disabled) { background: var(--surface3); color: var(--text); border-color: var(--border2); }
+.pg-btn:disabled { opacity: .35; cursor: default; }
+.pg-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+@media (max-width: 767px) {
+  .pg-bar { padding: 10px 12px; }
+  .pg-info { display: none; }
+  .pg-ctrl { width: 100%; justify-content: space-between; gap: 8px; }
+  .pg-btn { min-height: 44px; padding: 8px 16px; font-size: .83rem; border-radius: 10px; flex: 1; justify-content: center; }
+  .pg-num { font-size: .8rem; min-width: 72px; padding: 6px 10px; }
+}
+
+/* ── 3. TOASTS MOBILE — topo, full-width, swipe ─────────────── */
+@media (max-width: 767px) {
+  #toast-container {
+    bottom: auto;
+    top: calc(58px + env(safe-area-inset-top, 0px));
+    left: 12px; right: 12px;
+    max-width: 100%;
+    align-items: stretch;
+  }
+  .toast {
+    min-height: 48px; padding: 13px 16px;
+    font-size: .85rem; border-radius: 12px;
+    animation: toastInTop .28s cubic-bezier(.21,1.02,.73,1) forwards;
+    cursor: pointer; /* toque para fechar */
+    user-select: none;
+  }
+  .toast.leaving { animation: toastOutTop .25s ease forwards; }
+}
+@keyframes toastInTop  { from { opacity:0; transform:translateY(-14px); } to { opacity:1; transform:translateY(0); } }
+@keyframes toastOutTop { from { opacity:1; transform:translateY(0);     } to { opacity:0; transform:translateY(-10px); } }
+
+/* ── 4. ANÁLISE COMPACTA (mobile) ───────────────────────────── */
+@media (max-width: 767px) {
+  #period-bar { display: none; }
+  #period-sheet-btn { display: flex; }
+}
+
+/* ── 5. PULL-TO-REFRESH ─────────────────────────────────────── */
+#ptr-indicator {
+  position: fixed;
+  top: 56px; /* abaixo da topbar */
+  left: 0; right: 0;
+  z-index: 140;
+  display: flex; align-items: center; justify-content: center;
+  height: 0; overflow: hidden;
+  background: linear-gradient(180deg, rgba(15,20,32,.95) 0%, transparent 100%);
+  transition: height .2s ease;
+  pointer-events: none;
+}
+#ptr-indicator.pulling   { height: 52px; }
+#ptr-indicator.releasing { height: 60px; }
+#ptr-indicator.refreshing{ height: 52px; }
+
+.ptr-inner {
+  display: flex; align-items: center; gap: 8px;
+  font-size: .75rem; color: var(--text-muted); font-weight: 600;
+  font-family: var(--font-body);
+  opacity: 0; transition: opacity .2s;
+}
+#ptr-indicator.pulling    .ptr-inner { opacity: .6; }
+#ptr-indicator.releasing  .ptr-inner { opacity: 1;  color: var(--accent2); }
+#ptr-indicator.refreshing .ptr-inner { opacity: 1;  }
+
+.ptr-spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent2);
+  border-radius: 50%;
+  transition: transform .3s ease;
+}
+#ptr-indicator.releasing  .ptr-spinner { transform: rotate(200deg); border-top-color: var(--accent2); }
+#ptr-indicator.refreshing .ptr-spinner { animation: spin .7s linear infinite; }
 </style>
 </head>
 <body>
@@ -2574,7 +2838,93 @@ input:focus:not(:focus-visible) { outline: none; }
   </div>
 </div>
 
-<!-- SIDEBAR -->
+<!-- ══ FASE 3 HTML ════════════════════════════════════════════ -->
+
+<!-- Overlay partilhado para filter sheets -->
+<div id="filter-overlay" onclick="closeFilterSheets()"></div>
+
+<!-- ── SHEET: MERCADO ─────────────────────────────────────── -->
+<div id="sheet-mercado" class="filter-sheet" role="dialog" aria-label="Selecionar mercado">
+  <div class="fs-handle"></div>
+  <div class="fs-header">
+    <div>
+      <div class="fs-title">Mercado</div>
+      <div class="fs-subtitle">Filtrar dados por mercado</div>
+    </div>
+    <button class="fs-close" onclick="closeFilterSheets()" aria-label="Fechar">
+      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+  <div class="fs-options" id="mercado-options">
+    <!-- gerado por JS via _buildMercadoOptions() -->
+  </div>
+</div>
+
+<!-- ── SHEET: PERÍODO ─────────────────────────────────────── -->
+<div id="sheet-periodo" class="filter-sheet" role="dialog" aria-label="Selecionar período">
+  <div class="fs-handle"></div>
+  <div class="fs-header">
+    <div>
+      <div class="fs-title">Período</div>
+      <div class="fs-subtitle" id="sheet-periodo-sub">A filtrar a Análise</div>
+    </div>
+    <button class="fs-close" onclick="closeFilterSheets()" aria-label="Fechar">
+      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+  <div class="fs-options">
+    <button class="fs-option" data-period="today"   onclick="_fsSetPeriod('today')">
+      <div class="fs-option-icon">📅</div>
+      <div class="fs-option-body"><strong>Hoje</strong><span>Apenas transações de hoje</span></div>
+      <div class="fs-check"><svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+    </button>
+    <button class="fs-option" data-period="week"    onclick="_fsSetPeriod('week')">
+      <div class="fs-option-icon">📆</div>
+      <div class="fs-option-body"><strong>Esta Semana</strong><span>Desde segunda-feira</span></div>
+      <div class="fs-check"><svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+    </button>
+    <button class="fs-option selected" data-period="month" onclick="_fsSetPeriod('month')">
+      <div class="fs-option-icon">🗓️</div>
+      <div class="fs-option-body"><strong>Este Mês</strong><span>Do dia 1 até hoje</span></div>
+      <div class="fs-check"><svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+    </button>
+    <button class="fs-option" data-period="quarter" onclick="_fsSetPeriod('quarter')">
+      <div class="fs-option-icon">📊</div>
+      <div class="fs-option-body"><strong>Este Trimestre</strong><span>Últimos 3 meses</span></div>
+      <div class="fs-check"><svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+    </button>
+    <button class="fs-option" data-period="year"    onclick="_fsSetPeriod('year')">
+      <div class="fs-option-icon">📈</div>
+      <div class="fs-option-body"><strong>Este Ano</strong><span>Janeiro até hoje</span></div>
+      <div class="fs-check"><svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+    </button>
+    <button class="fs-option" data-period="custom"  onclick="_fsSetPeriod('custom')">
+      <div class="fs-option-icon">✏️</div>
+      <div class="fs-option-body"><strong>Período Personalizado</strong><span>Escolher datas</span></div>
+      <div class="fs-check"><svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+    </button>
+  </div>
+  <!-- Campos de data personalizados -->
+  <div class="fs-period-custom" id="fs-custom-dates">
+    <label>Data Início</label>
+    <input type="date" id="fs-period-from">
+    <label>Data Fim</label>
+    <input type="date" id="fs-period-to">
+    <button class="fs-apply-btn" onclick="_fsApplyCustomPeriod()">Aplicar Período</button>
+  </div>
+</div>
+
+<!-- ── PULL-TO-REFRESH INDICATOR ─────────────────────────── -->
+<div id="ptr-indicator" aria-hidden="true">
+  <div class="ptr-inner">
+    <div class="ptr-spinner"></div>
+    <span id="ptr-label">Puxar para actualizar</span>
+  </div>
+</div>
 <nav id="sidebar" style="display:none">
   <div class="sidebar-logo">
     <h1>Gumba<span> Soluções</span></h1>
@@ -2662,6 +3012,13 @@ input:focus:not(:focus-visible) { outline: none; }
     </button>
     <span class="topbar-title" id="page-title">Dashboard</span>
     <div class="topbar-right">
+      <!-- Botão mobile para sheet de mercado -->
+      <button id="market-filter-btn" onclick="openSheetMercado()" aria-label="Selecionar mercado">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span id="market-btn-label">Todos</span>
+        <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+
       <div class="market-filter" id="market-filter-wrap"
            data-tip="Filtra dados em todas as secções da aplicação">
         <!-- Ícone de localização -->
@@ -2958,7 +3315,17 @@ input:focus:not(:focus-visible) { outline: none; }
 
     <!-- ══════════════════════════════════════════════ ANÁLISE DE LUCRO -->
     <div class="section" id="s-analise">
-      <!-- Barra de filtro de período -->
+      <!-- Botão mobile que substitui a barra de período -->
+      <button id="period-sheet-btn" onclick="openSheetPeriodo()" aria-label="Selecionar período">
+        <div class="psb-period">
+          <span class="psb-label">Período activo</span>
+          <span class="psb-value" id="psb-value-label">Este Mês</span>
+        </div>
+        <svg class="psb-arrow" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </button>
+      <!-- Barra de filtro de período (desktop) -->
       <div class="period-bar" id="period-bar">
         <button class="period-btn" data-period="today" onclick="setPeriod('today')">Hoje</button>
         <button class="period-btn" data-period="week" onclick="setPeriod('week')">Esta Semana</button>
@@ -9174,6 +9541,352 @@ async function init(){
   }
 }
 init();
+
+// ═══════════════════════════════════════════════════════════════
+//  FASE 3 — Filter Sheets · Paginação Touch · Toasts · PTR
+// ═══════════════════════════════════════════════════════════════
+
+// ── 1. FILTER SHEETS ───────────────────────────────────────────
+
+/** Abre um filter-sheet por ID e activa o overlay. */
+function _openFilterSheet(sheetId) {
+  const overlay = document.getElementById('filter-overlay');
+  const sheet   = document.getElementById(sheetId);
+  if (!overlay || !sheet) return;
+  closeFilterSheets(); // fecha qualquer outro sheet aberto
+  overlay.style.display = 'block';
+  void overlay.offsetWidth; // reflow para activar transição
+  overlay.classList.add('visible');
+  sheet.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+/** Fecha todos os filter sheets e o overlay. */
+function closeFilterSheets() {
+  document.querySelectorAll('.filter-sheet').forEach(s => s.classList.remove('open'));
+  const overlay = document.getElementById('filter-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('visible');
+  document.body.style.overflow = '';
+  setTimeout(() => {
+    if (!overlay.classList.contains('visible')) overlay.style.display = 'none';
+  }, 280);
+}
+
+// ── SHEET DE MERCADO ───────────────────────────────────────────
+
+/** Opções de mercado — lidas dos <option> do select existente. */
+const _MARKET_ICONS = { 'todos': '🌍', 'sumbe': '📍', 'benguela': '🏙️' };
+const _MARKET_DESCS = { 'todos': 'Todos os mercados', 'sumbe': 'Operações em Sumbe', 'benguela': 'Operações em Benguela' };
+
+function _buildMercadoOptions() {
+  const sel  = document.getElementById('filtro-mercado');
+  const wrap = document.getElementById('mercado-options');
+  if (!sel || !wrap) return;
+  const opts = Array.from(sel.options);
+  wrap.innerHTML = opts.map(o => {
+    const key  = o.value.toLowerCase();
+    const icon = _MARKET_ICONS[key] || '📌';
+    const desc = _MARKET_DESCS[key] || o.text;
+    const sel  = o.selected ? 'selected' : '';
+    return `<button class="fs-option ${sel}" data-market="${esc(o.value)}" onclick="_fsSetMercado('${esc(o.value)}')" >
+      <div class="fs-option-icon">${icon}</div>
+      <div class="fs-option-body"><strong>${esc(o.text)}</strong><span>${esc(desc)}</span></div>
+      <div class="fs-check"><svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+    </button>`;
+  }).join('');
+}
+
+function openSheetMercado() {
+  _buildMercadoOptions();
+  _openFilterSheet('sheet-mercado');
+}
+
+/** Selecção de mercado dentro do sheet — espelha o select. */
+function _fsSetMercado(value) {
+  const sel = document.getElementById('filtro-mercado');
+  if (sel) { sel.value = value; onMercadoChange(sel); }
+  // Actualizar label no botão do topbar
+  const btn = document.getElementById('market-btn-label');
+  if (btn) btn.textContent = value === 'todos' ? 'Todos' : value;
+  // Estado visual do botão
+  const mfBtn = document.getElementById('market-filter-btn');
+  if (mfBtn) mfBtn.classList.toggle('is-filtered', value !== 'todos');
+  // Fechar sheet após selecção
+  closeFilterSheets();
+}
+
+// Sincronizar label do botão quando o select muda (desktop)
+const _origOnMercadoChange = onMercadoChange;
+onMercadoChange = function(sel) {
+  _origOnMercadoChange(sel);
+  const btn = document.getElementById('market-btn-label');
+  if (btn) btn.textContent = sel.value === 'todos' ? 'Todos' : sel.value;
+  const mfBtn = document.getElementById('market-filter-btn');
+  if (mfBtn) mfBtn.classList.toggle('is-filtered', sel.value !== 'todos');
+};
+
+// ── SHEET DE PERÍODO ───────────────────────────────────────────
+
+const _PERIOD_LABELS_FULL = {
+  'today':   'Hoje',
+  'week':    'Esta Semana',
+  'month':   'Este Mês',
+  'quarter': 'Este Trimestre',
+  'year':    'Este Ano',
+  'all':     'Todos os Tempos',
+  'custom':  'Período Personalizado',
+};
+
+function openSheetPeriodo() {
+  // Sincronizar selecção actual com os botões do sheet
+  const current = document.querySelector('.period-btn.active')?.dataset.period || 'month';
+  document.querySelectorAll('#sheet-periodo .fs-option').forEach(opt => {
+    opt.classList.toggle('selected', opt.dataset.period === current);
+  });
+  // Mostrar/ocultar datas custom
+  const customBlock = document.getElementById('fs-custom-dates');
+  if (customBlock) customBlock.classList.toggle('visible', current === 'custom');
+  _openFilterSheet('sheet-periodo');
+}
+
+/** Muda o período a partir do sheet — espelha a period-bar. */
+function _fsSetPeriod(type) {
+  // Actualizar estado visual dentro do sheet
+  document.querySelectorAll('#sheet-periodo .fs-option').forEach(opt => {
+    opt.classList.toggle('selected', opt.dataset.period === type);
+  });
+  const customBlock = document.getElementById('fs-custom-dates');
+  if (customBlock) customBlock.classList.toggle('visible', type === 'custom');
+
+  if (type !== 'custom') {
+    // Chamar a função setPeriod original
+    setPeriod(type);
+    _syncPeriodBtn(type);
+    closeFilterSheets();
+  }
+  // Se custom, mantém o sheet aberto para escolher datas
+}
+
+function _fsApplyCustomPeriod() {
+  const from = document.getElementById('fs-period-from')?.value;
+  const to   = document.getElementById('fs-period-to')?.value;
+  if (!from || !to) { showToast('Escolha as duas datas', 'warning'); return; }
+  // Sincronizar com os campos da period-bar
+  const pfrom = document.getElementById('period-from');
+  const pto   = document.getElementById('period-to');
+  if (pfrom) pfrom.value = from;
+  if (pto)   pto.value   = to;
+  applyCustomPeriod();
+  _syncPeriodBtn('custom', from, to);
+  closeFilterSheets();
+}
+
+/** Actualiza o period-sheet-btn com o período activo. */
+function _syncPeriodBtn(type, from, to) {
+  const lbl = document.getElementById('psb-value-label');
+  if (!lbl) return;
+  if (type === 'custom' && from && to) {
+    lbl.textContent = `${from} → ${to}`;
+  } else {
+    lbl.textContent = _PERIOD_LABELS_FULL[type] || type;
+  }
+}
+
+// Swipe para fechar filter sheets (igual ao Mais sheet)
+(function() {
+  let _startY = 0;
+  document.addEventListener('touchstart', e => {
+    const open = document.querySelector('.filter-sheet.open');
+    if (open) _startY = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const open = document.querySelector('.filter-sheet.open');
+    if (!open) return;
+    if (e.changedTouches[0].clientY - _startY > 80) closeFilterSheets();
+  }, { passive: true });
+})();
+
+// Mostrar botão mobile ao activar mobile (CSS já controla display)
+function _initFilterButtons() {
+  const mfBtn  = document.getElementById('market-filter-btn');
+  if (mfBtn) mfBtn.style.display = ''; // CSS @media decide
+}
+
+// ── 2. PAGINAÇÃO TOUCH-FIRST ────────────────────────────────────
+// Substituição do _renderPG para usar os novos .pg-btn com SVG
+
+const _PG_SVG_PREV = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 19l-7-7 7-7"/></svg>`;
+const _PG_SVG_NEXT = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 5l7 7-7 7"/></svg>`;
+
+// Override _renderPG com versão touch-first
+const _renderPG_orig = _renderPG;
+_renderPG = function(barId, total, key, rerender) {
+  _PG_FNS[key] = rerender;
+  const bar = document.getElementById(barId);
+  if (!bar) return;
+  if (total <= PAGE_SIZE) { bar.innerHTML = ''; return; }
+  const p     = PG[key];
+  const pages = Math.ceil(total / PAGE_SIZE);
+  const from  = (p - 1) * PAGE_SIZE + 1;
+  const to    = Math.min(p * PAGE_SIZE, total);
+  bar.innerHTML = `<div class="pg-bar">
+    <span class="pg-info"><strong>${from}–${to}</strong> de ${total} registos</span>
+    <div class="pg-ctrl">
+      <button class="pg-btn pg-btn-prev" ${p <= 1 ? 'disabled' : ''} onclick="_goPage('${key}',${p-1})">
+        ${_PG_SVG_PREV} <span>Anterior</span>
+      </button>
+      <span class="pg-num">${p} / ${pages}</span>
+      <button class="pg-btn pg-btn-next" ${p >= pages ? 'disabled' : ''} onclick="_goPage('${key}',${p+1})">
+        <span>Seguinte</span> ${_PG_SVG_NEXT}
+      </button>
+    </div>
+  </div>`;
+};
+
+// ── 3. TOASTS MOBILE — swipe-to-dismiss ───────────────────────
+
+const _showToast_orig = showToast;
+showToast = function(msg, type = 'info', duration = 3500) {
+  _showToast_orig(msg, type, duration);
+  // Adicionar swipe-to-dismiss ao toast recém-criado (mobile)
+  if (window.innerWidth > 767) return;
+  const container = document.getElementById('toast-container');
+  const toast = container?.lastElementChild;
+  if (!toast) return;
+  let startX = 0, startY = 0;
+  toast.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  toast.addEventListener('touchend', e => {
+    const dx = Math.abs(e.changedTouches[0].clientX - startX);
+    const dy = Math.abs(e.changedTouches[0].clientY - startY);
+    // Swipe horizontal ou toque rápido — dispensar
+    if (dx > 50 || (dx < 10 && dy < 10)) {
+      toast.classList.add('leaving');
+      setTimeout(() => toast.remove(), 280);
+    }
+  }, { passive: true });
+  // Tap directo para fechar
+  toast.addEventListener('click', () => {
+    toast.classList.add('leaving');
+    setTimeout(() => toast.remove(), 280);
+  });
+};
+
+// ── 4. ANÁLISE — sincronizar period-sheet-btn com setPeriod ────
+
+const _setPeriod_orig = setPeriod;
+setPeriod = function(type) {
+  _setPeriod_orig(type);
+  _syncPeriodBtn(type);
+};
+
+const _applyCustomPeriod_orig = applyCustomPeriod;
+applyCustomPeriod = function() {
+  _applyCustomPeriod_orig();
+  const from = document.getElementById('period-from')?.value || '';
+  const to   = document.getElementById('period-to')?.value   || '';
+  _syncPeriodBtn('custom', from, to);
+};
+
+// ── 5. PULL-TO-REFRESH ─────────────────────────────────────────
+
+(function() {
+  const PTR_THRESHOLD  = 72;  // px necessários para activar
+  const PTR_RESISTANCE = 2.6; // divisor (quanto mais alto, mais resistência)
+  let _ptrStartY  = 0;
+  let _ptrCurrent = 0;
+  let _ptrActive  = false;
+  let _ptrBusy    = false;
+
+  const _el  = () => document.getElementById('ptr-indicator');
+  const _lbl = () => document.getElementById('ptr-label');
+  const _isMobile = () => window.innerWidth <= 767;
+  const _atTop    = () => (document.querySelector('.content')?.scrollTop || window.scrollY) <= 0;
+
+  function _setState(state, label) {
+    const el = _el(); if (!el) return;
+    el.className = state ? `${state}` : '';
+    if (label && _lbl()) _lbl().textContent = label;
+  }
+
+  document.addEventListener('touchstart', e => {
+    if (!_isMobile() || _ptrBusy) return;
+    if (!_atTop()) return;
+    _ptrStartY = e.touches[0].clientY;
+    _ptrActive = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!_ptrActive || _ptrBusy) return;
+    _ptrCurrent = (e.touches[0].clientY - _ptrStartY) / PTR_RESISTANCE;
+    if (_ptrCurrent <= 0) { _ptrActive = false; return; }
+    if (_ptrCurrent > 8) { // mínimo para aparecer
+      const ratio = Math.min(_ptrCurrent / PTR_THRESHOLD, 1);
+      if (ratio >= 1) {
+        _setState('releasing', 'Soltar para actualizar');
+      } else {
+        _setState('pulling', 'Puxar para actualizar');
+      }
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', async () => {
+    if (!_ptrActive || _ptrBusy) return;
+    _ptrActive = false;
+    if (_ptrCurrent >= PTR_THRESHOLD) {
+      _ptrBusy = true;
+      _setState('refreshing', 'A actualizar...');
+      try {
+        await refreshCacheManual();
+      } catch (_) {}
+      // Manter indicador um momento para feedback
+      await new Promise(r => setTimeout(r, 600));
+      showToast('Dados actualizados', 'success', 2000);
+    }
+    _setState('');
+    _ptrCurrent = 0;
+    _ptrBusy = false;
+  }, { passive: true });
+})();
+
+// ── INICIALIZAÇÃO FASE 3 ───────────────────────────────────────
+
+function _initPhase3() {
+  _initFilterButtons();
+  // Sincronizar psb-value-label com o período activo ao carregar
+  const activePeriod = document.querySelector('.period-btn.active')?.dataset.period || 'month';
+  _syncPeriodBtn(activePeriod);
+  // Ajustar z-index do market-filter-wrap em mobile (ocultar select)
+  const isMobile = () => window.innerWidth <= 767;
+  if (isMobile()) {
+    const wrap = document.getElementById('market-filter-wrap');
+    if (wrap) wrap.style.display = 'none';
+  }
+}
+
+// Patch do _initBottomNav para incluir Fase 3
+const _initBottomNav_orig = _initBottomNav;
+_initBottomNav = function() {
+  _initBottomNav_orig();
+  _initPhase3();
+};
+
+// Ocultar market-filter-wrap em mobile e mostrar botão
+(function() {
+  function _syncMarketControls() {
+    const isMobile = window.innerWidth <= 767;
+    const wrap     = document.getElementById('market-filter-wrap');
+    const btn      = document.getElementById('market-filter-btn');
+    if (wrap) wrap.style.display = isMobile ? 'none' : '';
+    if (btn)  btn.style.display  = isMobile ? 'flex' : 'none';
+  }
+  // Correr imediatamente e no resize
+  _syncMarketControls();
+  window.addEventListener('resize', _syncMarketControls, { passive: true });
+})();
 </script>
 </body>
 </html>
