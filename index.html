@@ -1212,6 +1212,35 @@ textarea { resize: vertical; min-height: 70px; }
   border-radius: 6px; padding: 3px 8px;
 }
 
+/* ── Modal Empresa (Configurações) ────────────────────────────── */
+#modal-empresa .company-field-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+#modal-empresa .company-field-group.full { grid-template-columns: 1fr; }
+#modal-empresa .field-preview {
+  font-size: .7rem; color: var(--text-muted);
+  margin-top: 4px; font-style: italic;
+}
+.sidebar-config-btn {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .78rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all .15s;
+  margin-bottom: 6px;
+}
+.sidebar-config-btn:hover { color: var(--accent2); border-color: var(--accent2); }
+
 /* ── Garantia (venda) ─────────────────────────────────────────── */
 .garantia-toggle-row {
   display: flex; align-items: center; gap: 10px;
@@ -1570,6 +1599,11 @@ textarea { resize: vertical; min-height: 70px; }
     <div style="font-size:.78rem;font-weight:600;color:var(--text)" id="user-name">—</div>
     <div style="font-size:.7rem;color:var(--text-muted)" id="user-role">—</div>
   </div>
+  <!-- Configurações da empresa — apenas admin -->
+  <button id="btn-config-empresa" class="sidebar-config-btn" onclick="openModal('modal-empresa')" style="display:none">
+    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
+    Configurar Empresa
+  </button>
   <button onclick="doLogout()" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);padding:8px 12px;border-radius:6px;cursor:pointer;font-size:.78rem;text-align:left;display:flex;align-items:center;gap:8px;transition:all .15s" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-muted)'">
     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
     Terminar sessão
@@ -1621,6 +1655,83 @@ textarea { resize: vertical; min-height: 70px; }
         <span>live</span>
       </div>
 
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════ MODAL CONFIGURAR EMPRESA -->
+  <div class="modal-overlay" id="modal-empresa">
+    <div class="modal" style="max-width:540px">
+      <div class="modal-header">
+        <h3>
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          Dados da Empresa
+        </h3>
+        <button class="modal-close" onclick="closeModal('modal-empresa')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:.78rem;color:var(--text-muted);margin-bottom:16px;line-height:1.5">
+          Estes dados aparecem nos recibos PDF gerados pelo sistema. Guardados localmente neste browser.
+        </p>
+
+        <div class="form-grid-2" style="gap:12px">
+          <div class="form-group full">
+            <label>Nome da empresa</label>
+            <input type="text" id="ci-nome" placeholder="Gumba Soluções" maxlength="60" oninput="_updateCompanyPreview()">
+          </div>
+          <div class="form-group full">
+            <label>Tagline / Actividade</label>
+            <input type="text" id="ci-tagline" placeholder="Comércio e Prestação de Serviços" maxlength="80" oninput="_updateCompanyPreview()">
+          </div>
+          <div class="form-group">
+            <label>NIF</label>
+            <input type="text" id="ci-nif" placeholder="000000000" oninput="_updateCompanyPreview()" maxlength="20">
+          </div>
+          <div class="form-group">
+            <label>Telefone</label>
+            <input type="text" id="ci-tel" placeholder="+244 9XX XXX XXX" oninput="_updateCompanyPreview()" maxlength="30">
+          </div>
+          <div class="form-group full">
+            <label>Email</label>
+            <input type="email" id="ci-email" placeholder="geral@gumbasolucoes.ao" maxlength="80">
+          </div>
+          <div class="form-group full">
+            <label>Morada</label>
+            <input type="text" id="ci-morada" placeholder="Rua principal, nº X — Cidade, Província" oninput="_updateCompanyPreview()" maxlength="120">
+          </div>
+          <div class="form-group">
+            <label>Website <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+            <input type="text" id="ci-website" placeholder="www.gumbasolucoes.ao" maxlength="80">
+          </div>
+          <div class="form-group">
+            <label>Número de série dos recibos</label>
+            <input type="text" id="ci-serie" placeholder="GS" oninput="_updateCompanyPreview()" maxlength="6"
+              title="Prefixo usado no número de referência do recibo (ex: GS → GS-2026-004821)">
+            <div class="field-preview" id="ci-serie-preview">Exemplo: GS-2026-004821</div>
+          </div>
+        </div>
+
+        <!-- Pré-visualização do cabeçalho do recibo -->
+        <div style="margin-top:20px;padding:14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border2)">
+          <div style="font-size:.68rem;font-weight:700;color:var(--text-muted);letter-spacing:.08em;margin-bottom:10px">PRÉ-VISUALIZAÇÃO — CABEÇALHO DO RECIBO</div>
+          <div style="display:flex;flex-direction:column;gap:2px" id="ci-preview">
+            <span style="font-size:.85rem;font-weight:700;color:var(--text)" id="prev-nome">Gumba Soluções</span>
+            <span style="font-size:.72rem;color:var(--text-muted)" id="prev-tagline">Comércio e Prestação de Serviços</span>
+            <div style="height:6px"></div>
+            <span style="font-size:.7rem;color:var(--text-dim)" id="prev-nif"></span>
+            <span style="font-size:.7rem;color:var(--text-dim)" id="prev-tel"></span>
+            <span style="font-size:.7rem;color:var(--text-dim)" id="prev-email"></span>
+            <span style="font-size:.7rem;color:var(--text-dim)" id="prev-morada"></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modal-empresa')">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveCompanyInfo()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          Guardar
+        </button>
+      </div>
     </div>
   </div>
 
@@ -3294,6 +3405,7 @@ let editingProduto = null;
 
 function openModal(id) {
   document.getElementById(id).classList.add('open');
+  if(id==='modal-empresa')    _populateCompanyModal();
   if(id==='modal-venda')      populateVendaSelects();
   if(id==='modal-relatorio')  initRelatorioModal();
   if(id==='modal-entrada-caixa') { document.getElementById('ec-data').value=today(); }
@@ -3916,7 +4028,7 @@ function _normalizarTelAngola(tel) {
 function _gerarMensagemWhatsApp(venda, cliente) {
   const nome  = (cliente.nome || 'prezado cliente').split(' ')[0];
   const data  = _fmtDataExibir(venda.data);
-  const refId = (venda.id || '').toString().slice(-6).toUpperCase();
+  const refId = _gerarRefRecibo(venda.id);
   const sep   = '-----------------------------';
 
   const linhasItens = venda.itens.map(function(i) {
@@ -3984,35 +4096,43 @@ function descarregarReciboPDF() {
 
   // Header
   doc.setFillColor(BR, BG, BB);
-  doc.rect(0, 0, PW, 44, 'F');
+  doc.rect(0, 0, PW, 52, 'F');
   doc.setFillColor(LR, LG, LB);
-  doc.rect(PW - 38, 0, 38, 44, 'F');
+  doc.rect(PW - 38, 0, 38, 52, 'F');
   doc.setFillColor(BR, BG, BB);
-  doc.triangle(PW - 48, 0, PW - 38, 0, PW - 38, 44, 'F');
+  doc.triangle(PW - 48, 0, PW - 38, 0, PW - 38, 52, 'F');
 
   try { doc.addImage('data:image/png;base64,' + _LOGO_B64, 'PNG', M, 6, 22, 22); } catch(e) {}
 
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.text('GUMBA SOLUÇÕES', M + 27, 14);
+  doc.text((COMPANY_INFO.nome || 'Gumba Soluções').toUpperCase(), M + 27, 14);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(190, 225, 255);
-  doc.text('Comércio e Prestação de Serviços', M + 27, 20);
+  doc.text(COMPANY_INFO.tagline || 'Comércio e Prestação de Serviços', M + 27, 20);
+  // Detalhes da empresa (NIF, tel, email, morada)
+  doc.setFontSize(6);
+  doc.setTextColor(180, 220, 255);
+  var _cy = 27;
+  if (COMPANY_INFO.nif)    { doc.text('NIF: ' + COMPANY_INFO.nif, M + 27, _cy); _cy += 5; }
+  if (COMPANY_INFO.tel)    { doc.text('Tel: ' + COMPANY_INFO.tel, M + 27, _cy); _cy += 5; }
+  if (COMPANY_INFO.email)  { doc.text(COMPANY_INFO.email,          M + 27, _cy); _cy += 5; }
+  if (COMPANY_INFO.morada) { doc.text(COMPANY_INFO.morada,         M + 27, _cy); }
 
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.text('RECIBO DE COMPRA', PW - M, 11, { align: 'right' });
-  const refId = (venda.id || '').toString().slice(-6).toUpperCase();
+  const refId = _gerarRefRecibo(venda.id);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(190, 225, 255);
   doc.text('Ref: #' + refId, PW - M, 18, { align: 'right' });
   doc.text('Data: ' + _fmtDataExibir(venda.data), PW - M, 24, { align: 'right' });
 
-  y = 54;
+  y = 62;
 
   // Secção cliente
   doc.setFillColor(240, 246, 253);
@@ -4175,7 +4295,7 @@ function descarregarReciboPDF() {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
   doc.setTextColor(170, 215, 255);
-  doc.text('Gumba Soluções  |  Comércio e Prestação de Serviços  |  Angola', PW / 2, PH - 6, { align: 'center' });
+  doc.text((COMPANY_INFO.nome || 'Gumba Soluções') + '  |  ' + (COMPANY_INFO.tagline || 'Comércio e Prestação de Serviços') + '  |  Angola', PW / 2, PH - 6, { align: 'center' });
 
   doc.save('Recibo_Gumba_' + refId + '_' + (venda.data || '').replace(/-/g, '') + '.pdf');
   showToast('Recibo PDF gerado!', 'success');
@@ -5562,6 +5682,8 @@ async function loadApp(){
     const sfDate=document.getElementById('sf-date');
     if(sfDate)sfDate.textContent=new Date().toLocaleDateString('pt-AO',{day:'2-digit',month:'short',year:'numeric'});
     _syncMercadoFilter();
+    // Carregar dados da empresa (localStorage)
+    loadCompanyInfo();
     // Diagnóstico RLS — não-bloqueante, apenas para admin
     setTimeout(() => checkRLSSecurity(), 800);
     // Iniciar Realtime subscriptions
@@ -5582,6 +5704,9 @@ async function loadApp(){
 }
 
 function applyPermissions(){
+  // Botão de configuração empresa — apenas admin
+  const cfgBtn = document.getElementById('btn-config-empresa');
+  if (cfgBtn) cfgBtn.style.display = CURRENT_ROLE === 'admin' ? '' : 'none';
   // Comercial não vê: Análise, Fornecedores, Importações
   const adminOnly=['nav-analise','nav-fornecedores','nav-importacoes','nav-calculadora','s-analise','s-fornecedores','s-importacoes','s-calculadora'];
   adminOnly.forEach(id=>{
@@ -5970,7 +6095,7 @@ async function gerarRelatorio() {
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
-    doc.text('GUMBA SOLUÇÕES', 14, 12);
+    doc.text((COMPANY_INFO.nome || 'Gumba Soluções').toUpperCase(), 14, 12);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.text('Comércio e Prestação de Serviços', 14, 18);
@@ -7054,6 +7179,112 @@ function _setupDraftListeners(modalId) {
     el.addEventListener('input',  () => _saveDraft(modalId));
     el.addEventListener('change', () => _saveDraft(modalId));
   });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  COMPANY_INFO — dados da empresa para recibos PDF
+//  Persistido em localStorage. Editável pelo admin em modal-empresa.
+// ═══════════════════════════════════════════════════════════════════
+
+const _CI_KEY = 'gumba_company_info';
+
+// Defaults — usados se nunca configurado
+const COMPANY_INFO_DEFAULTS = {
+  nome:    'Gumba Soluções',
+  tagline: 'Comércio e Prestação de Serviços',
+  nif:     '',
+  tel:     '',
+  email:   '',
+  morada:  '',
+  website: '',
+  serie:   'GS',
+};
+
+// Objecto activo — carregado do localStorage em loadCompanyInfo()
+let COMPANY_INFO = { ...COMPANY_INFO_DEFAULTS };
+
+/** Carrega do localStorage. Chamado em loadApp(). */
+function loadCompanyInfo() {
+  try {
+    const raw = localStorage.getItem(_CI_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      COMPANY_INFO = { ...COMPANY_INFO_DEFAULTS, ...saved };
+    }
+  } catch(_) {}
+}
+
+/** Persiste em localStorage. Chamado ao guardar o modal. */
+function saveCompanyInfo() {
+  const btn = document.querySelector('#modal-empresa .btn-primary');
+  const restore = btnLoading(btn, 'A guardar...');
+  try {
+    COMPANY_INFO = {
+      nome:    document.getElementById('ci-nome').value.trim()    || COMPANY_INFO_DEFAULTS.nome,
+      tagline: document.getElementById('ci-tagline').value.trim() || COMPANY_INFO_DEFAULTS.tagline,
+      nif:     document.getElementById('ci-nif').value.trim(),
+      tel:     document.getElementById('ci-tel').value.trim(),
+      email:   document.getElementById('ci-email').value.trim(),
+      morada:  document.getElementById('ci-morada').value.trim(),
+      website: document.getElementById('ci-website').value.trim(),
+      serie:   (document.getElementById('ci-serie').value.trim().toUpperCase() || 'GS').slice(0, 6),
+    };
+    localStorage.setItem(_CI_KEY, JSON.stringify(COMPANY_INFO));
+    closeModal('modal-empresa');
+    showToast('Dados da empresa guardados com sucesso.', 'success');
+  } catch(e) {
+    showToast('Erro ao guardar: ' + e.message, 'error');
+  } finally {
+    restore();
+  }
+}
+
+/** Abre o modal e preenche os campos com os valores actuais. */
+function _populateCompanyModal() {
+  const ci = COMPANY_INFO;
+  document.getElementById('ci-nome').value    = ci.nome;
+  document.getElementById('ci-tagline').value = ci.tagline;
+  document.getElementById('ci-nif').value     = ci.nif;
+  document.getElementById('ci-tel').value     = ci.tel;
+  document.getElementById('ci-email').value   = ci.email;
+  document.getElementById('ci-morada').value  = ci.morada;
+  document.getElementById('ci-website').value = ci.website;
+  document.getElementById('ci-serie').value   = ci.serie;
+  _updateCompanyPreview();
+}
+
+/** Actualiza o bloco de pré-visualização em tempo real. */
+function _updateCompanyPreview() {
+  const get = id => document.getElementById(id)?.value?.trim() || '';
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+
+  set('prev-nome',    get('ci-nome')    || COMPANY_INFO_DEFAULTS.nome);
+  set('prev-tagline', get('ci-tagline') || COMPANY_INFO_DEFAULTS.tagline);
+
+  const nif   = get('ci-nif');
+  const tel   = get('ci-tel');
+  const email = get('ci-email');
+  const morada= get('ci-morada');
+
+  set('prev-nif',    nif    ? 'NIF: ' + nif    : '');
+  set('prev-tel',    tel    ? 'Tel: ' + tel     : '');
+  set('prev-email',  email  ? email             : '');
+  set('prev-morada', morada ? morada            : '');
+
+  // Actualizar exemplo de série
+  const serie  = (get('ci-serie') || 'GS').toUpperCase().slice(0, 6);
+  const ano    = new Date().getFullYear();
+  const preview= document.getElementById('ci-serie-preview');
+  if (preview) preview.textContent = 'Exemplo: ' + serie + '-' + ano + '-004821';
+}
+
+/** Gera o número de referência legível do recibo. */
+function _gerarRefRecibo(vendaId) {
+  const serie = COMPANY_INFO.serie || 'GS';
+  const ano   = new Date().getFullYear();
+  // Últimos 6 dígitos do UUID como número (hexadecimal → decimal simplificado)
+  const suffix = parseInt((vendaId || '').replace(/-/g, '').slice(-8), 16) % 1000000;
+  return serie + '-' + ano + '-' + String(suffix).padStart(6, '0');
 }
 
 // ═══════════════════════════════════════════════════════════════════
