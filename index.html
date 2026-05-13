@@ -1450,6 +1450,558 @@ textarea { resize: vertical; min-height: 70px; }
 }
 #rls-banner.rls-ok .rls-title { color: #dcfce7; }
 #rls-banner.rls-ok .rls-icon { color: #86efac; }
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE-FIRST REDESIGN — Gumba Soluções
+   Auditoria UX/UI completa + implementação progressiva
+   Fase 1: Críticos + Estrutura
+═══════════════════════════════════════════════════════════════ */
+
+/* ── 1. GRID RESPONSIVO UTILITÁRIO ─────────────────────────────
+   Substitui os inline style="grid-template-columns:1fr 1fr"
+   espalhados pelo HTML. Colapsa para 1 coluna em mobile.
+──────────────────────────────────────────────────────────────── */
+.rg-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.rg-3-2 {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 16px;
+}
+.rg-mb { margin-bottom: 20px; }
+
+/* ── 2. FAB — Floating Action Button (mobile only) ─────────────
+   O botão primário de cada secção fica fixo no ecrã.
+   Ativado por JS através da classe .fab-visible no body.
+──────────────────────────────────────────────────────────────── */
+#mobile-fab {
+  display: none;
+  position: fixed;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  right: 20px;
+  z-index: 150;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(37,99,235,.5);
+  transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s;
+  touch-action: manipulation;
+}
+#mobile-fab:active {
+  transform: scale(.93);
+  box-shadow: 0 2px 10px rgba(37,99,235,.4);
+}
+#mobile-fab svg { pointer-events: none; }
+
+/* ── 3. TABLE → CARD TRANSFORM (mobile) ────────────────────────
+   Tabelas com classe .table-cards transformam rows em cards
+   empilhados em mobile. Zero scroll horizontal.
+   Cada <td data-label="X"> mostra a label inline.
+──────────────────────────────────────────────────────────────── */
+
+/* ── 4. TOPBAR COMPACTA ─────────────────────────────────────── */
+#cache-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .72rem;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: border-color .2s;
+  white-space: nowrap;
+}
+#cache-status:hover { border-color: var(--border2); }
+.cs-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+  animation: dotPulse 2s ease-in-out infinite;
+}
+#realtime-badge {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  font-size: .68rem;
+  font-weight: 700;
+  color: var(--success);
+  background: var(--success-bg);
+  border: 1px solid rgba(16,185,129,.2);
+  border-radius: 6px;
+  padding: 3px 8px;
+  letter-spacing: .3px;
+  white-space: nowrap;
+}
+#realtime-badge.visible { display: flex; }
+.rt-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: dotPulse 1.5s ease-in-out infinite;
+}
+/* Topbar search collapse */
+.topbar-right .search-bar {
+  width: 180px;
+  transition: width .25s;
+}
+.topbar-right .search-bar:focus { width: 240px; }
+
+/* ── 5. SEARCH BAR ADAPTATIVA ───────────────────────────────── */
+.search-bar-adaptive {
+  width: 100% !important;
+  min-width: 0;
+}
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── 6. PERIOD BAR MELHORADA ────────────────────────────────── */
+.period-bar-scroll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+  margin-bottom: 18px;
+}
+.period-bar-scroll::-webkit-scrollbar { display: none; }
+
+/* ── 7. CARD HEADER ADAPTATIVO ──────────────────────────────── */
+.card-header-stack {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.card-header-stack .card-title { flex-shrink: 0; }
+.card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── 8. SAFE AREA & TOUCH OPTIMIZATION ──────────────────────── */
+.modal-footer {
+  padding-bottom: max(16px, calc(16px + env(safe-area-inset-bottom, 0px)));
+}
+
+/* touch-action: manipulation — elimina delay 300ms */
+.btn, .nav-item, .period-btn, .caixa-pill,
+.kpi-card, .typeahead-item, .view-toggle button,
+#menu-btn, .modal-close { touch-action: manipulation; }
+
+/* ── 9. SIDEBAR FOOTER COMPACTO ─────────────────────────────── */
+.sidebar-user-block {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+.sidebar-actions {
+  padding: 0 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sidebar-config-btn {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .78rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all .15s;
+  font-family: var(--font-body);
+  touch-action: manipulation;
+}
+.sidebar-config-btn:hover { color: var(--accent2); border-color: rgba(56,189,248,.3); }
+
+/* ── 10. OVERSCROLL MODAL CONTAINMENT ───────────────────────── */
+.modal { overscroll-behavior: contain; }
+.modal-body { overscroll-behavior: contain; }
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE OVERRIDES — Mobile (<768px)
+   Estratégia mobile-first aplicada secção a secção
+══════════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+
+  /* ── BASE ──────────────────────────────────────────────────── */
+  html { font-size: 15px; }
+
+  /* FIX CRÍTICO: iOS Safari zoom automático em inputs */
+  input, select, textarea,
+  .form-group input, .form-group select, .form-group textarea,
+  .search-bar, .period-custom input[type="date"],
+  #calc-custo, #calc-margem-input {
+    font-size: 16px !important;
+  }
+
+  /* ── FAB ACTIVO ────────────────────────────────────────────── */
+  #mobile-fab { display: flex; }
+
+  /* ── GRID RESPONSIVO ───────────────────────────────────────── */
+  .rg-2,
+  .rg-3-2,
+  [style*="grid-template-columns:1fr 1fr"],
+  [style*="grid-template-columns: 1fr 1fr"],
+  [style*="grid-template-columns:3fr 2fr"],
+  [style*="grid-template-columns: 3fr 2fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── TOPBAR ────────────────────────────────────────────────── */
+  .topbar {
+    padding: 10px 12px;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .topbar-title {
+    font-size: .9rem;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topbar-right { gap: 6px; }
+
+  /* Cache status — apenas ícone ponto em mobile */
+  #cache-status-text { display: none; }
+  #cache-status { padding: 6px 7px; }
+
+  /* Realtime badge — compacto */
+  #realtime-badge span:last-child { display: none; }
+  #realtime-badge { padding: 5px 7px; }
+
+  /* Market filter label já oculto (media query existente) */
+
+  /* ── CONTENT PADDING ───────────────────────────────────────── */
+  .content { padding: 10px 12px 80px; } /* 80px: espaço para o FAB */
+
+  /* ── KPI CARDS ─────────────────────────────────────────────── */
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .kpi-card {
+    padding: 14px 12px;
+    min-height: 88px;
+  }
+  .kpi-value { font-size: 1.25rem; }
+  .kpi-label { font-size: .63rem; margin-bottom: 6px; }
+  .kpi-sub { font-size: .65rem; }
+  /* KPI drill — sempre visível em mobile (sem hover) */
+  .kpi-card[data-nav] .kpi-drill {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* ── DASHBOARD INLINE GRIDS ────────────────────────────────── */
+  /* Override para os grids do Dashboard que usam inline style */
+  #s-dashboard > div[style],
+  #s-analise > div[style] {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* ── TABELAS → CARDS ──────────────────────────────────────── */
+  /* Estratégia: thead oculto, cada td vira uma linha label:valor */
+  .card-body { padding: 0; overflow-x: hidden !important; }
+  .card-body table { min-width: unset !important; width: 100%; }
+
+  table thead { display: none; }
+
+  table tbody tr {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    gap: 5px;
+    position: relative;
+  }
+  table tbody tr:last-child { border-bottom: none; }
+  table tbody tr:hover { background: var(--surface2); }
+
+  /* Cada célula vira uma linha "Label: Valor" */
+  table tbody td {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 0;
+    font-size: .82rem;
+    border: none;
+  }
+
+  /* Label inline via data-label */
+  table tbody td[data-label]::before {
+    content: attr(data-label);
+    font-size: .62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--text-muted);
+    min-width: 80px;
+    flex-shrink: 0;
+  }
+
+  /* Célula de acções — row de botões no final */
+  table tbody td:last-child {
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+  table tbody td:last-child::before { display: none; }
+
+  /* Primeira célula — destaque (nome/título da linha) */
+  table tbody td:first-child {
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--text);
+    padding-bottom: 4px;
+  }
+  table tbody td:first-child::before { display: none; }
+
+  /* Touch target para botões em tabela */
+  table .btn-sm {
+    min-height: 36px;
+    padding: 6px 12px;
+    font-size: .75rem;
+  }
+
+  /* ── SEARCH BAR ─────────────────────────────────────────────── */
+  .card-header .search-bar,
+  .card-header input[type="text"],
+  .card-header input[type="month"],
+  .card-header input[placeholder] {
+    width: 100% !important;
+    min-width: 0;
+    flex: 1;
+  }
+  /* Card header com search — empilha verticalmente */
+  .card-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .card-header > .flex,
+  .card-header > div { width: 100%; }
+
+  /* Mas: quando só tem título + 1 botão, mantém horizontal */
+  .card-header:has(.card-title):has(.btn):not(:has(.search-bar)):not(:has(input)) {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  /* ── PERIOD BAR ─────────────────────────────────────────────── */
+  .period-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    margin-bottom: 14px;
+    gap: 6px;
+  }
+  .period-bar::-webkit-scrollbar { display: none; }
+  .period-btn {
+    padding: 9px 14px;
+    font-size: .76rem;
+    min-height: 36px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .period-badge { display: none; } /* espaço limitado */
+  .period-custom {
+    flex-shrink: 0;
+    gap: 4px;
+  }
+
+  /* ── MODAIS ─────────────────────────────────────────────────── */
+  .modal-overlay { align-items: flex-end; }
+  .modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 94vh;
+    border-radius: 20px 20px 0 0 !important;
+    border-bottom: none;
+    /* Handle / indicador de drag */
+    padding-top: 4px;
+  }
+  /* Pill handle visual */
+  .modal::before {
+    content: '';
+    display: block;
+    width: 40px; height: 4px;
+    background: var(--border2);
+    border-radius: 2px;
+    margin: 8px auto 0;
+  }
+  .modal-header { padding: 14px 18px 12px; }
+  .modal-body {
+    padding: 14px 18px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal-footer {
+    padding: 12px 18px;
+    padding-bottom: max(18px, calc(18px + env(safe-area-inset-bottom, 0px)));
+    /* Botões full-width em mobile */
+    flex-direction: column-reverse;
+  }
+  .modal-footer .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+    font-size: .88rem;
+  }
+
+  /* ── FORMULÁRIOS ────────────────────────────────────────────── */
+  .form-grid-2 { grid-template-columns: 1fr !important; gap: 12px; }
+  .form-group label { font-size: .7rem; letter-spacing: .4px; }
+  .form-group input,
+  .form-group select,
+  .form-group textarea { padding: 11px 12px; min-height: 44px; }
+
+  /* ── CAIXA SUMMARY STRIP ───────────────────────────────────── */
+  .caixa-summary-strip { grid-template-columns: repeat(3, 1fr); } /* mantém 3 cols */
+  .caixa-strip-cell { padding: 10px 12px; }
+  .caixa-strip-value { font-size: .88rem; }
+
+  /* Caixa pills — scroll horizontal */
+  #s-caixa .card-header > div:first-of-type {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+    gap: 4px;
+    padding-bottom: 2px;
+  }
+  .caixa-pill { min-height: 36px; padding: 5px 12px; }
+
+  /* ── STATS ROW ──────────────────────────────────────────────── */
+  .stats-row { grid-template-columns: 1fr !important; gap: 10px; }
+
+  /* ── CALCULADORA ────────────────────────────────────────────── */
+  #calc-grid { grid-template-columns: 1fr !important; gap: 20px; }
+  /* Resultado principal */
+  #calc-preco-venda { font-size: 1.9rem !important; }
+  /* Cards detalhe */
+  #calc-grid > div:last-child > div:nth-child(2) {
+    grid-template-columns: 1fr 1fr !important; /* mantém 2 cols para Lucro e Markup */
+  }
+
+  /* ── PRODUTO GRID ───────────────────────────────────────────── */
+  .produto-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .produto-card { padding: 12px; }
+  .produto-nome { font-size: .82rem; }
+  .produto-preco { font-size: .9rem; }
+  .produto-actions { flex-wrap: wrap; }
+  .produto-actions .btn { flex: 1; justify-content: center; min-height: 36px; }
+
+  /* ── TIMELINE (Importações) ─────────────────────────────────── */
+  .timeline { padding-left: 20px; }
+
+  /* ── ANALISE — Period bar KPI grid ─────────────────────────── */
+  #kpi-analise { grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* ── PAGINAÇÃO ──────────────────────────────────────────────── */
+  /* Estilo base para botões de paginação gerados por JS */
+  .pg-btn {
+    min-height: 40px !important;
+    min-width: 40px !important;
+    padding: 8px 12px !important;
+    font-size: .82rem !important;
+  }
+
+  /* ── LOGIN SCREEN ───────────────────────────────────────────── */
+  .login-card { padding: 28px 20px; margin: 0 10px; }
+  .login-card-title { font-size: 1.55rem; }
+  .login-field input { min-height: 48px; }
+  .login-btn { min-height: 48px; }
+  #login-screen .ls-footer {
+    flex-direction: column; text-align: center; gap: 4px;
+  }
+
+  /* ── BADGES ─────────────────────────────────────────────────── */
+  .badge { font-size: .65rem; padding: 3px 8px; }
+
+  /* ── NAV ITEMS (sidebar) ────────────────────────────────────── */
+  .nav-item { padding: 12px 16px; min-height: 48px; }
+
+  /* ── BOTÕES GLOBAIS ─────────────────────────────────────────── */
+  .btn { min-height: 40px; }
+  .btn-sm { min-height: 36px; padding: 6px 12px; }
+} /* fim @media 767px */
+
+/* ── VERY SMALL SCREENS (≤380px) ─────────────────────────────── */
+@media (max-width: 380px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .kpi-value { font-size: 1.1rem; }
+  .kpi-card { padding: 10px 8px; }
+  .topbar-title { font-size: .82rem; }
+  .produto-grid { grid-template-columns: 1fr; }
+  .content { padding: 8px 10px 80px; }
+  .caixa-strip-value { font-size: .8rem; }
+  .caixa-strip-label { font-size: .6rem; }
+}
+
+/* ── FOCUS VISIBLE (acessibilidade) ─────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent2);
+  outline-offset: 2px;
+}
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible) { outline: none; }
+
+/* ── SCROLL MOMENTUM em todos os containers ─────────────────── */
+.card-body, .modal-body, .typeahead-dropdown, #sidebar {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── ANIMAÇÃO MODAL melhorada para bottom sheet ─────────────── */
+@media (max-width: 767px) {
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
 </style>
 </head>
 <body>
@@ -1537,6 +2089,13 @@ textarea { resize: vertical; min-height: 70px; }
 </div>
 
 <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- FAB — Floating Action Button (mobile) -->
+<button id="mobile-fab" aria-label="Ação principal" onclick="fabAction()">
+  <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4"/>
+  </svg>
+</button>
 
 <!-- SIDEBAR -->
 <nav id="sidebar" style="display:none">
@@ -1766,7 +2325,7 @@ textarea { resize: vertical; min-height: 70px; }
     <!-- ══════════════════════════════════════════════ DASHBOARD -->
     <div class="section active" id="s-dashboard">
       <div class="kpi-grid" id="kpi-grid"><!-- JS --></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div class="rg-2 rg-mb">
         <div class="card">
           <div class="card-header"><span class="card-title">Vendas — Últimos 6 Meses</span></div>
           <div class="card-body" id="chart-vendas" style="min-height:80px"></div>
@@ -1776,7 +2335,7 @@ textarea { resize: vertical; min-height: 70px; }
           <div class="card-body" id="top-produtos"><!-- JS --></div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="rg-2">
         <div class="card">
           <div class="card-header"><span class="card-title">Cobranças Pendentes</span><span class="badge badge-warning" id="badge-cobr-count"></span></div>
           <div id="dash-cobr-list"><!-- JS --></div>
@@ -1939,7 +2498,7 @@ textarea { resize: vertical; min-height: 70px; }
         <div class="period-badge" id="period-badge"><strong>—</strong></div>
       </div>
       <div class="kpi-grid" id="kpi-analise"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="rg-2 rg-mb">
         <div class="card">
           <div class="card-header"><span class="card-title">Margem por Produto</span></div>
           <table>
@@ -2096,7 +2655,7 @@ textarea { resize: vertical; min-height: 70px; }
       </div>
 
       <!-- Gráficos -->
-      <div style="display:grid;grid-template-columns:3fr 2fr;gap:16px">
+      <div class="rg-3-2">
         <div class="card">
           <div class="card-header">
             <span class="card-title">Evolução — Últimos 6 Meses</span>
@@ -3369,6 +3928,8 @@ function showSection(name, el) {
   } else {
     renderSection(name);
   }
+  // FAB — actualiza ação e visibilidade
+  _updateFAB(name);
 }
 function renderSection(name) {
   if(name==='dashboard')    renderDashboard();
@@ -3391,6 +3952,32 @@ function renderSection(name) {
   if(name==='calculadora')  calcPreco();
 }
 function renderAll() { renderSection(document.querySelector('.section.active')?.id.replace('s-','')||'dashboard'); }
+
+// ── FAB — Floating Action Button ──────────────────────────────
+// Mapeia cada secção para a sua acção primária
+const FAB_ACTIONS = {
+  vendas:       () => openModal('modal-venda'),
+  stock:        () => openModal('modal-produto'),
+  clientes:     () => openModal('modal-cliente'),
+  'cobranças':  () => openModal('modal-cobranca'),
+  caixa:        () => openModal('modal-caixa'),
+  fornecedores: () => openModal('modal-fornecedor'),
+  importacoes:  () => openModal('modal-importacao'),
+};
+function _updateFAB(name) {
+  const fab = document.getElementById('mobile-fab');
+  if (!fab) return;
+  if (FAB_ACTIONS[name]) {
+    fab.style.display = ''; // deixa ao CSS mobile decidir
+    fab.setAttribute('data-section', name);
+  } else {
+    fab.style.display = 'none';
+  }
+}
+function fabAction() {
+  const name = document.getElementById('mobile-fab')?.getAttribute('data-section');
+  if (name && FAB_ACTIONS[name]) FAB_ACTIONS[name]();
+}
 
 // Actualiza o estado visual do filtro de mercado e re-renderiza tudo
 function onMercadoChange(sel) {
@@ -3720,15 +4307,15 @@ function renderVendas(q='', _paged=false) {
     const btnPag = saldoPend > 100 ? '<button class="btn btn-success btn-sm" onclick="registarPagamentoVenda(\'' + vid + '\',' + Math.round(saldoPend) + ')" title="Registar pagamento">&#128176;</button>' : '';
     const produtos = (v.itens||[]).map(function(i){return '<span class="prod-chip">'+esc(i.qty)+'x '+esc(i.nome_snapshot)+'</span>';}).join('') || '—';
     return '<tr>' +
-      '<td class="mono">' + (v.data||'—') + '</td>' +
-      '<td><strong>' + esc(nomeCliente(v.cliente_id)) + '</strong></td>' +
-      '<td>' + produtos + '</td>' +
-      '<td class="mono text-success"><strong>' + fmt(v.total) + '</strong></td>' +
-      '<td class="mono text-success">' + fmt(totalPago) + '</td>' +
-      '<td class="mono ' + (saldoPend>0?'text-danger':'text-muted') + '">' + (saldoPend>0?fmt(saldoPend):'—') + '</td>' +
-      '<td><span class="badge ' + estadoBadge + '">' + estadoPag + '</span></td>' +
-      '<td><span class="badge badge-neutral">' + esc(v.pagamento||'—') + '</span></td>' +
-      '<td><span class="badge ' + (v.tipo==='parcelada'?'badge-warning':'badge-success') + '">' + (v.tipo==='parcelada'?'Parcelada':'Pronto') + '</span></td>' +
+      '<td class="mono" data-label="">' + (v.data||'—') + '</td>' +
+      '<td data-label=""><strong>' + esc(nomeCliente(v.cliente_id)) + '</strong></td>' +
+      '<td data-label="Produtos">' + produtos + '</td>' +
+      '<td class="mono text-success" data-label="Total"><strong>' + fmt(v.total) + '</strong></td>' +
+      '<td class="mono text-success" data-label="Pago">' + fmt(totalPago) + '</td>' +
+      '<td class="mono ' + (saldoPend>0?'text-danger':'text-muted') + '" data-label="Saldo">' + (saldoPend>0?fmt(saldoPend):'—') + '</td>' +
+      '<td data-label="Estado"><span class="badge ' + estadoBadge + '">' + estadoPag + '</span></td>' +
+      '<td data-label="Pagamento"><span class="badge badge-neutral">' + esc(v.pagamento||'—') + '</span></td>' +
+      '<td data-label="Tipo"><span class="badge ' + (v.tipo==='parcelada'?'badge-warning':'badge-success') + '">' + (v.tipo==='parcelada'?'Parcelada':'Pronto') + '</span></td>' +
       '<td>' + (v.garantia_prazo ? '<span class="garantia-badge" title="' + esc(v.garantia_desc||'Garantia') + '">&#x1F6E1; ' + _fmtDataExibir(v.garantia_prazo) + '</span> ' : '') + btnDelete + btnPag + '</td>' +
     '</tr>';
   }).join('');
@@ -4444,17 +5031,17 @@ function renderStock(q='', _paged=false) {
     const baixo=Number(p.stock||0)<=Number(p.stock_minimo||1);
     const pct=p.stock>0?Math.min(100,Math.round(p.stock/(p.stock+5)*100)):0;
     return `<tr>
-      <td><strong>${esc(p.nome)}</strong>${p.obs?`<br><span class="text-xs text-muted">${esc(p.obs)}</span>`:''}</td>
-      <td><span class="badge badge-neutral">${esc(p.categoria||'—')}</span></td>
-      <td><span class="badge badge-info">${esc(p.origem||'—')}</span></td>
-      <td class="mono">${fmt(p.preco_custo)}</td>
-      <td class="mono text-success"><strong>${fmt(p.preco_venda)}</strong></td>
-      <td><span class="mono ${margem>30?'text-success':margem>15?'text-warning':'text-danger'}">${margem}%</span></td>
-      <td>
+      <td data-label=""><strong>${esc(p.nome)}</strong>${p.obs?`<br><span class="text-xs text-muted">${esc(p.obs)}</span>`:''}</td>
+      <td data-label="Categoria"><span class="badge badge-neutral">${esc(p.categoria||'—')}</span></td>
+      <td data-label="Origem"><span class="badge badge-info">${esc(p.origem||'—')}</span></td>
+      <td class="mono" data-label="Custo">${fmt(p.preco_custo)}</td>
+      <td class="mono text-success" data-label="P.Venda"><strong>${fmt(p.preco_venda)}</strong></td>
+      <td data-label="Margem"><span class="mono ${margem>30?'text-success':margem>15?'text-warning':'text-danger'}">${margem}%</span></td>
+      <td data-label="Stock">
         <span class="mono ${baixo?'text-danger':'text-success'}">${p.stock||0}</span>
         <div class="stock-bar"><div class="stock-fill" style="width:${pct}%;background:${baixo?'var(--danger)':'var(--success)'}"></div></div>
       </td>
-      <td><span class="badge ${p.stock==0?'badge-danger':baixo?'badge-warning':'badge-success'}">${p.stock==0?'Esgotado':baixo?'Stock Baixo':'Disponível'}</span></td>
+      <td data-label="Status"><span class="badge ${p.stock==0?'badge-danger':baixo?'badge-warning':'badge-success'}">${p.stock==0?'Esgotado':baixo?'Stock Baixo':'Disponível'}</span></td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="editProduto('${esc(p.id)}')">✏️</button>
         <button class="btn btn-ghost btn-sm" onclick="ajustarStock('${esc(p.id)}')">+/-</button>
@@ -4546,12 +5133,12 @@ function renderClientes(q='', _paged=false){
     const cVendas=vendas.filter(v=>v.cliente_id===c.id);
     const totalGasto=cVendas.reduce((s,v)=>s+Number(v.total||0),0);
     return `<tr>
-      <td><strong>${esc(c.nome)}</strong><br><span class="text-xs text-muted">${esc(c.profissao||'')}${c.nif ? ' &nbsp;·&nbsp; NIF: '+esc(c.nif) : '' }</span></td>
-      <td class="mono">${esc(c.telefone||'—')}</td>
-      <td><span class="badge badge-info">${esc(c.localizacao||'—')}</span></td>
-      <td class="mono">${cVendas.length}</td>
-      <td class="mono text-success">${fmt(totalGasto)}</td>
-      <td><span class="badge ${c.credito==='confianca'?'badge-success':'badge-neutral'}">${c.credito==='confianca'?'Crédito':'Normal'}</span></td>
+      <td data-label=""><strong>${esc(c.nome)}</strong><br><span class="text-xs text-muted">${esc(c.profissao||'')}${c.nif ? ' &nbsp;·&nbsp; NIF: '+esc(c.nif) : '' }</span></td>
+      <td class="mono" data-label="Telefone">${esc(c.telefone||'—')}</td>
+      <td data-label="Local"><span class="badge badge-info">${esc(c.localizacao||'—')}</span></td>
+      <td class="mono" data-label="Compras">${cVendas.length}</td>
+      <td class="mono text-success" data-label="Total Gasto">${fmt(totalGasto)}</td>
+      <td data-label="Tipo"><span class="badge ${c.credito==='confianca'?'badge-success':'badge-neutral'}">${c.credito==='confianca'?'Crédito':'Normal'}</span></td>
       <td style="display:flex;gap:4px">
         <button class="btn btn-ghost btn-sm" onclick="verHistorico('${esc(c.id)}')">👁</button>
         <button class="btn btn-danger btn-sm" onclick="deleteCliente('${esc(c.id)}')">🗑</button>
@@ -4595,7 +5182,7 @@ function verHistorico(clienteId){
   const total=vendas.reduce((s,v)=>s+Number(v.total||0),0);
   document.getElementById('hist-title').textContent=`Histórico: ${c?.nome||'Cliente'}`;
   document.getElementById('hist-body').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px" class="rg-3-hist">
       <div style="background:var(--surface2);border-radius:8px;padding:14px;text-align:center"><div style="font-size:1.4rem;font-family:var(--font-display);font-weight:800">${vendas.length}</div><div class="text-xs text-muted mt-1">Total de Compras</div></div>
       <div style="background:var(--surface2);border-radius:8px;padding:14px;text-align:center"><div style="font-size:1.1rem;font-family:var(--font-mono);font-weight:700;color:var(--success)">${fmtN(total)}</div><div class="text-xs text-muted mt-1">Total Gasto (Kz)</div></div>
       <div style="background:var(--surface2);border-radius:8px;padding:14px;text-align:center"><div style="font-size:1.4rem;font-family:var(--font-display);font-weight:800">${cobr.length}</div><div class="text-xs text-muted mt-1">Cobranças</div></div>
@@ -4646,14 +5233,14 @@ function renderCobranças(_paged=false){
       `<button class="btn btn-success btn-sm" onclick="pagarPrestacaoById('${esc(p.id)}','${esc(c.id)}')" title="Pagar ${esc(p.numero)}ª — ${fmt(p.valor)}">✓${esc(p.numero)}</button>`
     ).join('');
     return `<tr style="${c._vencidas>0&&!c._pago_total?'background:rgba(239,68,68,.05)':''}">
-      <td><strong>${esc(nomeCliente(c.cliente_id))}</strong></td>
-      <td>${esc(c.referencia||'—')}</td>
-      <td class="mono">${fmt(c.valor_total)}</td>
-      <td class="mono">${c._total}</td>
-      <td class="mono text-warning"><strong>${fmt(valPrest)}</strong></td>
-      <td class="mono ${c._vencidas>0?'text-danger':''}">${esc(c._proxVcto)}</td>
-      <td>${esc(pagoLabel)}</td>
-      <td><span class="badge ${statusBadge}">${statusLabel}</span></td>
+      <td data-label=""><strong>${esc(nomeCliente(c.cliente_id))}</strong></td>
+      <td data-label="Referência">${esc(c.referencia||'—')}</td>
+      <td class="mono" data-label="Total">${fmt(c.valor_total)}</td>
+      <td class="mono" data-label="Prestações">${c._total}</td>
+      <td class="mono text-warning" data-label="Valor/Prest"><strong>${fmt(valPrest)}</strong></td>
+      <td class="mono ${c._vencidas>0?'text-danger':''}" data-label="Próx. Vcto">${esc(c._proxVcto)}</td>
+      <td data-label="Pago">${esc(pagoLabel)}</td>
+      <td data-label="Status"><span class="badge ${statusBadge}">${statusLabel}</span></td>
       <td style="display:flex;gap:3px;flex-wrap:wrap">
         ${prestBtns}
         <button class="btn btn-ghost btn-sm" onclick="verPrestacoes('${esc(c.id)}')">👁</button>
@@ -5553,11 +6140,11 @@ function renderFornecedores(_paged=false){
   tbody.innerHTML=_slice(forn,'forn').map(f=>{
     const ultImp=CACHE.importacoes.filter(i=>i.fornecedor_id===f.id).sort((a,b)=>b.data_encomenda?.localeCompare(a.data_encomenda))[0];
     return `<tr>
-      <td><strong>${esc(f.nome)}</strong></td>
-      <td><span class="badge badge-info">${esc(f.pais||'—')}</span></td>
-      <td class="mono">${esc(f.contacto||'—')}</td>
-      <td>${esc(f.produtos||'—')}</td>
-      <td class="mono">${esc(ultImp?.data_encomenda||'—')}</td>
+      <td data-label=""><strong>${esc(f.nome)}</strong></td>
+      <td data-label="País"><span class="badge badge-info">${esc(f.pais||'—')}</span></td>
+      <td class="mono" data-label="Contacto">${esc(f.contacto||'—')}</td>
+      <td data-label="Produtos">${esc(f.produtos||'—')}</td>
+      <td class="mono" data-label="Ult. Encomenda">${esc(ultImp?.data_encomenda||'—')}</td>
       <td style="display:flex;gap:4px">
         <button class="btn btn-danger btn-sm" onclick="deleteFornecedor('${esc(f.id)}')">🗑</button>
       </td>
@@ -6804,12 +7391,12 @@ function renderCaixa() {
       const canDelete = CURRENT_ROLE === 'admin' || m.criado_por === CURRENT_USER?.id;
       const descHtml  = m.descricao ? esc(m.descricao) : `<span style="color:var(--text-dim);font-style:italic">sem descrição</span>`;
       return `<tr class="${rowCls}">
-        <td class="mono" style="font-size:.8rem;color:var(--text-muted)">${_fmtDataExibir(m.data)||'—'}</td>
-        <td><span class="badge ${badge}" style="font-size:.7rem">${label}</span></td>
-        <td><span class="badge badge-neutral" style="font-size:.7rem">${esc(m.categoria||'—')}</span></td>
-        <td style="font-size:.82rem;color:var(--text)">${descHtml}</td>
-        <td><span class="badge badge-info" style="font-size:.7rem">${esc(m.metodo||'—')}</span></td>
-        <td class="mono" style="font-weight:700;color:${cor};text-align:right;font-size:.88rem">${sinal} ${fmt(m.valor)}</td>
+        <td class="mono" data-label="" style="font-size:.8rem;color:var(--text-muted)">${_fmtDataExibir(m.data)||'—'}</td>
+        <td data-label="Tipo"><span class="badge ${badge}" style="font-size:.7rem">${label}</span></td>
+        <td data-label="Categoria"><span class="badge badge-neutral" style="font-size:.7rem">${esc(m.categoria||'—')}</span></td>
+        <td data-label="Descrição" style="font-size:.82rem;color:var(--text)">${descHtml}</td>
+        <td data-label="Método"><span class="badge badge-info" style="font-size:.7rem">${esc(m.metodo||'—')}</span></td>
+        <td class="mono" data-label="Valor" style="font-weight:700;color:${cor};text-align:right;font-size:.88rem">${sinal} ${fmt(m.valor)}</td>
         <td style="text-align:center">${canDelete ? `<button class="btn btn-danger btn-sm" onclick="deleteCaixaMovimento('${esc(m.id)}')" title="Eliminar" style="padding:5px 8px">${trashSVG}</button>` : ''}</td>
       </tr>`;
     }).join('');
