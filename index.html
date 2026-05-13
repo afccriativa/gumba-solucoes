@@ -493,7 +493,11 @@ td strong { color: var(--text); font-weight: 600; }
   width: 90%;
   max-width: 560px;
   max-height: 90vh;
-  overflow-y: auto;
+  /* FIX: flex column para que modal-body tenha altura constrangida */
+  display: flex;
+  flex-direction: column;
+  /* FIX: overflow hidden aqui — só modal-body deve scrollar */
+  overflow: hidden;
   animation: modalIn .25s ease;
 }
 @keyframes modalIn { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: scale(1); } }
@@ -501,11 +505,22 @@ td strong { color: var(--text); font-weight: 600; }
   padding: 20px 24px;
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between;
+  /* FIX: não encolhe — altura fixa no topo */
+  flex-shrink: 0;
 }
 .modal-header h3 { font-family: var(--font-display); font-size: 1rem; font-weight: 700; }
 .modal-close { cursor: pointer; color: var(--text-muted); border: none; background: none; font-size: 1.2rem; padding: 4px 8px; border-radius: 6px; }
 .modal-close:hover { background: var(--surface3); color: var(--text); }
-.modal-body { padding: 24px; }
+.modal-body {
+  padding: 24px;
+  /* FIX: ocupa o espaço disponível entre header e footer */
+  flex: 1;
+  min-height: 0;            /* essencial para flex + overflow scroll */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;  /* impede propagação ao body */
+  touch-action: pan-y;           /* gestos verticais inequívocos */
+}
 .form-grid { display: grid; gap: 16px; }
 .form-grid-2 { grid-template-columns: 1fr 1fr; }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
@@ -533,6 +548,8 @@ textarea { resize: vertical; min-height: 70px; }
   padding: 16px 24px;
   border-top: 1px solid var(--border);
   display: flex; justify-content: flex-end; gap: 10px;
+  /* FIX: não encolhe — altura fixa no fundo */
+  flex-shrink: 0;
 }
 
 /* ─── ALERTS ─── */
@@ -1643,9 +1660,8 @@ textarea { resize: vertical; min-height: 70px; }
 }
 .sidebar-config-btn:hover { color: var(--accent2); border-color: rgba(56,189,248,.3); }
 
-/* ── 10. OVERSCROLL MODAL CONTAINMENT ───────────────────────── */
-.modal { overscroll-behavior: contain; }
-.modal-body { overscroll-behavior: contain; }
+/* ── 10. SCROLL CONTAINMENT — tratado no .modal-body base ────── */
+/* overscroll-behavior: contain já definido em .modal-body acima */
 
 /* ══════════════════════════════════════════════════════════════
    RESPONSIVE OVERRIDES — Mobile (<768px)
@@ -1861,13 +1877,14 @@ textarea { resize: vertical; min-height: 70px; }
     max-height: 94vh;
     border-radius: 20px 20px 0 0 !important;
     border-bottom: none;
-    /* Handle / indicador de drag */
     padding-top: 4px;
+    /* flex layout já definido na base — mantém-se */
   }
   /* Pill handle visual */
   .modal::before {
     content: '';
     display: block;
+    flex-shrink: 0;           /* não participa no flex scroll */
     width: 40px; height: 4px;
     background: var(--border2);
     border-radius: 2px;
@@ -1876,13 +1893,12 @@ textarea { resize: vertical; min-height: 70px; }
   .modal-header { padding: 14px 18px 12px; }
   .modal-body {
     padding: 14px 18px;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    /* overflow-y, touch-action e overscroll já definidos na base */
+    /* apenas ajustar o padding mobile aqui */
   }
   .modal-footer {
     padding: 12px 18px;
     padding-bottom: max(18px, calc(18px + env(safe-area-inset-bottom, 0px)));
-    /* Botões full-width em mobile */
     flex-direction: column-reverse;
   }
   .modal-footer .btn {
