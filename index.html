@@ -3026,7 +3026,11 @@ textarea { resize: vertical; min-height: 70px; }
             <option value="Outra">Outra</option>
           </select>
         </div>
-        <div class="form-group full">
+        <div class="form-group">
+          <label>NIF <span style="font-weight:400;color:var(--text-muted)">(opcional — para clientes empresariais)</span></label>
+          <input type="text" id="c-nif" placeholder="000000000" maxlength="20">
+        </div>
+        <div class="form-group">
           <label>Profissão / Empresa (opcional)</label>
           <input type="text" id="c-prof" placeholder="Ex: Professor, Funcionário público...">
         </div>
@@ -4218,6 +4222,7 @@ function descarregarReciboPDF() {
 
   var compradorLines = [
     cliente.nome || 'Cliente directo',
+    cliente.nif         ? 'NIF: ' + cliente.nif         : null,
     cliente.telefone    ? 'Tel: ' + cliente.telefone    : null,
     cliente.localizacao ? cliente.localizacao            : null,
     venda.mercado       ? 'Mercado: ' + venda.mercado   : null,
@@ -4541,7 +4546,7 @@ function renderClientes(q='', _paged=false){
     const cVendas=vendas.filter(v=>v.cliente_id===c.id);
     const totalGasto=cVendas.reduce((s,v)=>s+Number(v.total||0),0);
     return `<tr>
-      <td><strong>${esc(c.nome)}</strong><br><span class="text-xs text-muted">${esc(c.profissao||'')}  </span></td>
+      <td><strong>${esc(c.nome)}</strong><br><span class="text-xs text-muted">${esc(c.profissao||'')}${c.nif ? ' &nbsp;·&nbsp; NIF: '+esc(c.nif) : '' }</span></td>
       <td class="mono">${esc(c.telefone||'—')}</td>
       <td><span class="badge badge-info">${esc(c.localizacao||'—')}</span></td>
       <td class="mono">${cVendas.length}</td>
@@ -4563,6 +4568,7 @@ async function saveCliente(){
   try{
     const novo=await sbInsert('clientes',{
       nome,telefone:document.getElementById('c-tel').value,
+      nif:document.getElementById('c-nif').value.trim()||null,
       localizacao:document.getElementById('c-local').value,
       profissao:document.getElementById('c-prof').value,
       credito:document.getElementById('c-credito').value,
@@ -7153,7 +7159,7 @@ const _DRAFT_PREFIX = 'gumba_draft_';
 const _DRAFT_FIELDS = {
   'modal-venda':      ['v-data','v-mercado','v-cliente','v-tipo','v-pagamento','v-nprest','v-obs','v-garantia-prazo','v-garantia-desc'],
   'modal-produto':    ['p-nome','p-cat','p-origem','p-custo','p-venda','p-stock','p-minimo','p-obs','p-forn'],
-  'modal-cliente':    ['c-nome','c-tel','c-local','c-prof','c-credito','c-origem','c-obs'],
+  'modal-cliente':    ['c-nome','c-nif','c-tel','c-local','c-prof','c-credito','c-origem','c-obs'],
   'modal-fornecedor': ['f-nome','f-pais','f-contacto','f-produtos','f-prazo','f-moeda','f-obs'],
   'modal-importacao': ['i-forn','i-produtos','i-valor','i-frete','i-alfandega','i-cambio','i-data-enc','i-data-prev','i-status'],
   'modal-cobranca':   ['cb-cliente','cb-ref','cb-total','cb-nprest','cb-entrada','cb-mercado','cb-obs'],
