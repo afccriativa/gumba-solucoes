@@ -1970,6 +1970,329 @@ textarea { resize: vertical; min-height: 70px; }
   .btn-sm { min-height: 36px; padding: 6px 12px; }
 } /* fim @media 767px */
 
+/* ═══════════════════════════════════════════════════════════════
+   FASE 2 — Bottom Navigation + Mais Sheet + Section Transitions
+═══════════════════════════════════════════════════════════════ */
+
+/* ── BOTTOM NAV — estrutura base (sempre presente no DOM) ───── */
+#bottom-nav {
+  display: none; /* activado apenas em mobile pelo @media abaixo */
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  z-index: 150;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: stretch;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* Blur fosco — camada de profundidade */
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+}
+
+/* Cada botão do nav */
+.bn-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 6px 4px;
+  position: relative;
+  transition: color var(--dur-fast, .15s);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+.bn-item.active { color: var(--accent2); }
+
+/* Indicador activo — linha na base do ícone */
+.bn-item::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 20px; height: 2px;
+  background: var(--accent2);
+  border-radius: 1px 1px 0 0;
+  transition: transform .2s var(--ease-out, cubic-bezier(.22,1,.36,1));
+}
+.bn-item.active::after { transform: translateX(-50%) scaleX(1); }
+
+/* Ícone container — fundo activo */
+.bn-icon {
+  width: 36px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 10px;
+  position: relative;
+  transition: background .18s;
+}
+.bn-item.active .bn-icon { background: var(--accent-glow); }
+.bn-item:active .bn-icon { background: var(--surface3); }
+
+/* Label */
+.bn-label {
+  font-size: .56rem;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  line-height: 1;
+  transition: color .18s;
+  font-family: var(--font-body);
+}
+
+/* Badge no botão Mais */
+.bn-mais-badge {
+  position: absolute;
+  top: 2px; right: 2px;
+  width: 14px; height: 14px;
+  background: var(--danger);
+  color: #fff;
+  font-size: .55rem;
+  font-weight: 800;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--surface);
+  animation: dotPulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── MAIS SHEET OVERLAY ─────────────────────────────────────── */
+#mais-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(8,11,18,.72);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 250;
+  opacity: 0;
+  transition: opacity .28s ease;
+}
+#mais-overlay.visible {
+  display: block;
+  opacity: 1;
+}
+
+/* ── MAIS SHEET ─────────────────────────────────────────────── */
+#mais-sheet {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: 0;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-bottom: none;
+  border-radius: 22px 22px 0 0;
+  z-index: 260;
+  padding-bottom: calc(var(--sp-4, 16px) + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%);
+  transition: transform .32s cubic-bezier(.22,1,.36,1);
+  /* Sombra dramática */
+  box-shadow: 0 -8px 40px rgba(0,0,0,.5);
+  /* Garante que não excede a viewport */
+  max-height: 88vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+#mais-sheet.open { transform: translateY(0); }
+
+/* Drag handle */
+.mais-handle {
+  width: 40px; height: 4px;
+  background: var(--border2);
+  border-radius: 2px;
+  margin: 10px auto 0;
+}
+
+/* Header com info do utilizador */
+.mais-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.mais-user-name {
+  font-family: var(--font-display);
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.mais-user-role {
+  font-size: .68rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.mais-close {
+  width: 30px; height: 30px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  border-radius: 50%;
+  color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all .15s;
+  touch-action: manipulation;
+  flex-shrink: 0;
+}
+.mais-close:hover { background: var(--surface3); color: var(--text); }
+
+/* Grid de secções */
+.mais-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  padding: 0;
+  margin: 0;
+}
+.mais-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 12px 16px;
+  background: var(--surface);
+  border: none;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: .72rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  transition: background .15s, color .15s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  text-align: center;
+  line-height: 1.3;
+}
+.mais-item:hover, .mais-item:active { background: var(--surface2); color: var(--text); }
+
+/* Ícone de cada item */
+.mais-item-icon {
+  width: 46px; height: 46px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim);
+  position: relative;
+  transition: all .15s;
+}
+.mais-item:hover .mais-item-icon,
+.mais-item:active .mais-item-icon {
+  background: var(--accent-glow);
+  border-color: rgba(56,189,248,.25);
+  color: var(--accent2);
+}
+
+/* Badge dentro do ícone */
+.mais-item-badge {
+  position: absolute;
+  top: -5px; right: -5px;
+  background: var(--danger);
+  color: #fff;
+  font-size: .58rem;
+  font-weight: 800;
+  min-width: 18px; height: 18px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--surface);
+  padding: 0 4px;
+}
+
+/* Divisor */
+.mais-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0;
+}
+
+/* Acções de conta (config + logout) */
+.mais-actions {
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mais-action-btn {
+  width: 100%;
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: .82rem;
+  font-weight: 500;
+  font-family: var(--font-body);
+  cursor: pointer;
+  text-align: left;
+  transition: all .15s;
+  touch-action: manipulation;
+  min-height: 44px;
+}
+.mais-action-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border); }
+.mais-logout { color: var(--danger); }
+.mais-logout:hover { background: var(--danger-bg); border-color: rgba(239,68,68,.2); color: var(--danger); }
+
+/* ── TRANSIÇÕES ENTRE SECÇÕES ───────────────────────────────── */
+/* Animação direccional — suave como Notion/Linear */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes sectionFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.section.active                { animation: sectionFadeIn .22s ease both; }
+.section.active.anim-forward   { animation: slideInRight .22s ease both; }
+.section.active.anim-backward  { animation: slideInLeft .22s ease both; }
+
+/* ── MOBILE OVERRIDES FASE 2 ─────────────────────────────────── */
+@media (max-width: 767px) {
+  /* Activar bottom nav */
+  #bottom-nav { display: grid; }
+
+  /* Esconder tudo relacionado com a sidebar */
+  #menu-btn           { display: none !important; }
+  #sidebar            { display: none !important; }
+  #sidebar-overlay    { display: none !important; }
+
+  /* FAB sobe para não colidir com o bottom nav */
+  #mobile-fab {
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Content — padding extra para bottom nav + FAB */
+  .content {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Topbar: sem hamburger → título centrado ou alinhado à esquerda */
+  .topbar {
+    /* Recentrar quando não há hamburger */
+    padding: 10px 14px;
+  }
+  .topbar-title {
+    /* Sem o hamburger, tem mais espaço */
+    font-size: .92rem;
+  }
+}
+
 /* ── VERY SMALL SCREENS (≤380px) ─────────────────────────────── */
 @media (max-width: 380px) {
   .kpi-grid { grid-template-columns: 1fr 1fr; }
@@ -2096,6 +2419,160 @@ input:focus:not(:focus-visible) { outline: none; }
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4"/>
   </svg>
 </button>
+
+<!-- ══ BOTTOM NAVIGATION BAR (mobile) ══════════════════════ -->
+<nav id="bottom-nav" aria-label="Navegação principal">
+  <button class="bn-item active" data-section="dashboard" onclick="bnNavigate('dashboard',this)">
+    <div class="bn-icon">
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1.5" stroke-width="1.8"/>
+        <rect x="14" y="3" width="7" height="7" rx="1.5" stroke-width="1.8"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5" stroke-width="1.8"/>
+        <rect x="14" y="14" width="7" height="7" rx="1.5" stroke-width="1.8"/>
+      </svg>
+    </div>
+    <span class="bn-label">Painel</span>
+  </button>
+
+  <button class="bn-item" data-section="vendas" onclick="bnNavigate('vendas',this)">
+    <div class="bn-icon">
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+    </div>
+    <span class="bn-label">Vendas</span>
+  </button>
+
+  <button class="bn-item" data-section="stock" onclick="bnNavigate('stock',this)">
+    <div class="bn-icon">
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+      </svg>
+    </div>
+    <span class="bn-label">Stock</span>
+  </button>
+
+  <button class="bn-item" data-section="caixa" onclick="bnNavigate('caixa',this)">
+    <div class="bn-icon">
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+      </svg>
+    </div>
+    <span class="bn-label">Caixa</span>
+  </button>
+
+  <button class="bn-item" id="bn-mais-btn" onclick="openMais()">
+    <div class="bn-icon">
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+        <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+        <circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+      </svg>
+      <span class="bn-mais-badge" id="bn-mais-badge" style="display:none">!</span>
+    </div>
+    <span class="bn-label">Mais</span>
+  </button>
+</nav>
+
+<!-- ══ MAIS SHEET — secções secundárias + logout ════════════ -->
+<div id="mais-overlay" onclick="closeMais()"></div>
+
+<div id="mais-sheet" role="dialog" aria-label="Mais secções">
+  <!-- Drag handle -->
+  <div class="mais-handle"></div>
+
+  <!-- Header -->
+  <div class="mais-header">
+    <div>
+      <div class="mais-user-name" id="mais-user-name">—</div>
+      <div class="mais-user-role" id="mais-user-role">—</div>
+    </div>
+    <button class="mais-close" onclick="closeMais()" aria-label="Fechar">
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Grid de secções -->
+  <div class="mais-grid">
+    <button class="mais-item" onclick="maisNavigate('clientes')">
+      <div class="mais-item-icon">
+        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+      </div>
+      <span>Clientes</span>
+    </button>
+
+    <button class="mais-item" onclick="maisNavigate('cobranças')" id="mais-cobr-item">
+      <div class="mais-item-icon" style="position:relative">
+        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span class="mais-item-badge" id="mais-badge-cobr" style="display:none">0</span>
+      </div>
+      <span>Cobranças</span>
+    </button>
+
+    <button class="mais-item mais-admin-only" onclick="maisNavigate('analise')">
+      <div class="mais-item-icon">
+        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+      </div>
+      <span>Análise</span>
+    </button>
+
+    <button class="mais-item mais-admin-only" onclick="maisNavigate('fornecedores')">
+      <div class="mais-item-icon">
+        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+      <span>Fornecedores</span>
+    </button>
+
+    <button class="mais-item mais-admin-only" onclick="maisNavigate('importacoes')">
+      <div class="mais-item-icon">
+        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+        </svg>
+      </div>
+      <span>Importações</span>
+    </button>
+
+    <button class="mais-item mais-admin-only" onclick="maisNavigate('calculadora')">
+      <div class="mais-item-icon">
+        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <span>Calculadora</span>
+    </button>
+  </div>
+
+  <!-- Divisor -->
+  <div class="mais-divider"></div>
+
+  <!-- Ações de conta -->
+  <div class="mais-actions">
+    <button class="mais-action-btn" id="mais-btn-config" onclick="openModal('modal-empresa');closeMais()" style="display:none">
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+        <circle cx="12" cy="12" r="3" stroke-width="2"/>
+      </svg>
+      Configurar Empresa
+    </button>
+
+    <button class="mais-action-btn mais-logout" onclick="doLogout()">
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+      </svg>
+      Terminar Sessão
+    </button>
+  </div>
+</div>
 
 <!-- SIDEBAR -->
 <nav id="sidebar" style="display:none">
@@ -3978,6 +4455,241 @@ function fabAction() {
   const name = document.getElementById('mobile-fab')?.getAttribute('data-section');
   if (name && FAB_ACTIONS[name]) FAB_ACTIONS[name]();
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  FASE 2 — BOTTOM NAVIGATION + MAIS SHEET + TRANSIÇÕES
+// ═══════════════════════════════════════════════════════════════
+
+// Ordem das secções para determinar direcção da animação
+const SECTION_ORDER = {
+  'dashboard':    0,
+  'vendas':       1,
+  'stock':        2,
+  'clientes':     3,
+  'cobranças':    4,
+  'analise':      5,
+  'caixa':        6,
+  'fornecedores': 7,
+  'importacoes':  8,
+  'calculadora':  9,
+};
+
+// Secções ancoradas no bottom nav principal (não aparecem no Mais)
+const BN_PRIMARY = new Set(['dashboard', 'vendas', 'stock', 'caixa']);
+
+// Última secção visitada (para calcular direcção de animação)
+let _lastSection = 'dashboard';
+
+/**
+ * bnNavigate(name, btnEl)
+ * Clicado directamente nos botões do bottom nav.
+ * Só trata secções primárias — "Mais" tem o seu próprio handler.
+ */
+function bnNavigate(name, btnEl) {
+  // Calcular direcção de animação
+  const fromOrder = SECTION_ORDER[_lastSection] ?? 0;
+  const toOrder   = SECTION_ORDER[name] ?? 0;
+  _animDirection  = toOrder >= fromOrder ? 'forward' : 'backward';
+
+  // Activar estado no bottom nav
+  document.querySelectorAll('.bn-item').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+
+  // Navegar
+  const navEl = Array.from(document.querySelectorAll('.nav-item'))
+    .find(el => el.getAttribute('onclick') === `showSection('${name}', this)`);
+  showSection(name, navEl || null);
+}
+
+/**
+ * maisNavigate(name)
+ * Chamado pelos botões dentro do Mais sheet.
+ */
+function maisNavigate(name) {
+  closeMais();
+
+  // Calcular animação
+  const fromOrder = SECTION_ORDER[_lastSection] ?? 0;
+  const toOrder   = SECTION_ORDER[name] ?? 0;
+  _animDirection  = toOrder >= fromOrder ? 'forward' : 'backward';
+
+  // Desactivar todos os botões do bottom nav — este vem de "Mais"
+  document.querySelectorAll('.bn-item').forEach(b => b.classList.remove('active'));
+  // Manter o "Mais" com indicação visual de que está activo
+  document.getElementById('bn-mais-btn')?.classList.add('active');
+
+  const navEl = Array.from(document.querySelectorAll('.nav-item'))
+    .find(el => el.getAttribute('onclick') === `showSection('${name}', this)`);
+  showSection(name, navEl || null);
+}
+
+// Direcção da animação actual
+let _animDirection = 'forward';
+
+/**
+ * _applyTransition(name)
+ * Adiciona a classe de animação à secção activa.
+ * Chamado no final de showSection().
+ */
+function _applyTransition(name) {
+  const el = document.getElementById('s-' + name);
+  if (!el) return;
+  // Remover classes anteriores primeiro
+  el.classList.remove('anim-forward', 'anim-backward');
+  // Forçar reflow para reiniciar a animação
+  void el.offsetWidth;
+  if (_animDirection === 'forward')  el.classList.add('anim-forward');
+  if (_animDirection === 'backward') el.classList.add('anim-backward');
+}
+
+/**
+ * _syncBottomNav(name)
+ * Sincroniza o estado activo do bottom nav com a secção actual.
+ */
+function _syncBottomNav(name) {
+  document.querySelectorAll('.bn-item').forEach(b => b.classList.remove('active'));
+  if (BN_PRIMARY.has(name)) {
+    // Activar o botão correspondente
+    const btn = document.querySelector(`#bottom-nav .bn-item[data-section="${name}"]`);
+    if (btn) btn.classList.add('active');
+  } else {
+    // Secção vem do "Mais" — activar o botão Mais
+    document.getElementById('bn-mais-btn')?.classList.add('active');
+  }
+}
+
+// ── MAIS SHEET ─────────────────────────────────────────────────
+
+/**
+ * openMais()
+ * Abre o bottom sheet com as secções secundárias.
+ */
+function openMais() {
+  // Actualizar dados do utilizador no sheet
+  const nameEl = document.getElementById('mais-user-name');
+  const roleEl = document.getElementById('mais-user-role');
+  if (nameEl) nameEl.textContent = document.getElementById('user-name')?.textContent || '—';
+  if (roleEl) roleEl.textContent = document.getElementById('user-role')?.textContent || '—';
+
+  // Mostrar botão de config apenas para admin
+  const cfgBtn = document.getElementById('mais-btn-config');
+  if (cfgBtn) cfgBtn.style.display = CURRENT_ROLE === 'admin' ? '' : 'none';
+
+  // Mostrar/ocultar itens admin-only
+  document.querySelectorAll('.mais-admin-only').forEach(el => {
+    el.style.display = CURRENT_ROLE === 'admin' ? '' : 'none';
+  });
+
+  // Sincronizar badge de cobranças
+  _syncMaisBadge();
+
+  // Animar entrada
+  const overlay = document.getElementById('mais-overlay');
+  const sheet   = document.getElementById('mais-sheet');
+  if (!overlay || !sheet) return;
+
+  overlay.style.display = 'block';
+  // Forçar reflow antes de adicionar classe (garante transição CSS)
+  void overlay.offsetWidth;
+  overlay.classList.add('visible');
+  sheet.classList.add('open');
+
+  // Prevenir scroll do body
+  document.body.style.overflow = 'hidden';
+}
+
+/**
+ * closeMais()
+ * Fecha o Mais sheet com animação de saída.
+ */
+function closeMais() {
+  const overlay = document.getElementById('mais-overlay');
+  const sheet   = document.getElementById('mais-sheet');
+  if (!overlay || !sheet) return;
+
+  overlay.classList.remove('visible');
+  sheet.classList.remove('open');
+  document.body.style.overflow = '';
+
+  // Remover overlay do DOM após a transição
+  setTimeout(() => {
+    if (!sheet.classList.contains('open')) {
+      overlay.style.display = 'none';
+    }
+  }, 320);
+}
+
+/**
+ * _syncMaisBadge()
+ * Espelha o badge de cobranças pendentes no Mais sheet e no bottom nav.
+ */
+function _syncMaisBadge() {
+  const sidebarBadge = document.getElementById('badge-cobr');
+  const maisBadge    = document.getElementById('mais-badge-cobr');
+  const bnBadge      = document.getElementById('bn-mais-badge');
+
+  const count = sidebarBadge?.textContent?.trim() || '0';
+  const n     = parseInt(count) || 0;
+
+  if (maisBadge) {
+    maisBadge.textContent = n > 99 ? '99+' : count;
+    maisBadge.style.display = n > 0 ? '' : 'none';
+  }
+  if (bnBadge) {
+    bnBadge.style.display = n > 0 ? 'flex' : 'none';
+  }
+}
+
+// ── PATCH showSection para Fase 2 ──────────────────────────────
+// Guardamos a referência original e envolvemos com lógica de Fase 2
+const _showSection_orig = showSection;
+showSection = function(name, el) {
+  _showSection_orig(name, el);
+  _lastSection = name;
+  _applyTransition(name);
+  _syncBottomNav(name);
+  _syncMaisBadge();
+};
+
+// ── SWIPE GESTURE — fechar Mais sheet com swipe para baixo ─────
+(function() {
+  let startY = 0;
+  const sheet = () => document.getElementById('mais-sheet');
+
+  document.addEventListener('touchstart', e => {
+    if (sheet()?.classList.contains('open')) {
+      startY = e.touches[0].clientY;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (!sheet()?.classList.contains('open')) return;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (dy > 80) closeMais(); // swipe down > 80px fecha o sheet
+  }, { passive: true });
+})();
+
+// ── INICIALIZAÇÃO DO BOTTOM NAV ─────────────────────────────────
+// Chamado depois do loadApp() ter definido CURRENT_ROLE e restaurado a secção
+function _initBottomNav() {
+  _syncMaisBadge();
+  // Sincronizar com a secção já activa ao arrancar
+  const active = document.querySelector('.section.active');
+  if (active) {
+    const name = active.id.replace('s-', '');
+    _lastSection = name;
+    _syncBottomNav(name);
+  }
+}
+
+// Observar mutações no badge-cobr (sidebar) para manter sincronizado
+(function() {
+  const target = document.getElementById('badge-cobr');
+  if (!target) return;
+  new MutationObserver(_syncMaisBadge).observe(target, {
+    childList: true, characterData: true, subtree: true
+  });
+})();
 
 // Actualiza o estado visual do filtro de mercado e re-renderiza tudo
 function onMercadoChange(sel) {
@@ -6394,6 +7106,9 @@ async function loadApp(){
     document.getElementById('loading-screen').style.display='none';
     document.getElementById('sidebar').style.display='';
     document.getElementById('main').style.display='';
+    // Fase 2 — mostrar bottom nav e repor FAB
+    const bnav2 = document.getElementById('bottom-nav');
+    if (bnav2) bnav2.style.display = '';
     const mesInput=document.getElementById('filtro-mes');
     if(mesInput){const n=new Date();mesInput.value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;}
     const sfDate=document.getElementById('sf-date');
@@ -6417,6 +7132,8 @@ async function loadApp(){
       el => el.getAttribute('onclick') === `showSection('${lastSection}', this)`
     );
     showSection(lastSection, restoredNavEl || null);
+    // Fase 2 — inicializar bottom nav após a secção ser restaurada
+    _initBottomNav();
   }
 }
 
@@ -6434,6 +7151,12 @@ function applyPermissions(){
   document.querySelectorAll('.admin-only').forEach(el=>{
     el.style.display=CURRENT_ROLE==='admin'?'':'none';
   });
+  // Fase 2 — Mais sheet: itens admin-only + botão config
+  document.querySelectorAll('.mais-admin-only').forEach(el => {
+    el.style.display = CURRENT_ROLE === 'admin' ? '' : 'none';
+  });
+  const maisCfg = document.getElementById('mais-btn-config');
+  if (maisCfg) maisCfg.style.display = CURRENT_ROLE === 'admin' ? '' : 'none';
 }
 
 async function doLogout(){
@@ -6447,6 +7170,12 @@ async function doLogout(){
   document.getElementById('sidebar').style.display='none';
   document.getElementById('main').style.display='none';
   document.getElementById('sidebar-overlay').classList.remove('visible');
+  // Fase 2 — esconder bottom nav e fechar Mais sheet
+  closeMais();
+  const bnav = document.getElementById('bottom-nav');
+  if (bnav) bnav.style.display = 'none';
+  const fab = document.getElementById('mobile-fab');
+  if (fab) fab.style.display = 'none';
   const li=document.getElementById('login-screen');
   li.style.display='flex';
   requestAnimationFrame(()=>requestAnimationFrame(()=>li.classList.add('visible')));
