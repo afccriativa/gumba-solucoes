@@ -4088,13 +4088,56 @@ function descarregarReciboPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
 
-  const BR = 10, BG = 120, BB = 200;
-  const LR = 26, LG = 153, LB = 240;
+  // ── Paleta ────────────────────────────────────────────────────────
+  const BR = 10, BG = 120, BB = 200;          // azul principal
+  const LR = 26, LG = 153, LB = 240;          // azul claro
   const PW = 148, PH = 210, M = 13;
   const INNER = PW - M * 2;
   let y = 0;
 
-  // Header
+  // ── helpers locais ────────────────────────────────────────────────
+  function sectionHeader(label, yPos) {
+    doc.setFillColor(240, 246, 253);
+    doc.roundedRect(M, yPos, INNER, 7, 1.5, 1.5, 'F');
+    doc.setDrawColor(BR, BG, BB);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(M, yPos, INNER, 7, 1.5, 1.5, 'S');
+    doc.setFillColor(BR, BG, BB);
+    doc.roundedRect(M, yPos, 3, 7, 1, 1, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.5);
+    doc.setTextColor(BR, BG, BB);
+    doc.text(label, M + 6, yPos + 4.5);
+  }
+  function colBlock(label, lines, x, yPos, w) {
+    // label — small uppercase tag
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(5.5);
+    doc.setTextColor(BR, BG, BB);
+    doc.text(label, x + 5, yPos + 4);
+    // lines[0] — name (larger, bold)
+    if (lines[0]) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(15, 15, 15);
+      doc.text(String(lines[0]).substring(0, 30), x + 5, yPos + 10);
+    }
+    // lines[1..] — detail lines
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(70, 70, 70);
+    var ly = yPos + 15.5;
+    for (var i = 1; i < lines.length; i++) {
+      if (lines[i]) {
+        doc.text(String(lines[i]).substring(0, 40), x + 5, ly);
+        ly += 5;
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  CABEÇALHO
+  // ══════════════════════════════════════════════════════════════════
   doc.setFillColor(BR, BG, BB);
   doc.rect(0, 0, PW, 52, 'F');
   doc.setFillColor(LR, LG, LB);
@@ -4102,190 +4145,268 @@ function descarregarReciboPDF() {
   doc.setFillColor(BR, BG, BB);
   doc.triangle(PW - 48, 0, PW - 38, 0, PW - 38, 52, 'F');
 
-  try { doc.addImage('data:image/png;base64,' + _LOGO_B64, 'PNG', M, 6, 22, 22); } catch(e) {}
+  try { doc.addImage('data:image/png;base64,' + _LOGO_B64, 'PNG', M, 8, 20, 20); } catch(e) {}
 
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text((COMPANY_INFO.nome || 'Gumba Soluções').toUpperCase(), M + 27, 14);
+  doc.setFontSize(11.5);
+  doc.text((COMPANY_INFO.nome || 'Gumba Soluções').toUpperCase(), M + 25, 15);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(190, 225, 255);
-  doc.text(COMPANY_INFO.tagline || 'Comércio e Prestação de Serviços', M + 27, 20);
-  // Detalhes da empresa (NIF, tel, email, morada)
+  doc.text(COMPANY_INFO.tagline || 'Comércio e Prestação de Serviços', M + 25, 21);
+
+  // Detalhes empresa — linhas dinâmicas
   doc.setFontSize(6);
   doc.setTextColor(180, 220, 255);
-  var _cy = 27;
-  if (COMPANY_INFO.nif)    { doc.text('NIF: ' + COMPANY_INFO.nif, M + 27, _cy); _cy += 5; }
-  if (COMPANY_INFO.tel)    { doc.text('Tel: ' + COMPANY_INFO.tel, M + 27, _cy); _cy += 5; }
-  if (COMPANY_INFO.email)  { doc.text(COMPANY_INFO.email,          M + 27, _cy); _cy += 5; }
-  if (COMPANY_INFO.morada) { doc.text(COMPANY_INFO.morada,         M + 27, _cy); }
+  var _cy = 28;
+  if (COMPANY_INFO.nif)    { doc.text('NIF: ' + COMPANY_INFO.nif, M + 25, _cy); _cy += 5; }
+  if (COMPANY_INFO.tel)    { doc.text('Tel: ' + COMPANY_INFO.tel, M + 25, _cy); _cy += 5; }
+  if (COMPANY_INFO.email)  { doc.text(COMPANY_INFO.email,          M + 25, _cy); _cy += 5; }
+  if (COMPANY_INFO.morada) { doc.text(COMPANY_INFO.morada,         M + 25, _cy); }
 
+  // Canto direito — tipo de documento + referência + data
+  const refId = _gerarRefRecibo(venda.id);
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.text('RECIBO DE COMPRA', PW - M, 11, { align: 'right' });
-  const refId = _gerarRefRecibo(venda.id);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(190, 225, 255);
-  doc.text('Ref: #' + refId, PW - M, 18, { align: 'right' });
-  doc.text('Data: ' + _fmtDataExibir(venda.data), PW - M, 24, { align: 'right' });
-
-  y = 62;
-
-  // Secção cliente
-  doc.setFillColor(240, 246, 253);
-  doc.roundedRect(M, y - 4, INNER, 21, 2, 2, 'F');
-  doc.setDrawColor(BR, BG, BB);
-  doc.setLineWidth(0.4);
-  doc.roundedRect(M, y - 4, INNER, 21, 2, 2, 'S');
-  // Barra lateral colorida
-  doc.setFillColor(BR, BG, BB);
-  doc.roundedRect(M, y - 4, 3, 21, 1, 1, 'F');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6);
-  doc.setTextColor(BR, BG, BB);
-  doc.text('CLIENTE', M + 6, y + 1);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(15, 15, 15);
-  doc.text(cliente.nome || 'Cliente directo', M + 6, y + 7.5);
-  if(cliente.telefone) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(70, 70, 70);
-    doc.text('Tel: ' + cliente.telefone, M + 6, y + 13.5);
-  }
+  doc.setFontSize(8);
+  doc.text('RECIBO DE VENDA', PW - M, 11, { align: 'right' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
-  doc.setTextColor(BR, BG, BB);
-  doc.text('Mercado: ' + (venda.mercado || '—'), PW - M - 5, y + 7.5, { align: 'right' });
+  doc.setTextColor(190, 225, 255);
+  doc.text('Ref: ' + refId,                                  PW - M, 18, { align: 'right' });
+  doc.text('Data: ' + _fmtDataExibir(venda.data || ''),     PW - M, 24, { align: 'right' });
+  if (COMPANY_INFO.website) {
+    doc.setFontSize(6);
+    doc.text(COMPANY_INFO.website,                           PW - M, 30, { align: 'right' });
+  }
 
-  y += 30;
+  y = 60;
 
-  // Tabela de itens — autoTable (suporta nomes longos com wrap automático)
+  // ══════════════════════════════════════════════════════════════════
+  //  BLOCO VENDEDOR | COMPRADOR (dois painéis lado a lado)
+  // ══════════════════════════════════════════════════════════════════
+  var COL_W = (INNER - 4) / 2;   // largura de cada coluna
+  var BLK_H = 32;                  // altura do bloco
+
+  // Painel VENDEDOR (esquerda)
+  doc.setFillColor(240, 246, 253);
+  doc.roundedRect(M, y, COL_W, BLK_H, 2, 2, 'F');
+  doc.setDrawColor(BR, BG, BB);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(M, y, COL_W, BLK_H, 2, 2, 'S');
+  doc.setFillColor(BR, BG, BB);
+  doc.roundedRect(M, y, 3, BLK_H, 1, 1, 'F');
+
+  var vendedorLines = [
+    COMPANY_INFO.nome || 'Gumba Soluções',
+    COMPANY_INFO.nif    ? 'NIF: ' + COMPANY_INFO.nif    : null,
+    COMPANY_INFO.tel    ? 'Tel: ' + COMPANY_INFO.tel    : null,
+    COMPANY_INFO.email  ? COMPANY_INFO.email             : null,
+    COMPANY_INFO.morada ? COMPANY_INFO.morada            : null,
+  ].filter(Boolean);
+  colBlock('VENDEDOR', vendedorLines, M, y, COL_W);
+
+  // Painel COMPRADOR (direita)
+  var COL_X2 = M + COL_W + 4;
+  doc.setFillColor(240, 246, 253);
+  doc.roundedRect(COL_X2, y, COL_W, BLK_H, 2, 2, 'F');
+  doc.setDrawColor(BR, BG, BB);
+  doc.roundedRect(COL_X2, y, COL_W, BLK_H, 2, 2, 'S');
+  doc.setFillColor(BR, BG, BB);
+  doc.roundedRect(COL_X2, y, 3, BLK_H, 1, 1, 'F');
+
+  var compradorLines = [
+    cliente.nome || 'Cliente directo',
+    cliente.telefone    ? 'Tel: ' + cliente.telefone    : null,
+    cliente.localizacao ? cliente.localizacao            : null,
+    venda.mercado       ? 'Mercado: ' + venda.mercado   : null,
+  ].filter(Boolean);
+  colBlock('COMPRADOR', compradorLines, COL_X2, y, COL_W);
+
+  y += BLK_H + 8;
+
+  // ══════════════════════════════════════════════════════════════════
+  //  TABELA DE ITENS
+  // ══════════════════════════════════════════════════════════════════
   doc.autoTable({
     startY: y,
     head: [['PRODUTO / DESCRIÇÃO', 'QTY', 'P. UNIT.', 'SUBTOTAL']],
     body: venda.itens.map(function(item) {
       return [
-        item.nome,
+        item.nome_snapshot || item.nome,
         String(item.qty),
-        item.preco.toLocaleString('pt-AO'),
+        item.preco.toLocaleString('pt-AO') + ' Kz',
         (item.preco * item.qty).toLocaleString('pt-AO') + ' Kz'
       ];
     }),
     theme: 'plain',
     styles: {
-      font: 'helvetica',
-      fontSize: 8,
+      font: 'helvetica', fontSize: 8,
       cellPadding: { top: 2.5, right: 3, bottom: 2.5, left: 5.5 },
-      textColor: [20, 20, 20],
-      overflow: 'linebreak'
+      textColor: [20, 20, 20], overflow: 'linebreak'
     },
     headStyles: {
-      fillColor: [BR, BG, BB],
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 6.5,
+      fillColor: [BR, BG, BB], textColor: [255, 255, 255],
+      fontStyle: 'bold', fontSize: 6.5,
       cellPadding: { top: 2, right: 3, bottom: 2, left: 5.5 }
     },
     alternateRowStyles: { fillColor: [247, 251, 255] },
     columnStyles: {
       0: { cellWidth: 'auto' },
       1: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
-      2: { cellWidth: 26, halign: 'center', textColor: [60, 60, 60] },
-      3: { cellWidth: 26, halign: 'right',  fontStyle: 'bold', textColor: [BR, BG, BB] }
+      2: { cellWidth: 28, halign: 'right', textColor: [60, 60, 60] },
+      3: { cellWidth: 28, halign: 'right', fontStyle: 'bold', textColor: [BR, BG, BB] }
     },
     margin: { left: M, right: M },
-    didDrawCell: function(data) {
-      if(data.section === 'body' && data.column.index === 0) {
+    didDrawCell: function(d) {
+      if (d.section === 'body' && d.column.index === 0) {
         doc.setFillColor(BR, BG, BB);
-        doc.rect(data.cell.x, data.cell.y, 2.5, data.cell.height, 'F');
+        doc.rect(d.cell.x, d.cell.y, 2.5, d.cell.height, 'F');
       }
     }
   });
   y = doc.lastAutoTable.finalY + 6;
 
-  // Bloco total
+  // ══════════════════════════════════════════════════════════════════
+  //  BLOCO TOTAL + PAGAMENTO
+  // ══════════════════════════════════════════════════════════════════
+  // Total (direita)
   doc.setFillColor(BR, BG, BB);
-  doc.roundedRect(PW - M - 62, y - 2, 62, 14, 2, 2, 'F');
+  doc.roundedRect(PW - M - 66, y - 2, 66, 16, 2, 2, 'F');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
+  doc.setFontSize(6.5);
   doc.setTextColor(180, 220, 255);
-  doc.text('TOTAL', PW - M - 58, y + 5);
-  doc.setFontSize(11);
+  doc.text('TOTAL A PAGAR', PW - M - 62, y + 5);
+  doc.setFontSize(12);
   doc.setTextColor(255, 255, 255);
-  doc.text(venda.total.toLocaleString('pt-AO') + ' Kz', PW - M - 4, y + 6.5, { align: 'right' });
+  doc.text(venda.total.toLocaleString('pt-AO') + ' Kz', PW - M - 3, y + 8, { align: 'right' });
 
+  // Pagamento (esquerda)
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
-  doc.setTextColor(90, 90, 90);
-  doc.text('Pagamento: ' + (venda.pagamento || 'Dinheiro'), M, y + 4);
-  doc.text('Modalidade: ' + (venda.tipo === 'parcelada' ? 'Parcelado' : 'A Pronto'), M, y + 9.5);
-  y += 22;
+  doc.setTextColor(60, 60, 60);
+  doc.text('Pagamento: ' + (venda.pagamento || 'Dinheiro'), M, y + 5);
+  doc.text('Modalidade: ' + (venda.tipo === 'parcelada' ? 'Parcelado (crédito)' : 'À Pronto'), M, y + 11);
+  y += 24;
 
-  // Plano de prestações (apenas para vendas parceladas)
-  if(venda.tipo === 'parcelada' && venda.prestacoes && venda.prestacoes.length) {
-    const prests = venda.prestacoes;
-    // Cabeçalho da secção
-    doc.setFillColor(240, 246, 253);
-    doc.roundedRect(M, y - 2, INNER, 7, 1.5, 1.5, 'F');
-    doc.setDrawColor(BR, BG, BB);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(M, y - 2, INNER, 7, 1.5, 1.5, 'S');
-    doc.setFillColor(BR, BG, BB);
-    doc.roundedRect(M, y - 2, 3, 7, 1, 1, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6.5);
-    doc.setTextColor(BR, BG, BB);
-    doc.text('PLANO DE PRESTAÇÕES', M + 6, y + 3);
+  // ══════════════════════════════════════════════════════════════════
+  //  PLANO DE PRESTAÇÕES
+  // ══════════════════════════════════════════════════════════════════
+  if (venda.tipo === 'parcelada' && venda.prestacoes && venda.prestacoes.length) {
+    sectionHeader('PLANO DE PRESTAÇÕES', y);
     y += 10;
-
-    // Linhas de prestações (altura 10mm para caber 2 linhas de texto)
     var ROW_H = 10;
-    prests.forEach(function(p, idx) {
-      var bgR = idx % 2 === 0 ? 247 : 255;
-      var bgG = idx % 2 === 0 ? 251 : 255;
-      doc.setFillColor(bgR, bgG, 255);
+    venda.prestacoes.forEach(function(p, i) {
+      doc.setFillColor(i % 2 === 0 ? 247 : 255, i % 2 === 0 ? 251 : 255, 255);
       doc.rect(M, y, INNER, ROW_H, 'F');
       doc.setFillColor(BR, BG, BB);
       doc.rect(M, y, 2.5, ROW_H, 'F');
-
-      // Linha 1 — "Prestação N"
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7.5);
       doc.setTextColor(50, 50, 50);
       doc.text('Prestação ' + p.numero, M + 5, y + 3.5);
-
-      // Linha 2 — data de vencimento
-      var dataVcto = p.data_vencimento ? _fmtDataExibir(p.data_vencimento) : '—';
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
       doc.setTextColor(100, 100, 100);
-      doc.text('Venc.: ' + dataVcto, M + 5, y + 7.5);
-
-      // Valor alinhado à direita, centrado verticalmente
+      doc.text('Venc.: ' + (p.data_vencimento ? _fmtDataExibir(p.data_vencimento) : '—'), M + 5, y + 7.5);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
       doc.setTextColor(BR, BG, BB);
       doc.text(p.valor.toLocaleString('pt-AO') + ' Kz', PW - M - 3, y + 5.5, { align: 'right' });
       y += ROW_H;
     });
-    y += 4;
+    y += 6;
   }
 
-  if(venda.obs) {
+  // ══════════════════════════════════════════════════════════════════
+  //  GARANTIA (apenas se preenchida)
+  // ══════════════════════════════════════════════════════════════════
+  if (venda.garantia_prazo || venda.garantia_desc) {
+    sectionHeader('GARANTIA', y);
+    y += 10;
+    var GH = 7 + (venda.garantia_desc ? 6 : 0);
+    doc.setFillColor(232, 243, 255);
+    doc.roundedRect(M, y, INNER, GH, 1.5, 1.5, 'F');
+    doc.setDrawColor(LR, LG, LB);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(M, y, INNER, GH, 1.5, 1.5, 'S');
+    // Ícone shield (triângulo estilizado)
+    doc.setFillColor(BR, BG, BB);
+    doc.roundedRect(M, y, 3, GH, 1, 1, 'F');
+    if (venda.garantia_prazo) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(BR, BG, BB);
+      doc.text('Válida até: ' + _fmtDataExibir(venda.garantia_prazo), M + 6, y + 5);
+    }
+    if (venda.garantia_desc) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(60, 60, 60);
+      doc.text(venda.garantia_desc, M + 6, y + (venda.garantia_prazo ? 11 : 5));
+    }
+    y += GH + 7;
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  OBSERVAÇÕES
+  // ══════════════════════════════════════════════════════════════════
+  if (venda.obs) {
+    doc.setFillColor(252, 252, 248);
+    doc.roundedRect(M, y, INNER, 12, 1.5, 1.5, 'F');
+    doc.setDrawColor(200, 200, 180);
+    doc.setLineWidth(0.25);
+    doc.roundedRect(M, y, INNER, 12, 1.5, 1.5, 'S');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(5.5);
+    doc.setTextColor(140, 140, 100);
+    doc.text('OBS:', M + 4, y + 4.5);
     doc.setFont('helvetica', 'italic');
-    doc.setFontSize(7.5);
-    doc.setTextColor(100, 100, 100);
-    doc.text('Obs: ' + venda.obs, M, y);
-    y += 8;
+    doc.setFontSize(7);
+    doc.setTextColor(80, 80, 60);
+    // wrap obs text
+    var obsWrapped = doc.splitTextToSize(venda.obs, INNER - 16);
+    doc.text(obsWrapped[0] || '', M + 14, y + 4.5);
+    if (obsWrapped[1]) doc.text(obsWrapped[1], M + 14, y + 9);
+    y += 16;
   }
 
-  // Rodapé
+  // ══════════════════════════════════════════════════════════════════
+  //  LINHA DE ASSINATURA (apenas para vendas parceladas)
+  // ══════════════════════════════════════════════════════════════════
+  if (venda.tipo === 'parcelada') {
+    // Garantir espaço mínimo (pelo menos 25mm antes do rodapé)
+    var signY = Math.max(y + 4, PH - 43);
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.3);
+    // Linha comprador
+    doc.line(M, signY, M + (INNER / 2) - 4, signY);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6);
+    doc.setTextColor(130, 130, 130);
+    doc.text('Assinatura do Comprador', M, signY + 4);
+    // Linha vendedor
+    var sx2 = M + (INNER / 2) + 4;
+    doc.line(sx2, signY, PW - M, signY);
+    doc.text('Carimbo / Assinatura do Vendedor', sx2, signY + 4);
+    y = signY + 10;
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  DISCLAIMER LEGAL
+  // ══════════════════════════════════════════════════════════════════
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(5.5);
+  doc.setTextColor(170, 170, 170);
+  doc.text(
+    'Este documento não substitui factura fiscal. Emitido electronicamente pelo sistema Gumba Soluções.',
+    PW / 2, PH - 21, { align: 'center' }
+  );
+
+  // ══════════════════════════════════════════════════════════════════
+  //  RODAPÉ
+  // ══════════════════════════════════════════════════════════════════
   doc.setFillColor(BR, BG, BB);
   doc.rect(0, PH - 18, PW, 18, 'F');
   doc.setFont('helvetica', 'bold');
@@ -4295,7 +4416,10 @@ function descarregarReciboPDF() {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
   doc.setTextColor(170, 215, 255);
-  doc.text((COMPANY_INFO.nome || 'Gumba Soluções') + '  |  ' + (COMPANY_INFO.tagline || 'Comércio e Prestação de Serviços') + '  |  Angola', PW / 2, PH - 6, { align: 'center' });
+  var footerLine = (COMPANY_INFO.nome || 'Gumba Soluções');
+  if (COMPANY_INFO.tel)   footerLine += '  |  Tel: ' + COMPANY_INFO.tel;
+  if (COMPANY_INFO.email) footerLine += '  |  ' + COMPANY_INFO.email;
+  doc.text(footerLine, PW / 2, PH - 6, { align: 'center' });
 
   doc.save('Recibo_Gumba_' + refId + '_' + (venda.data || '').replace(/-/g, '') + '.pdf');
   showToast('Recibo PDF gerado!', 'success');
