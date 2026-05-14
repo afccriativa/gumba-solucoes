@@ -5285,6 +5285,7 @@ function _syncMercadoFilter() {
 // ─── MODAL ───
 let carrinho = [];
 let editingProduto = null;
+let editingCliente = null;
 
 function openModal(id) {
   document.getElementById(id).classList.add('open');
@@ -5296,10 +5297,15 @@ function openModal(id) {
   if(id==='modal-cobranca')   populateCobrancaSelects();
   if(id==='modal-importacao') populateImportacaoSelects();
   if(id==='modal-produto')    populateProdutoFornSelect();
-  if(id==='modal-cliente')    _resetModalCliente();
+  if(id==='modal-cliente') {
+    // _resetModalCliente só é chamado para criação (não edição)
+    // editProduto já colocou editingCliente e preencheu o form
+    if (!editingCliente) _resetModalCliente();
+  }
   // Restaurar rascunho — só para criação (não edição)
   if (_DRAFT_FIELDS[id]) {
-    const isEditing = (id === 'modal-produto' && editingProduto);
+    const isEditing = (id === 'modal-produto' && editingProduto)
+                   || (id === 'modal-cliente' && editingCliente);
     if (!isEditing) {
       setTimeout(() => _restoreDraft(id), 80);
     }
@@ -5309,6 +5315,7 @@ function closeModal(id) {
   document.getElementById(id).classList.remove('open');
   if(id==='modal-venda')   { carrinho=[]; renderCarrinho(); const _gc=document.getElementById('v-garantia-toggle');if(_gc){_gc.checked=false;document.getElementById('garantia-fields')?.classList.remove('open');document.getElementById('v-garantia-prazo').value='';document.getElementById('v-garantia-desc').value='';} }
   if(id==='modal-produto') { editingProduto=null; clearProdutoForm(); document.getElementById('modal-produto-title').textContent='Novo Produto'; }
+  if(id==='modal-cliente') { editingCliente=null; document.getElementById('modal-cliente-title').textContent='Novo Cliente'; }
   // Esconder badge de rascunho (o draft permanece em sessionStorage para restauro futuro)
   _hideDraftBadge(id);
 }
@@ -6557,6 +6564,7 @@ function renderClientes(q='', _paged=false){
       <td data-label="Canal">${canalHtml}</td>
       <td style="display:flex;gap:4px">
         <button class="btn btn-ghost btn-sm" onclick="verHistorico('${esc(c.id)}')">👁</button>
+        <button class="btn btn-ghost btn-sm" onclick="editCliente('${esc(c.id)}')">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteCliente('${esc(c.id)}')">🗑</button>
       </td>
     </tr>`;
@@ -6565,33 +6573,97 @@ function renderClientes(q='', _paged=false){
   // Actualizar KPI de parceiros no cabeçalho
   _updateParceiroKPI();
 }
+/** Pré-preenche o modal de cliente para edição. */
+function editCliente(id) {
+  const c = CACHE.clientes.find(x => x.id === id);
+  if (!c) return;
+
+  editingCliente = id;
+  _hideDraftBadge('modal-cliente');
+
+  // Título do modal
+  document.getElementById('modal-cliente-title').textContent = 'Editar Cliente';
+
+  // Campos de texto simples
+  document.getElementById('c-nome').value  = c.nome  || '';
+  document.getElementById('c-tel').value   = c.telefone || '';
+  document.getElementById('c-nif').value   = c.nif   || '';
+  document.getElementById('c-prof').value  = c.profissao || '';
+  document.getElementById('c-obs').value   = c.obs   || '';
+
+  // Selects
+  document.getElementById('c-local').value   = c.localizacao || 'Sumbe';
+  document.getElementById('c-credito').value = c.credito     || 'normal';
+  document.getElementById('c-origem').value  = c.origem_conhecimento || 'Boca a boca';
+
+  // Radio de tipo
+  const tipoVal = c.tipo || 'normal';
+  const radioEl = document.getElementById(`c-tipo-${tipoVal}`);
+  if (radioEl) { radioEl.checked = true; _onTipoChange(); }
+
+  // Campo "referido por" — repor o estado
+  _clearReferido();
+  if (c.referido_por) {
+    const parceiro = CACHE.clientes.find(x => x.id === c.referido_por);
+    if (parceiro) _selectParceiro(parceiro.id, parceiro.nome);
+  }
+
+  openModal('modal-cliente');
+}
+
 async function saveCliente(){
-  const nome=document.getElementById('c-nome').value.trim();
-  if(!nome)return showToast('Nome é obrigatório.','warning');
-  const _btnC = document.querySelector('#modal-cliente .btn-primary');
-  const _restoreC = btnLoading(_btnC, 'A guardar...');
-  try{
-    const tipoVal = document.querySelector('input[name="c-tipo"]:checked')?.value || 'normal';
+  const nome = document.getElementById('c-nome').value.trim();
+  if (!nome) return showToast('Nome é obrigatório.', 'warning');
+
+  const _btnC    = document.querySelector('#modal-cliente .btn-primary');
+  const _restoreC = btnLoading(_btnC, editingCliente ? 'A actualizar...' : 'A guardar...');
+
+  try {
+    const tipoVal    = document.querySelector('input[name="c-tipo"]:checked')?.value || 'normal';
     const referidoId = document.getElementById('c-referido-id')?.value || null;
-    const novo=await sbInsert('clientes',{
+
+    const dados = {
       nome,
-      telefone:document.getElementById('c-tel').value,
-      nif:document.getElementById('c-nif').value.trim()||null,
-      localizacao:document.getElementById('c-local').value,
-      profissao:document.getElementById('c-prof').value,
-      credito:document.getElementById('c-credito').value,
-      tipo: tipoVal,
-      referido_por: referidoId || null,
-      origem_conhecimento:document.getElementById('c-origem').value,
-      obs:document.getElementById('c-obs').value
-    });
-    CACHE.clientes.unshift(novo);
-    clearDraft('modal-cliente');
-    stampCache('clientes');
-    closeModal('modal-cliente');renderClientes();renderDashboard();
-    const tipoLabel = tipoVal === 'parceiro' ? '🤝 Parceiro' : '👤 Cliente';
-    showToast(`${tipoLabel} "${nome}" adicionado com sucesso.`,'success');
-  }catch(e){showToast('Erro: '+e.message,'error');}finally{_restoreC();}
+      telefone:              document.getElementById('c-tel').value,
+      nif:                   document.getElementById('c-nif').value.trim() || null,
+      localizacao:           document.getElementById('c-local').value,
+      profissao:             document.getElementById('c-prof').value,
+      credito:               document.getElementById('c-credito').value,
+      tipo:                  tipoVal,
+      referido_por:          referidoId || null,
+      origem_conhecimento:   document.getElementById('c-origem').value,
+      obs:                   document.getElementById('c-obs').value,
+    };
+
+    if (editingCliente) {
+      // ── ACTUALIZAÇÃO ────────────────────────────────────────────
+      await sbUpdate('clientes', editingCliente, dados);
+      const idx = CACHE.clientes.findIndex(x => x.id === editingCliente);
+      if (idx >= 0) CACHE.clientes[idx] = { ...CACHE.clientes[idx], ...dados };
+      stampCache('clientes');
+      clearDraft('modal-cliente');
+      closeModal('modal-cliente');
+      renderClientes();
+      renderDashboard();
+      const tipoLabel = tipoVal === 'parceiro' ? '🤝 Parceiro' : '👤 Cliente';
+      showToast(`${tipoLabel} "${nome}" actualizado com sucesso.`, 'success');
+    } else {
+      // ── CRIAÇÃO ─────────────────────────────────────────────────
+      const novo = await sbInsert('clientes', dados);
+      CACHE.clientes.unshift(novo);
+      stampCache('clientes');
+      clearDraft('modal-cliente');
+      closeModal('modal-cliente');
+      renderClientes();
+      renderDashboard();
+      const tipoLabel = tipoVal === 'parceiro' ? '🤝 Parceiro' : '👤 Cliente';
+      showToast(`${tipoLabel} "${nome}" adicionado com sucesso.`, 'success');
+    }
+  } catch(e) {
+    showToast('Erro: ' + e.message, 'error');
+  } finally {
+    _restoreC();
+  }
 }
 async function deleteCliente(id){
   showConfirm('Este cliente será eliminado permanentemente. Continuar?', async()=>{
