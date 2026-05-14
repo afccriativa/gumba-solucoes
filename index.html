@@ -6140,7 +6140,7 @@ function renderStock(q='', _paged=false) {
       <td style="display:flex;gap:4px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="editProduto('${esc(p.id)}')">✏️</button>
         <button class="btn btn-ghost btn-sm" onclick="ajustarStock('${esc(p.id)}')">+/-</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteProduto('${esc(p.id)}')">🗑</button>
+        ${CURRENT_ROLE==='admin'?`${CURRENT_ROLE==='admin'?'<button class="btn btn-danger btn-sm" onclick="deleteProduto(\''+(esc(p.id))+'\')">'+'🗑</button>':'' }`:''}
       </td>
     </tr>`;
   }).join('');
@@ -6207,10 +6207,27 @@ async function saveProduto(){
   }catch(e){showToast('Erro: '+e.message,'error');}finally{_restore1();}
 }
 async function deleteProduto(id){
-  showConfirm('Este produto será eliminado permanentemente. Continuar?', async()=>{
-    const _rD=btnLoading(document.getElementById('confirm-ok-btn'),'A eliminar...');
-    try{await sbDelete('produtos',id);CACHE.produtos=CACHE.produtos.filter(x=>x.id!==id);stampCache('produtos');renderStock();renderDashboard();showToast('Produto eliminado.','success');}catch(e){showToast('Erro: '+e.message,'error');}finally{_rD();}
-  });
+  if(CURRENT_ROLE !== 'admin') return showToast('Apenas administradores podem eliminar produtos.','warning');
+  const p = CACHE.produtos.find(x=>x.id===id);
+  const nome = p ? p.nome : 'este produto';
+  showConfirm(
+    'Eliminar permanentemente "' + nome + '"?\n\nOs movimentos de stock associados serão eliminados. O histrico de vendas passadas fica preservado.',
+    async () => {
+      const _rD = btnLoading(document.getElementById('confirm-ok-btn'), 'A eliminar...');
+      try {
+        const { error } = await sb.rpc('eliminar_produto', { p_produto_id: id });
+        if (error) throw error;
+        CACHE.produtos = CACHE.produtos.filter(x => x.id !== id);
+        stampCache('produtos');
+        renderStock();
+        renderDashboard();
+        showToast('Produto "' + nome + '" eliminado.', 'success');
+      } catch(e) {
+        showToast('Erro ao eliminar: ' + e.message, 'error');
+      } finally { _rD(); }
+    },
+    'Eliminar produto'
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════
