@@ -1258,6 +1258,80 @@ textarea { resize: vertical; min-height: 70px; }
 }
 .sidebar-config-btn:hover { color: var(--accent2); border-color: var(--accent2); }
 
+/* ── Carrinho — ajuste de preço por item ─────────────────────── */
+.cart-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 7px 8px; border-radius: 7px;
+  background: var(--surface2);
+  margin-bottom: 5px;
+  transition: background .15s;
+}
+.cart-item:hover { background: var(--surface3, var(--border2)); }
+.cart-item-info { flex: 1; min-width: 0; }
+.cart-item-name {
+  font-size: .82rem; font-weight: 600;
+  color: var(--text); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.cart-item-price-row {
+  display: flex; align-items: center; gap: 6px; margin-top: 3px;
+}
+.cart-price-badge {
+  font-size: .72rem; font-family: var(--font-mono);
+  padding: 1px 6px; border-radius: 8px; font-weight: 600;
+}
+.cart-price-badge.original {
+  background: rgba(34,197,94,.12); color: #4ade80;
+}
+.cart-price-badge.discount {
+  background: rgba(251,191,36,.14); color: #fbbf24;
+}
+.cart-price-badge.markup {
+  background: rgba(251,146,60,.14); color: #fb923c;
+}
+.cart-price-orig {
+  font-size: .68rem; color: var(--text-muted);
+  text-decoration: line-through; font-family: var(--font-mono);
+}
+.cart-item-edit { display: none; margin-top: 8px; }
+.cart-item-edit.open { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.cart-edit-label {
+  font-size: .68rem; color: var(--text-muted);
+  margin-bottom: 2px; font-weight: 600;
+}
+.cart-edit-input {
+  font-size: .8rem; padding: 4px 8px;
+  border: 1px solid var(--border2); border-radius: 5px;
+  background: var(--surface); color: var(--text);
+  width: 100%; box-sizing: border-box;
+  font-family: var(--font-mono);
+}
+.cart-edit-input:focus { border-color: var(--accent2); outline: none; }
+.cart-edit-select {
+  font-size: .78rem; padding: 4px 6px;
+  border: 1px solid var(--border2); border-radius: 5px;
+  background: var(--surface); color: var(--text);
+  width: 100%; box-sizing: border-box;
+}
+.cart-edit-actions {
+  grid-column: 1 / -1;
+  display: flex; gap: 6px; justify-content: flex-end;
+}
+.cart-subtotal {
+  font-size: .82rem; font-weight: 700;
+  color: var(--success); font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.cart-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.cart-btn {
+  border: none; border-radius: 4px; cursor: pointer;
+  font-size: .72rem; padding: 3px 7px; font-weight: 600;
+  transition: opacity .15s;
+}
+.cart-btn:hover { opacity: .8; }
+.cart-btn-edit { background: var(--surface3, var(--border2)); color: var(--text-dim); }
+.cart-btn-del  { background: var(--danger-bg, rgba(239,68,68,.12)); color: var(--danger); }
+
 /* ── Garantia (venda) ─────────────────────────────────────────── */
 .garantia-toggle-row {
   display: flex; align-items: center; gap: 10px;
@@ -5432,15 +5506,103 @@ function addProdutoVenda() {
   renderCarrinho();
 }
 function renderCarrinho() {
-  const div=document.getElementById('v-carrinho');
-  const total=carrinho.reduce((s,c)=>s+c.preco*c.qty,0);
-  document.getElementById('v-total-display').textContent=fmt(total);
-  if(!carrinho.length){div.innerHTML='<span style="color:var(--text-muted);font-size:.8rem">Carrinho vazio</span>';return;}
-  div.innerHTML=carrinho.map((c,i)=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-    <span style="flex:1;font-size:.82rem">${esc(c.qty)}x ${esc(c.nome)}</span>
-    <span class="mono" style="font-size:.82rem;color:var(--success)">${fmt(c.preco*c.qty)}</span>
-    <button style="border:none;background:var(--danger-bg);color:var(--danger);border-radius:4px;padding:2px 6px;cursor:pointer;font-size:.75rem" onclick="carrinho.splice(${i},1);renderCarrinho()">✕</button>
-  </div>`).join('');
+  const div   = document.getElementById('v-carrinho');
+  const total = carrinho.reduce((s, c) => s + c.preco * c.qty, 0);
+  document.getElementById('v-total-display').textContent = fmt(total);
+  if (!carrinho.length) {
+    div.innerHTML = '<span style="color:var(--text-muted);font-size:.8rem">Carrinho vazio</span>';
+    return;
+  }
+  div.innerHTML = carrinho.map((c, i) => {
+    const orig    = c.precoOriginal || c.preco;
+    const diff    = c.preco - orig;
+    const hasDiff = Math.abs(diff) >= 1;
+    const badgeCls = !hasDiff ? 'original' : diff < 0 ? 'discount' : 'markup';
+    const badgeTxt = !hasDiff
+      ? fmt(c.preco)
+      : (diff < 0 ? '▼ ' : '▲ ') + fmt(c.preco);
+    const origLine = hasDiff
+      ? `<span class="cart-price-orig">${fmt(orig)}</span>` : '';
+    const motivoTxt = c.motivoAjuste
+      ? `<span style="font-size:.68rem;color:var(--text-muted);margin-left:4px">${esc(c.motivoAjuste)}</span>` : '';
+    return `<div class="cart-item" id="cart-item-${i}">
+      <div class="cart-item-info">
+        <div class="cart-item-name">${esc(c.qty)}× ${esc(c.nome)}</div>
+        <div class="cart-item-price-row">
+          <span class="cart-price-badge ${badgeCls}">${badgeTxt}</span>
+          ${origLine}
+          ${motivoTxt}
+        </div>
+        <div class="cart-item-edit" id="cart-edit-${i}">
+          <div>
+            <div class="cart-edit-label">Preço unitário (Kz)</div>
+            <input class="cart-edit-input" type="number" min="0" step="1"
+              value="${c.preco}"
+              id="cart-edit-price-${i}"
+              onkeydown="if(event.key==='Enter')applyPrecoAjuste(${i})">
+          </div>
+          <div>
+            <div class="cart-edit-label">Motivo</div>
+            <select class="cart-edit-select" id="cart-edit-motivo-${i}">
+              <option value="">— sem motivo —</option>
+              <option value="Desconto negociado"   ${c.motivoAjuste==='Desconto negociado'   ?'selected':''}>Desconto negociado</option>
+              <option value="Promoção"              ${c.motivoAjuste==='Promoção'             ?'selected':''}>Promoção</option>
+              <option value="Ajuste de inflação"    ${c.motivoAjuste==='Ajuste de inflação'   ?'selected':''}>Ajuste de inflação</option>
+              <option value="Preço especial cliente"${c.motivoAjuste==='Preço especial cliente'?'selected':''}>Preço especial cliente</option>
+              <option value="Outro"                 ${c.motivoAjuste==='Outro'                ?'selected':''}>Outro</option>
+            </select>
+          </div>
+          <div class="cart-edit-actions">
+            <button class="cart-btn cart-btn-edit" onclick="applyPrecoAjuste(${i})">✓ Aplicar</button>
+            <button class="cart-btn cart-btn-del"  onclick="cancelEditPreco(${i})">Cancelar</button>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <span class="cart-subtotal">${fmt(c.preco * c.qty)}</span>
+        <div class="cart-actions">
+          <button class="cart-btn cart-btn-edit" onclick="toggleEditPreco(${i})" title="Ajustar preço">✏</button>
+          <button class="cart-btn cart-btn-del"  onclick="carrinho.splice(${i},1);renderCarrinho()" title="Remover">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleEditPreco(i) {
+  const panel = document.getElementById('cart-edit-' + i);
+  if (!panel) return;
+  const isOpen = panel.classList.contains('open');
+  // Fechar todos os outros
+  document.querySelectorAll('.cart-item-edit.open').forEach(el => el.classList.remove('open'));
+  if (!isOpen) {
+    panel.classList.add('open');
+    setTimeout(() => document.getElementById('cart-edit-price-' + i)?.select(), 60);
+  }
+}
+
+function cancelEditPreco(i) {
+  document.getElementById('cart-edit-' + i)?.classList.remove('open');
+}
+
+function applyPrecoAjuste(i) {
+  const item = carrinho[i];
+  if (!item) return;
+  const novoPreco = parseFloat(document.getElementById('cart-edit-price-' + i)?.value);
+  if (isNaN(novoPreco) || novoPreco < 0) {
+    showToast('Preço inválido.', 'warning'); return;
+  }
+  // Guardar preço original na primeira edição
+  if (!item.precoOriginal) item.precoOriginal = item.preco;
+  item.preco = novoPreco;
+  item.motivoAjuste = document.getElementById('cart-edit-motivo-' + i)?.value || '';
+  // Se voltou ao preço original, limpar ajuste
+  if (Math.abs(novoPreco - item.precoOriginal) < 1) {
+    item.precoOriginal = null;
+    item.motivoAjuste  = '';
+  }
+  renderCarrinho();
+  _saveDraft('modal-venda');
 }
 function toggleParcelaFields(v){
   const show=v==='parcelada';
@@ -5487,7 +5649,9 @@ async function saveVenda() {
         produto_id:     ci.id,
         nome_snapshot:  ci.nome,
         qty:            ci.qty,
-        preco_unitario: ci.preco
+        preco_unitario: ci.preco,
+        preco_original: ci.precoOriginal || ci.preco,
+        motivo_ajuste:  ci.motivoAjuste  || null
       }))
     };
 
@@ -6303,7 +6467,7 @@ function verHistorico(clienteId){
     ${vendas.length?`<table><thead><tr><th>Data</th><th>Produtos</th><th>Total</th><th>Tipo</th></tr></thead><tbody>
     ${vendas.sort((a,b)=>b.data?.localeCompare(a.data)).map(v=>`<tr>
       <td class="mono">${v.data}</td>
-      <td>${(v.itens||[]).map(i=>`${esc(i.qty)}x ${esc(i.nome_snapshot)}`).join(', ')}</td>
+      <td>${(v.itens||[]).map(i=>`${esc(i.qty)}x ${esc(i.nome_snapshot)}${i.motivo_ajuste?` <span style="font-size:.68rem;color:var(--warning,#fbbf24)">(${esc(i.motivo_ajuste)})</span>`:''}`).join(', ')}</td>
       <td class="mono text-success">${fmt(v.total)}</td>
       <td><span class="badge ${v.tipo==='parcelada'?'badge-warning':'badge-success'}">${v.tipo==='parcelada'?'Parcelada':'Pronto'}</span></td>
     </tr>`).join('')}</tbody></table>`:'<p class="text-muted text-sm">Sem vendas registadas.</p>'}`;
