@@ -4761,7 +4761,17 @@ input:focus:not(:focus-visible) { outline: none; }
 // ═══════════════════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://kbeawyysuejukwrppwsm.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiZWF3eXlzdWVqdWt3cnBwd3NtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5OTQ1MjQsImV4cCI6MjA5MzU3MDUyNH0.BfYtZqMaDZlrYsQN8VTJIQcd1_U0pEc08X7tLaJEYv4';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Cliente configurado explicitamente — comportamento previsível entre dispositivos e abas.
+// persistSession + autoRefreshToken garantem que cada dispositivo gere o seu próprio
+// token; storageKey dedicado evita colisões com outras apps no mesmo domínio.
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: 'gumba-auth',
+  }
+});
 
 
 // ═══════════════════════════════════════════════════════════════════
@@ -4788,7 +4798,17 @@ async function sbGet(table, select='*') {
     query = query.order('criado_em', { ascending: false });
   }
   const { data, error } = await query;
-  if (error) { console.warn(table, error.message); return []; }
+  if (error) {
+    // Erro de autenticação → a sessão morreu. Não devolver [] em silêncio
+    // (isso fazia os dados "desaparecerem"). Sinalizar a sessão morta.
+    if (_isAuthError(error)) {
+      console.warn('[Auth] sbGet detectou sessão inválida em:', table);
+      handleDeadSession('A sua sessão expirou. Inicie sessão novamente para recarregar os dados.');
+      throw error; // propagar — quem chamou decide, mas não fingimos sucesso
+    }
+    console.warn(table, error.message);
+    return [];
+  }
   return data || [];
 }
 async function sbInsert(table, obj) {
@@ -7582,6 +7602,199 @@ function _slice(arr, key) {
 let CURRENT_USER = null;
 let CURRENT_ROLE = null;
 
+// ═══════════════════════════════════════════════════════════════════
+//  AUTENTICAÇÃO — Resiliência de sessão e role
+//  Corrige: degradação silenciosa admin→comercial em uso multi-dispositivo
+// ═══════════════════════════════════════════════════════════════════
+
+const _KNOWN_ROLE_KEY = 'gumba_known_role';
+
+/** Lê o último role confirmado do localStorage (rede de segurança). */
+function _getKnownRole() {
+  try { return localStorage.getItem(_KNOWN_ROLE_KEY); } catch(_) { return null; }
+}
+/** Persiste um role confirmado — só chamado após uma query bem-sucedida. */
+function _setKnownRole(role) {
+  try { if (role) localStorage.setItem(_KNOWN_ROLE_KEY, role); } catch(_) {}
+}
+/** Limpa o role conhecido — chamado no logout. */
+function _clearKnownRole() {
+  try { localStorage.removeItem(_KNOWN_ROLE_KEY); } catch(_) {}
+}
+
+/**
+ * Identifica se um erro do Supabase é de autenticação (JWT/sessão)
+ * em vez de um erro de dados ou de rede.
+ */
+function _isAuthError(err) {
+  if (!err) return false;
+  const msg  = (err.message || '').toLowerCase();
+  const code = String(err.code || err.status || '');
+  return code === '401' || code === 'PGRST301'
+    || msg.includes('jwt') || msg.includes('token')
+    || msg.includes('not authenticated') || msg.includes('session');
+}
+
+/**
+ * fetchUserRole() — Busca o role do utilizador com retry e categorização
+ * de erros. NUNCA degrada o role por causa de uma query falhada.
+ *
+ * Devolve um objecto: { ok, role, nome, reason }
+ *  - ok:true              → role obtido com sucesso da BD
+ *  - ok:false reason:'no-profile'  → query funcionou mas não há perfil (problema real)
+ *  - ok:false reason:'auth'        → falha de sessão/autenticação
+ *  - ok:false reason:'network'     → falha transitória de rede
+ */
+async function fetchUserRole() {
+  const MAX_ATTEMPTS = 3;
+  let lastErr = null;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const { data, error } = await sb
+        .from('perfis')
+        .select('role,nome')
+        .eq('id', CURRENT_USER.id)
+        .maybeSingle(); // maybeSingle: não lança erro se 0 linhas
+
+      if (error) {
+        lastErr = error;
+        // Erro de autenticação → não vale a pena repetir, é a sessão
+        if (_isAuthError(error)) return { ok: false, reason: 'auth' };
+        // Outro erro → tentar de novo
+        if (attempt < MAX_ATTEMPTS) {
+          await new Promise(r => setTimeout(r, 400 * attempt));
+          continue;
+        }
+        return { ok: false, reason: 'network' };
+      }
+
+      // Query funcionou
+      if (data && data.role) {
+        return { ok: true, role: data.role, nome: data.nome };
+      }
+      // Query funcionou mas não há perfil — problema REAL, não assumir nada
+      return { ok: false, reason: 'no-profile' };
+
+    } catch (e) {
+      lastErr = e;
+      if (_isAuthError(e)) return { ok: false, reason: 'auth' };
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise(r => setTimeout(r, 400 * attempt));
+        continue;
+      }
+    }
+  }
+  console.warn('[Auth] fetchUserRole esgotou tentativas:', lastErr?.message);
+  return { ok: false, reason: 'network' };
+}
+
+/**
+ * resolveUserRole() — Aplica as regras de decisão do role.
+ * Esta função substitui o antigo `CURRENT_ROLE = data?.role || 'comercial'`.
+ */
+async function resolveUserRole() {
+  const result = await fetchUserRole();
+
+  if (result.ok) {
+    // Caminho feliz — role confirmado pela BD
+    CURRENT_ROLE = result.role;
+    _setKnownRole(result.role);
+    const uname = document.getElementById('user-name');
+    if (uname) uname.textContent = result.nome || CURRENT_USER.email;
+    const urole = document.getElementById('user-role');
+    if (urole) urole.textContent = CURRENT_ROLE === 'admin' ? 'Administrador' : 'Comercial';
+    return true;
+  }
+
+  // A query NÃO confirmou o role. Decidir com base no motivo:
+  if (result.reason === 'auth') {
+    // Sessão inválida — não tocar no role, tratar como sessão morta
+    console.warn('[Auth] Sessão inválida ao buscar role');
+    handleDeadSession('A sua sessão expirou. Por favor, inicie sessão novamente.');
+    return false;
+  }
+
+  if (result.reason === 'network') {
+    // Falha transitória — usar o último role CONHECIDO, nunca degradar às cegas
+    const known = _getKnownRole();
+    if (known) {
+      CURRENT_ROLE = known;
+      console.info('[Auth] Rede instável — a usar último role conhecido:', known);
+      const urole = document.getElementById('user-role');
+      if (urole) urole.textContent = CURRENT_ROLE === 'admin' ? 'Administrador' : 'Comercial';
+      showToast('Ligação instável — alguns dados podem estar desactualizados.', 'warning', 4000);
+      return true;
+    }
+    // Sem role conhecido e sem rede — não dá para continuar com segurança
+    handleDeadSession('Não foi possível verificar o seu perfil. Verifique a ligação e tente novamente.');
+    return false;
+  }
+
+  if (result.reason === 'no-profile') {
+    // A BD respondeu mas não há perfil para este utilizador.
+    // Isto é um problema real de configuração — NÃO assumir comercial.
+    const known = _getKnownRole();
+    if (known) {
+      // Já tínhamos um role confirmado antes — usar esse e avisar
+      CURRENT_ROLE = known;
+      const urole = document.getElementById('user-role');
+      if (urole) urole.textContent = CURRENT_ROLE === 'admin' ? 'Administrador' : 'Comercial';
+      console.warn('[Auth] Perfil não encontrado na BD — a usar role conhecido:', known);
+      return true;
+    }
+    // Primeira vez e sem perfil — bloquear com mensagem clara
+    console.error('[Auth] Utilizador sem perfil na tabela "perfis"');
+    handleDeadSession('A sua conta não tem um perfil associado. Contacte o administrador do sistema.');
+    return false;
+  }
+
+  return false;
+}
+
+/**
+ * handleDeadSession() — Ponto único de tratamento de sessão inválida.
+ * Faz teardown limpo e devolve o utilizador ao login, sem perder rascunhos
+ * (que permanecem em sessionStorage).
+ */
+let _deadSessionHandled = false;
+function handleDeadSession(mensagem) {
+  if (_deadSessionHandled) return; // evita disparos múltiplos
+  _deadSessionHandled = true;
+
+  try { teardownRealtimeSubscriptions(); } catch(_) {}
+  CURRENT_USER = null;
+  CURRENT_ROLE = null;
+
+  // Esconder a app
+  const sidebar = document.getElementById('sidebar');
+  const main    = document.getElementById('main');
+  const bnav    = document.getElementById('bottom-nav');
+  const fab     = document.getElementById('mobile-fab');
+  if (sidebar) sidebar.style.display = 'none';
+  if (main)    main.style.display = 'none';
+  if (bnav)    bnav.style.display = 'none';
+  if (fab)     fab.style.display = 'none';
+  try { closeMais(); } catch(_) {}
+  try { closeFilterSheets(); } catch(_) {}
+
+  // Mostrar login
+  const ls = document.getElementById('loading-screen');
+  if (ls) ls.style.display = 'none';
+  const li = document.getElementById('login-screen');
+  if (li) {
+    li.style.display = 'flex';
+    requestAnimationFrame(() => requestAnimationFrame(() => li.classList.add('visible')));
+  }
+  const errEl = document.getElementById('login-error');
+  if (errEl && mensagem) {
+    errEl.textContent = mensagem;
+    errEl.style.display = 'block';
+  }
+  const btn = document.getElementById('login-btn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
+}
+
 async function doLogin(){
   const email=document.getElementById('l-email').value.trim();
   const pass=document.getElementById('l-pass').value;
@@ -7594,6 +7807,7 @@ async function doLogin(){
     const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
     if(error)throw error;
     CURRENT_USER=data.user;
+    _deadSessionHandled = false; // nova sessão válida — repor o guard
     await loadApp();
   }catch(e){
     err.textContent='Email ou password incorrectos.';
@@ -7608,17 +7822,13 @@ document.getElementById('l-email')?.addEventListener('keydown',e=>{if(e.key==='E
 
 async function loadApp(){
   try{
-    // 1. Buscar role
-    try{
-      const {data}=await sb.from('perfis').select('role,nome').eq('id',CURRENT_USER.id).single();
-      CURRENT_ROLE=data?.role||'comercial';
-      const uname=document.getElementById('user-name');
-      if(uname)uname.textContent=data?.nome||CURRENT_USER.email;
-      const urole=document.getElementById('user-role');
-      if(urole)urole.textContent=CURRENT_ROLE==='admin'?'Administrador':'Comercial';
-    }catch(e){
-      CURRENT_ROLE='comercial';
-      console.warn('Perfil não encontrado, usando comercial');
+    // 1. Resolver role — função resiliente, nunca degrada admin→comercial
+    //    por causa de uma query falhada. Se a sessão estiver morta,
+    //    resolveUserRole() trata disso e devolve false.
+    const roleOk = await resolveUserRole();
+    if (!roleOk) {
+      // handleDeadSession() já mostrou o login com a mensagem apropriada.
+      return;
     }
 
     // 2. Aplicar permissões
@@ -7730,6 +7940,8 @@ async function doLogout(){
   const _pill=document.getElementById('cache-status');
   if(_pill){_pill.classList.remove('visible','stale');}
   CURRENT_USER=null;CURRENT_ROLE=null;
+  _clearKnownRole();              // limpar role conhecido — novo login não herda
+  _deadSessionHandled = false;    // repor o guard de sessão morta
   Object.keys(CACHE).forEach(k=>CACHE[k]=[]);
   document.getElementById('sidebar').style.display='none';
   document.getElementById('main').style.display='none';
@@ -9738,6 +9950,43 @@ async function init(){
   }
 }
 init();
+
+// ═══════════════════════════════════════════════════════════════════
+//  AUTH STATE LISTENER — Deteta sessões mortas em uso multi-dispositivo
+//  Sem isto, um token invalidado noutro dispositivo passava despercebido
+//  e a app continuava a correr com um cliente Supabase morto.
+// ═══════════════════════════════════════════════════════════════════
+sb.auth.onAuthStateChange((event, session) => {
+  console.info('[Auth] Evento:', event);
+
+  switch (event) {
+    case 'SIGNED_OUT':
+      // Sessão terminada — aqui ou noutro dispositivo. Teardown limpo.
+      if (CURRENT_USER) {
+        handleDeadSession('A sua sessão foi terminada. Inicie sessão novamente para continuar.');
+      }
+      break;
+
+    case 'TOKEN_REFRESHED':
+      // Token renovado com sucesso — a sessão está saudável.
+      if (session) {
+        CURRENT_USER = session.user;
+        _deadSessionHandled = false; // sessão viva — repor o guard
+        console.info('[Auth] Token renovado — sessão saudável');
+      }
+      break;
+
+    case 'SIGNED_IN':
+      // Disparado no login e no restauro de sessão. loadApp() já trata
+      // o fluxo principal — aqui apenas garantimos CURRENT_USER actualizado.
+      if (session) CURRENT_USER = session.user;
+      break;
+
+    case 'USER_UPDATED':
+      if (session) CURRENT_USER = session.user;
+      break;
+  }
+});
 
 // ═══════════════════════════════════════════════════════════════
 //  FASE 3 — Filter Sheets · Paginação Touch · Toasts · PTR
