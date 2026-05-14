@@ -450,6 +450,8 @@ td strong { color: var(--text); font-weight: 600; }
 .badge-danger { background: var(--danger-bg); color: var(--danger); }
 .badge-info { background: var(--accent-glow); color: var(--accent2); }
 .badge-neutral { background: rgba(100,116,139,.1); color: var(--text-muted); }
+/* Parceiro de Canal — tom âmbar distinto do crédito (verde) */
+.badge-parceiro { background: rgba(251,191,36,.12); color: #FBB824; border: 1px solid rgba(251,191,36,.25); }
 
 /* ─── CAIXA TOOLBAR ─── */
 .caixa-pill {
@@ -1240,6 +1242,33 @@ textarea { resize: vertical; min-height: 70px; }
   font-size: .7rem; color: var(--text-muted);
   margin-top: 4px; font-style: italic;
 }
+
+/* ── Tipo de Cliente — radio card buttons ────────────────────── */
+.tipo-radio-label { cursor: pointer; flex: 1; min-width: 160px; }
+.tipo-radio-label input[type="radio"] { display: none; }
+.tipo-radio-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border2);
+  border-radius: 10px;
+  transition: all .18s;
+  user-select: none;
+}
+.tipo-radio-btn strong { display: block; font-size: .83rem; color: var(--text); }
+.tipo-radio-btn small  { display: block; font-size: .7rem; color: var(--text-muted); margin-top: 1px; }
+/* Estado activo — normal */
+#c-tipo-normal:checked ~ .tipo-radio-btn {
+  border-color: var(--accent2);
+  background: var(--accent-glow);
+}
+#c-tipo-normal:checked ~ .tipo-radio-btn strong { color: var(--accent2); }
+/* Estado activo — parceiro */
+#c-tipo-parceiro:checked ~ .tipo-radio-btn {
+  border-color: #FBB824;
+  background: rgba(251,191,36,.1);
+}
+#c-tipo-parceiro:checked ~ .tipo-radio-btn strong { color: #FBB824; }
 .sidebar-config-btn {
   width: 100%;
   background: transparent;
@@ -3342,10 +3371,38 @@ input:focus:not(:focus-visible) { outline: none; }
 
     <!-- ══════════════════════════════════════════════ CLIENTES -->
     <div class="section" id="s-clientes">
+
+      <!-- KPI strip de canal — só aparece quando há parceiros -->
+      <div id="parceiro-kpi-strip" style="display:none;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px" class="parceiro-kpi-grid">
+          <div class="kpi-card" style="--kpi-color:#FBB824">
+            <div class="kpi-label">Parceiros Activos</div>
+            <div class="kpi-value" id="kpi-parceiros-count">0</div>
+          </div>
+          <div class="kpi-card" style="--kpi-color:#FBB824">
+            <div class="kpi-label">Clientes via Canal</div>
+            <div class="kpi-value" id="kpi-via-canal-count">0</div>
+          </div>
+          <div class="kpi-card" style="--kpi-color:#FBB824">
+            <div class="kpi-label">Vendas via Canal</div>
+            <div class="kpi-value" id="kpi-via-canal-vendas">0</div>
+          </div>
+          <div class="kpi-card" style="--kpi-color:#FBB824">
+            <div class="kpi-label">Volume via Canal</div>
+            <div class="kpi-value" id="kpi-via-canal-volume" style="font-size:1rem">—</div>
+          </div>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-header">
           <span class="card-title">Base de Clientes</span>
-          <div class="flex gap-2">
+          <div class="flex gap-2" style="flex-wrap:wrap">
+            <select id="filtro-tipo-cliente" class="search-bar" style="width:auto" onchange="renderClientes()">
+              <option value="todos">Todos os tipos</option>
+              <option value="normais">Clientes Normais</option>
+              <option value="parceiros">Parceiros / Revendedores</option>
+            </select>
             <input placeholder="Pesquisar cliente..." class="search-bar" oninput="renderClientes(this.value)">
             <button class="btn btn-primary" onclick="openModal('modal-cliente')">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -3356,7 +3413,7 @@ input:focus:not(:focus-visible) { outline: none; }
         <table>
           <thead><tr>
             <th>Nome</th><th>Telefone</th><th>Localização</th>
-            <th>Compras</th><th>Total Gasto</th><th>Tipo</th><th>Acções</th>
+            <th>Compras</th><th>Total Gasto</th><th>Tipo</th><th>Canal</th><th>Acções</th>
           </tr></thead>
           <tbody id="tbody-clientes"></tbody>
         </table>
@@ -4498,7 +4555,7 @@ input:focus:not(:focus-visible) { outline: none; }
 <div class="modal-overlay" id="modal-cliente">
   <div class="modal">
     <div class="modal-header">
-      <h3>Novo Cliente</h3>
+      <h3 id="modal-cliente-title">Novo Cliente</h3>
       <button class="modal-close" onclick="closeModal('modal-cliente')">✕</button>
     </div>
     <div class="modal-body">
@@ -4534,12 +4591,58 @@ input:focus:not(:focus-visible) { outline: none; }
             <option value="confianca">Confiança (aceita parcelas)</option>
           </select>
         </div>
+
+        <!-- ── TIPO DE CLIENTE (novo) ───────────────────────── -->
+        <div class="form-group full">
+          <label>Tipo de Cliente</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px">
+            <label class="tipo-radio-label" id="tipo-label-normal">
+              <input type="radio" name="c-tipo" id="c-tipo-normal" value="normal" checked onchange="_onTipoChange()">
+              <span class="tipo-radio-btn">
+                <span style="font-size:.9rem">👤</span>
+                <span>
+                  <strong>Cliente Normal</strong>
+                  <small>Compra para uso próprio</small>
+                </span>
+              </span>
+            </label>
+            <label class="tipo-radio-label" id="tipo-label-parceiro">
+              <input type="radio" name="c-tipo" id="c-tipo-parceiro" value="parceiro" onchange="_onTipoChange()">
+              <span class="tipo-radio-btn">
+                <span style="font-size:.9rem">🤝</span>
+                <span>
+                  <strong>Parceiro / Revendedor</strong>
+                  <small>Compra e revende com margem</small>
+                </span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ── REFERIDO POR (novo) — visível sempre ──────────── -->
+        <div class="form-group full" id="c-referido-wrap">
+          <label>Referido por <span style="font-weight:400;color:var(--text-muted)">(opcional — qual parceiro trouxe este cliente)</span></label>
+          <div style="position:relative">
+            <input type="text" id="c-referido-search" placeholder="Pesquisar parceiro..." autocomplete="off"
+              oninput="_filterParceirosTypeahead(this.value)"
+              onfocus="_filterParceirosTypeahead(this.value)"
+              onblur="setTimeout(()=>document.getElementById('c-referido-dropdown').style.display='none',200)">
+            <input type="hidden" id="c-referido-id">
+            <div id="c-referido-dropdown" class="typeahead-dropdown" style="display:none"></div>
+          </div>
+          <div id="c-referido-selected" style="display:none;margin-top:6px;padding:6px 10px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);border-radius:6px;font-size:.78rem;color:#FBB824;display:flex;align-items:center;justify-content:space-between">
+            <span id="c-referido-selected-nome">—</span>
+            <button type="button" onclick="_clearReferido()" style="background:none;border:none;color:#FBB824;cursor:pointer;font-size:.8rem;padding:0 4px" title="Remover">✕</button>
+          </div>
+        </div>
+
         <div class="form-group">
           <label>Como nos conheceu</label>
           <select id="c-origem">
             <option value="Boca a boca">Boca a boca</option>
             <option value="Facebook">Anúncio Facebook</option>
             <option value="Recomendação">Recomendação de cliente</option>
+            <option value="Via Parceiro">Via Parceiro / Revendedor</option>
             <option value="WhatsApp">WhatsApp directo</option>
             <option value="Outro">Outro</option>
           </select>
@@ -5193,11 +5296,11 @@ function openModal(id) {
   if(id==='modal-cobranca')   populateCobrancaSelects();
   if(id==='modal-importacao') populateImportacaoSelects();
   if(id==='modal-produto')    populateProdutoFornSelect();
+  if(id==='modal-cliente')    _resetModalCliente();
   // Restaurar rascunho — só para criação (não edição)
   if (_DRAFT_FIELDS[id]) {
     const isEditing = (id === 'modal-produto' && editingProduto);
     if (!isEditing) {
-      // Pequeno delay para garantir que selects estão populados
       setTimeout(() => _restoreDraft(id), 80);
     }
   }
@@ -6421,6 +6524,12 @@ function renderClientes(q='', _paged=false){
   if(!_paged) PG.clientes=1;
   let clientes=CACHE.clientes;
   if(q) clientes=clientes.filter(c=>c.nome.toLowerCase().includes(q.toLowerCase())||c.telefone?.includes(q));
+
+  // Filtro de tipo activo
+  const filtroTipo = document.getElementById('filtro-tipo-cliente')?.value || 'todos';
+  if(filtroTipo === 'parceiros') clientes = clientes.filter(c => c.tipo === 'parceiro');
+  else if(filtroTipo === 'normais') clientes = clientes.filter(c => c.tipo !== 'parceiro');
+
   const vendas=CACHE.vendas;
   const total=clientes.length;
   const tbody=document.getElementById('tbody-clientes');
@@ -6428,13 +6537,24 @@ function renderClientes(q='', _paged=false){
   tbody.innerHTML=_slice(clientes,'clientes').map(c=>{
     const cVendas=vendas.filter(v=>v.cliente_id===c.id);
     const totalGasto=cVendas.reduce((s,v)=>s+Number(v.total||0),0);
+    // Badge de tipo
+    const isParceiro = c.tipo === 'parceiro';
+    const tipoBadge = isParceiro
+      ? `<span class="badge badge-parceiro">🤝 Parceiro</span>`
+      : `<span class="badge badge-neutral">Cliente</span>`;
+    // Canal — quem o referenciou
+    const referido = c.referido_por ? CACHE.clientes.find(x=>x.id===c.referido_por) : null;
+    const canalHtml = referido
+      ? `<span class="badge badge-parceiro" style="font-size:.62rem" title="Trazido por ${esc(referido.nome)}">🔗 ${esc(referido.nome)}</span>`
+      : `<span class="text-muted" style="font-size:.75rem">—</span>`;
     return `<tr>
       <td data-label=""><strong>${esc(c.nome)}</strong><br><span class="text-xs text-muted">${esc(c.profissao||'')}${c.nif ? ' &nbsp;·&nbsp; NIF: '+esc(c.nif) : '' }</span></td>
       <td class="mono" data-label="Telefone">${esc(c.telefone||'—')}</td>
       <td data-label="Local"><span class="badge badge-info">${esc(c.localizacao||'—')}</span></td>
       <td class="mono" data-label="Compras">${cVendas.length}</td>
       <td class="mono text-success" data-label="Total Gasto">${fmt(totalGasto)}</td>
-      <td data-label="Tipo"><span class="badge ${c.credito==='confianca'?'badge-success':'badge-neutral'}">${c.credito==='confianca'?'Crédito':'Normal'}</span></td>
+      <td data-label="Tipo">${tipoBadge}<br><span class="badge ${c.credito==='confianca'?'badge-success':'badge-neutral'}" style="margin-top:3px;font-size:.62rem">${c.credito==='confianca'?'Crédito':'Normal'}</span></td>
+      <td data-label="Canal">${canalHtml}</td>
       <td style="display:flex;gap:4px">
         <button class="btn btn-ghost btn-sm" onclick="verHistorico('${esc(c.id)}')">👁</button>
         <button class="btn btn-danger btn-sm" onclick="deleteCliente('${esc(c.id)}')">🗑</button>
@@ -6442,6 +6562,8 @@ function renderClientes(q='', _paged=false){
     </tr>`;
   }).join('');
   _renderPG('pg-clientes',total,'clientes',()=>renderClientes(q,true));
+  // Actualizar KPI de parceiros no cabeçalho
+  _updateParceiroKPI();
 }
 async function saveCliente(){
   const nome=document.getElementById('c-nome').value.trim();
@@ -6449,12 +6571,17 @@ async function saveCliente(){
   const _btnC = document.querySelector('#modal-cliente .btn-primary');
   const _restoreC = btnLoading(_btnC, 'A guardar...');
   try{
+    const tipoVal = document.querySelector('input[name="c-tipo"]:checked')?.value || 'normal';
+    const referidoId = document.getElementById('c-referido-id')?.value || null;
     const novo=await sbInsert('clientes',{
-      nome,telefone:document.getElementById('c-tel').value,
+      nome,
+      telefone:document.getElementById('c-tel').value,
       nif:document.getElementById('c-nif').value.trim()||null,
       localizacao:document.getElementById('c-local').value,
       profissao:document.getElementById('c-prof').value,
       credito:document.getElementById('c-credito').value,
+      tipo: tipoVal,
+      referido_por: referidoId || null,
       origem_conhecimento:document.getElementById('c-origem').value,
       obs:document.getElementById('c-obs').value
     });
@@ -6462,7 +6589,8 @@ async function saveCliente(){
     clearDraft('modal-cliente');
     stampCache('clientes');
     closeModal('modal-cliente');renderClientes();renderDashboard();
-    showToast(`Cliente "${nome}" adicionado com sucesso.`,'success');
+    const tipoLabel = tipoVal === 'parceiro' ? '🤝 Parceiro' : '👤 Cliente';
+    showToast(`${tipoLabel} "${nome}" adicionado com sucesso.`,'success');
   }catch(e){showToast('Erro: '+e.message,'error');}finally{_restoreC();}
 }
 async function deleteCliente(id){
@@ -6471,13 +6599,156 @@ async function deleteCliente(id){
     try{await sbDelete('clientes',id);CACHE.clientes=CACHE.clientes.filter(x=>x.id!==id);stampCache('clientes');renderClientes();renderDashboard();showToast('Cliente eliminado.','success');}catch(e){showToast('Erro: '+e.message,'error');}finally{_rD();}
   });
 }
+
+// ── PARCEIRO / CANAL — funções auxiliares ─────────────────────────
+
+/** Atualiza o KPI strip de parceiros acima da tabela de clientes. */
+function _updateParceiroKPI() {
+  const parceiros = CACHE.clientes.filter(c => c.tipo === 'parceiro');
+  const strip = document.getElementById('parceiro-kpi-strip');
+  if (!strip) return;
+
+  if (parceiros.length === 0) {
+    strip.style.display = 'none';
+    return;
+  }
+  strip.style.display = '';
+
+  const clientesViaCanal = CACHE.clientes.filter(c => c.referido_por);
+  const vendasViaCanal   = CACHE.vendas.filter(v =>
+    clientesViaCanal.some(c => c.id === v.cliente_id)
+  );
+  const volumeCanal = vendasViaCanal.reduce((s,v) => s + Number(v.total||0), 0);
+
+  const el = id => document.getElementById(id);
+  if (el('kpi-parceiros-count'))  el('kpi-parceiros-count').textContent  = parceiros.length;
+  if (el('kpi-via-canal-count'))  el('kpi-via-canal-count').textContent  = clientesViaCanal.length;
+  if (el('kpi-via-canal-vendas')) el('kpi-via-canal-vendas').textContent = vendasViaCanal.length;
+  if (el('kpi-via-canal-volume')) el('kpi-via-canal-volume').textContent =
+    volumeCanal > 0 ? fmtN(volumeCanal) : '—';
+}
+
+/**
+ * Typeahead de parceiros no campo "Referido por".
+ * Só sugere clientes com tipo === 'parceiro'.
+ */
+function _filterParceirosTypeahead(q) {
+  const dropdown = document.getElementById('c-referido-dropdown');
+  if (!dropdown) return;
+  const parceiros = CACHE.clientes.filter(c =>
+    c.tipo === 'parceiro' &&
+    c.nome.toLowerCase().includes((q||'').toLowerCase())
+  );
+  if (!parceiros.length) { dropdown.style.display = 'none'; return; }
+  dropdown.innerHTML = parceiros.slice(0,8).map(p =>
+    `<div class="typeahead-item" onmousedown="_selectParceiro('${esc(p.id)}','${esc(p.nome.replace(/'/g,"\\'"))}')">
+       <span style="color:#FBB824">🤝</span> ${esc(p.nome)}
+       ${p.localizacao ? `<span style="font-size:.68rem;color:var(--text-muted);margin-left:6px">${esc(p.localizacao)}</span>` : ''}
+     </div>`
+  ).join('');
+  dropdown.style.display = 'block';
+}
+
+/** Seleciona um parceiro no typeahead. */
+function _selectParceiro(id, nome) {
+  const hiddenInput = document.getElementById('c-referido-id');
+  const searchInput = document.getElementById('c-referido-search');
+  const selected    = document.getElementById('c-referido-selected');
+  const selectedNome= document.getElementById('c-referido-selected-nome');
+  const dropdown    = document.getElementById('c-referido-dropdown');
+  if (hiddenInput) hiddenInput.value = id;
+  if (searchInput) { searchInput.value = ''; searchInput.placeholder = 'Parceiro seleccionado ✓'; }
+  if (selectedNome) selectedNome.textContent = `🤝 ${nome}`;
+  if (selected) selected.style.display = 'flex';
+  if (dropdown) dropdown.style.display = 'none';
+  // Auto-preencher origem como "Via Parceiro"
+  const origem = document.getElementById('c-origem');
+  if (origem) origem.value = 'Via Parceiro';
+}
+
+/** Limpa a selecção de parceiro referido. */
+function _clearReferido() {
+  const hiddenInput = document.getElementById('c-referido-id');
+  const searchInput = document.getElementById('c-referido-search');
+  const selected    = document.getElementById('c-referido-selected');
+  if (hiddenInput) hiddenInput.value = '';
+  if (searchInput) { searchInput.value = ''; searchInput.placeholder = 'Pesquisar parceiro...'; }
+  if (selected) selected.style.display = 'none';
+}
+
+/**
+ * Reage à mudança de tipo (normal/parceiro) no modal de cliente.
+ * Parceiros não são "referidos por" outro parceiro normalmente,
+ * mas o campo mantém-se disponível para casos excepcionais.
+ */
+function _onTipoChange() {
+  const tipo = document.querySelector('input[name="c-tipo"]:checked')?.value;
+  const wrap = document.getElementById('c-referido-wrap');
+  if (!wrap) return;
+  // Se for parceiro, o campo "referido por" faz menos sentido como obrigatório,
+  // mas mantemo-lo visível — um parceiro pode ter sido referenciado por outro.
+  wrap.style.opacity = tipo === 'parceiro' ? '.6' : '1';
+}
+
+/** Repõe o modal de cliente para estado limpo (novo registo). */
+function _resetModalCliente() {
+  document.getElementById('modal-cliente-title').textContent = 'Novo Cliente';
+  // Repor tipo para "normal"
+  const radioNormal = document.getElementById('c-tipo-normal');
+  if (radioNormal) { radioNormal.checked = true; _onTipoChange(); }
+  // Limpar referido
+  _clearReferido();
+}
 function verHistorico(clienteId){
   const c=CACHE.clientes.find(x=>x.id===clienteId);
   const vendas=CACHE.vendas.filter(v=>v.cliente_id===clienteId);
   const cobr=CACHE.cobrancas.filter(x=>x.cliente_id===clienteId);
   const total=vendas.reduce((s,v)=>s+Number(v.total||0),0);
-  document.getElementById('hist-title').textContent=`Histórico: ${c?.nome||'Cliente'}`;
+
+  // Dados de parceiro — quem o referenciou e quem este trouxe
+  const isParceiro = c?.tipo === 'parceiro';
+  const referidoPor = c?.referido_por ? CACHE.clientes.find(x=>x.id===c.referido_por) : null;
+  const clientesTrazidos = isParceiro
+    ? CACHE.clientes.filter(x=>x.referido_por===clienteId)
+    : [];
+  const vendasViaParceiro = clientesTrazidos.length
+    ? CACHE.vendas.filter(v=>clientesTrazidos.some(ct=>ct.id===v.cliente_id))
+    : [];
+  const volumeGerado = vendasViaParceiro.reduce((s,v)=>s+Number(v.total||0),0);
+
+  // Bloco de info de canal (só aparece quando relevante)
+  const canalBlock = isParceiro ? `
+    <div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:14px 16px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:1rem">🤝</span>
+        <strong style="font-size:.85rem;color:#FBB824">Parceiro / Revendedor</strong>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:1.3rem;font-weight:800;color:#FBB824">${clientesTrazidos.length}</div>
+          <div class="text-xs text-muted">Clientes trazidos</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:.95rem;font-weight:700;color:#FBB824;font-family:var(--font-mono)">${fmtN(volumeGerado)}</div>
+          <div class="text-xs text-muted">Volume gerado (Kz)</div>
+        </div>
+      </div>
+      ${clientesTrazidos.length ? `
+        <div style="margin-top:10px;font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Clientes referenciados</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${clientesTrazidos.slice(0,8).map(ct=>`<span onclick="verHistorico('${esc(ct.id)}')" style="cursor:pointer;background:var(--surface2);border:1px solid rgba(251,191,36,.2);border-radius:6px;padding:3px 10px;font-size:.72rem;color:var(--text-dim)">${esc(ct.nome)}</span>`).join('')}
+          ${clientesTrazidos.length>8?`<span style="font-size:.72rem;color:var(--text-muted);padding:3px 6px">+${clientesTrazidos.length-8} mais</span>`:''}
+        </div>` : ''}
+    </div>` : referidoPor ? `
+    <div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.15);border-radius:8px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:8px;font-size:.78rem">
+      <span>🔗</span>
+      <span style="color:var(--text-muted)">Trazido pelo parceiro</span>
+      <span onclick="verHistorico('${esc(referidoPor.id)}')" style="cursor:pointer;color:#FBB824;font-weight:600;text-decoration:underline">${esc(referidoPor.nome)}</span>
+    </div>` : '';
+
+  document.getElementById('hist-title').textContent=`${isParceiro?'🤝 ':''}${c?.nome||'Cliente'}`;
   document.getElementById('hist-body').innerHTML=`
+    ${canalBlock}
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px" class="rg-3-hist">
       <div style="background:var(--surface2);border-radius:8px;padding:14px;text-align:center"><div style="font-size:1.4rem;font-family:var(--font-display);font-weight:800">${vendas.length}</div><div class="text-xs text-muted mt-1">Total de Compras</div></div>
       <div style="background:var(--surface2);border-radius:8px;padding:14px;text-align:center"><div style="font-size:1.1rem;font-family:var(--font-mono);font-weight:700;color:var(--success)">${fmtN(total)}</div><div class="text-xs text-muted mt-1">Total Gasto (Kz)</div></div>
@@ -9251,7 +9522,7 @@ const _DRAFT_PREFIX = 'gumba_draft_';
 const _DRAFT_FIELDS = {
   'modal-venda':      ['v-data','v-mercado','v-cliente','v-tipo','v-pagamento','v-nprest','v-obs','v-garantia-prazo','v-garantia-desc'],
   'modal-produto':    ['p-nome','p-cat','p-origem','p-custo','p-venda','p-stock','p-minimo','p-obs','p-forn'],
-  'modal-cliente':    ['c-nome','c-nif','c-tel','c-local','c-prof','c-credito','c-origem','c-obs'],
+  'modal-cliente':    ['c-nome','c-nif','c-tel','c-local','c-prof','c-credito','c-origem','c-obs','c-referido-search'],
   'modal-fornecedor': ['f-nome','f-pais','f-contacto','f-produtos','f-prazo','f-moeda','f-obs'],
   'modal-importacao': ['i-forn','i-produtos','i-valor','i-frete','i-alfandega','i-cambio','i-data-enc','i-data-prev','i-status'],
   'modal-cobranca':   ['cb-cliente','cb-ref','cb-total','cb-nprest','cb-entrada','cb-mercado','cb-obs'],
