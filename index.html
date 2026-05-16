@@ -10379,8 +10379,6 @@ init();
 //  e a app continuava a correr com um cliente Supabase morto.
 // ═══════════════════════════════════════════════════════════════════
 sb.auth.onAuthStateChange((event, session) => {
-  console.info('[Auth] Evento:', event);
-
   switch (event) {
     case 'SIGNED_OUT':
       // Sessão terminada — aqui ou noutro dispositivo. Teardown limpo.
@@ -10393,8 +10391,7 @@ sb.auth.onAuthStateChange((event, session) => {
       // Token renovado com sucesso — a sessão está saudável.
       if (session) {
         CURRENT_USER = session.user;
-        _deadSessionHandled = false; // sessão viva — repor o guard
-        console.info('[Auth] Token renovado — sessão saudável');
+        _deadSessionHandled = false; // sessão viva — repor o guard;
       }
       break;
 
