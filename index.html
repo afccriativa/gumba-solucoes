@@ -9597,8 +9597,11 @@ function togglePass(){
 }
 
 // ─── RECUPERAÇÃO DE PASSWORD ───
+let _forgotInFlight = false;
 async function forgotPassword(e){
   e.preventDefault();
+  if(_forgotInFlight) return;
+  const link=e.currentTarget;
   const email=document.getElementById('l-email').value.trim();
   const err=document.getElementById('login-error');
   err.className='login-error';
@@ -9606,18 +9609,22 @@ async function forgotPassword(e){
     err.textContent='Introduza o seu e-mail para recuperar a password.';
     err.style.display='block';return;
   }
+  _forgotInFlight = true;
+  link.textContent='A enviar...';
+  link.style.pointerEvents='none';
   err.style.display='none';
   // Resposta neutra independente do resultado — impede enumeração de e-mails.
   // Um atacante não consegue distinguir se o e-mail existe ou não no sistema.
-  const _neutral = () => {
-    err.className='login-success-msg';
-    err.textContent='✓ Se este endereço estiver registado, receberá um link de recuperação.';
-    err.style.display='block';
-  };
   try{
     await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
   }catch(_){}
-  _neutral();
+  err.className='login-success-msg';
+  err.textContent='✓ Se este endereço estiver registado, receberá um link de recuperação.';
+  err.style.display='block';
+  link.textContent='Esqueceu a senha?';
+  link.style.pointerEvents='';
+  // Cooldown de 60s antes de permitir novo envio
+  setTimeout(()=>{ _forgotInFlight = false; }, 60000);
 }
 
 
