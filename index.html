@@ -8196,6 +8196,8 @@ async function doLogin(){
   }
 
   if(!email||!pass){err.textContent='Preencha email e password.';err.style.display='block';return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){err.textContent='Introduza um endereço de e-mail válido.';err.style.display='block';return;}
+  if(pass.length < 6){err.textContent='A password deve ter pelo menos 6 caracteres.';err.style.display='block';return;}
   btn.disabled=true;btn.textContent='A entrar...';
 
   // Backoff progressivo antes de enviar o pedido
