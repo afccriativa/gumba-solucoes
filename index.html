@@ -9605,17 +9605,17 @@ async function forgotPassword(e){
     err.style.display='block';return;
   }
   err.style.display='none';
-  try{
-    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
-    if(error)throw error;
+  // Resposta neutra independente do resultado — impede enumeração de e-mails.
+  // Um atacante não consegue distinguir se o e-mail existe ou não no sistema.
+  const _neutral = () => {
     err.className='login-success-msg';
-    err.textContent='✓ Link de recuperação enviado. Verifique o seu e-mail.';
+    err.textContent='✓ Se este endereço estiver registado, receberá um link de recuperação.';
     err.style.display='block';
-  }catch(e){
-    err.className='login-error';
-    err.textContent='Erro ao enviar e-mail de recuperação. Tente novamente.';
-    err.style.display='block';
-  }
+  };
+  try{
+    await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
+  }catch(_){}
+  _neutral();
 }
 
 
