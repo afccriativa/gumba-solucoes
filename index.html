@@ -7952,17 +7952,19 @@ let CURRENT_ROLE = null;
 
 const _KNOWN_ROLE_KEY = 'gumba_known_role';
 
-/** Lê o último role confirmado do localStorage (rede de segurança). */
+// sessionStorage em vez de localStorage: o role não sobrevive ao fecho do browser,
+// eliminando o risco de um utilizador diferente herdar o role numa sessão nova.
+/** Lê o último role confirmado da sessão actual (rede de segurança). */
 function _getKnownRole() {
-  try { return localStorage.getItem(_KNOWN_ROLE_KEY); } catch(_) { return null; }
+  try { return sessionStorage.getItem(_KNOWN_ROLE_KEY); } catch(_) { return null; }
 }
 /** Persiste um role confirmado — só chamado após uma query bem-sucedida. */
 function _setKnownRole(role) {
-  try { if (role) localStorage.setItem(_KNOWN_ROLE_KEY, role); } catch(_) {}
+  try { if (role) sessionStorage.setItem(_KNOWN_ROLE_KEY, role); } catch(_) {}
 }
 /** Limpa o role conhecido — chamado no logout. */
 function _clearKnownRole() {
-  try { localStorage.removeItem(_KNOWN_ROLE_KEY); } catch(_) {}
+  try { sessionStorage.removeItem(_KNOWN_ROLE_KEY); } catch(_) {}
 }
 
 /**
@@ -9575,13 +9577,17 @@ async function confirmarPagamentoVenda() {
 }
 
 
-function showLogin(){
+function showLogin(mensagem){
   const ls=document.getElementById('loading-screen');
   const li=document.getElementById('login-screen');
   if(ls)ls.style.display='none';
   if(li){
     li.style.display='flex';
     requestAnimationFrame(()=>requestAnimationFrame(()=>li.classList.add('visible')));
+  }
+  if(mensagem){
+    const err=document.getElementById('login-error');
+    if(err){ err.textContent=mensagem; err.style.display='block'; }
   }
 }
 
@@ -10357,8 +10363,9 @@ async function init(){
   if(ls)ls.style.display='flex';
   if(li)li.style.display='none';
 
-  // Timeout de segurança — se demorar +4s, mostra login
-  const timeout = setTimeout(showLogin, 4000);
+  // Timeout de segurança — se demorar +4s, mostra login com aviso de ligação lenta
+  const _msgTimeout = 'A ligação está lenta. Verifique a sua rede e tente entrar novamente.';
+  const timeout = setTimeout(()=>showLogin(_msgTimeout), 4000);
 
   try{
     const sessionResult = await Promise.race([
@@ -10375,7 +10382,8 @@ async function init(){
     }
   }catch(e){
     clearTimeout(timeout);
-    showLogin();
+    const msg = e?.message === 'timeout' ? _msgTimeout : 'Não foi possível estabelecer ligação. Tente novamente.';
+    showLogin(msg);
   }
 }
 init();
