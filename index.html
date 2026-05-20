@@ -2437,6 +2437,164 @@ input:focus:not(:focus-visible) { outline: none; }
   -webkit-overflow-scrolling: touch;
 }
 
+/* ── IMPORTAÇÕES — linha de detalhe expandível ───────────────── */
+.imp-detail-row td {
+  padding: 0 !important;
+  border-bottom: 1px solid var(--border);
+}
+.imp-detail-inner {
+  padding: 14px 20px 16px;
+  background: linear-gradient(135deg, rgba(37,99,235,.04) 0%, transparent 60%);
+  border-left: 3px solid var(--accent);
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  animation: detailExpand .2s ease;
+}
+@keyframes detailExpand {
+  from { opacity:0; transform:translateY(-6px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.imp-detail-inner.collapsed { display: none; }
+.imp-cost-block {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.imp-cost-block .label {
+  font-size: .62rem;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.imp-cost-block .value {
+  font-family: var(--font-mono);
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.imp-cost-block .sub {
+  font-size: .68rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+/* Anotações / timeline */
+.imp-notas-timeline {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+}
+.imp-nota-item {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.imp-nota-item:last-child { border-bottom: none; }
+.imp-nota-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent2);
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+.imp-nota-date { font-size: .68rem; color: var(--text-muted); font-family: var(--font-mono); white-space: nowrap; }
+.imp-nota-text { font-size: .78rem; color: var(--text-dim); flex: 1; }
+/* Botão de expand chevron */
+.imp-expand-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); padding: 4px 6px;
+  border-radius: 4px; transition: all .15s;
+  touch-action: manipulation; line-height: 1;
+
+/* ── Alerta de atraso na linha principal ──────────────────── */
+.imp-main-row.imp-atrasada td:first-child::before {
+  content: '';
+  display: block;
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--danger);
+  border-radius: 0 2px 2px 0;
+}
+.imp-main-row.imp-atrasada { position: relative; }
+.badge-atraso {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--danger-bg);
+  border: 1px solid rgba(239,68,68,.25);
+  color: var(--danger);
+  border-radius: 4px;
+  font-size: .6rem; font-weight: 700;
+  padding: 2px 6px; margin-left: 4px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* ── Barra de progresso de status ─────────────────────────── */
+.imp-status-stepper {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 4px;
+  padding: 12px 4px 4px;
+}
+.imp-step {
+  display: flex; flex-direction: column; align-items: center;
+  flex: 1; position: relative;
+}
+/* Linha conectora */
+.imp-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 13px; left: calc(50% + 13px);
+  right: calc(-50% + 13px);
+  height: 2px;
+  background: var(--border2);
+  z-index: 0;
+}
+.imp-step.done:not(:last-child)::after { background: var(--accent2); }
+.imp-step-dot {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--surface3);
+  border: 2px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem;
+  position: relative; z-index: 1;
+  transition: all .2s;
+}
+.imp-step.done    .imp-step-dot { background: var(--accent2); border-color: var(--accent2); color: var(--bg); }
+.imp-step.current .imp-step-dot { background: var(--accent-glow); border-color: var(--accent2); color: var(--accent2); box-shadow: 0 0 0 4px rgba(56,189,248,.15); }
+.imp-step-label {
+  font-size: .58rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .4px;
+  color: var(--text-muted); margin-top: 5px;
+  text-align: center; line-height: 1.2;
+}
+.imp-step.done    .imp-step-label { color: var(--accent2); }
+.imp-step.current .imp-step-label { color: var(--text); }
+
+/* ── Custo por unidade ─────────────────────────────────────── */
+.imp-custo-unit-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(16,185,129,.1);
+  border: 1px solid rgba(16,185,129,.2);
+  color: var(--success);
+  border-radius: 6px;
+  font-size: .7rem; font-weight: 700;
+  padding: 3px 8px; margin-top: 4px;
+  font-family: var(--font-mono);
+}
+}
+.imp-expand-btn:hover { background: var(--surface2); color: var(--text); }
+.imp-expand-btn svg { transition: transform .2s; }
+.imp-expand-btn.open svg { transform: rotate(180deg); }
+/* Status no select — disparar campo de data chegada */
+/* (JS controla display:none/block) */
+
 /* ── ANIMAÇÃO MODAL melhorada para bottom sheet ─────────────── */
 @media (max-width: 767px) {
   @keyframes modalIn {
@@ -2775,7 +2933,7 @@ input:focus:not(:focus-visible) { outline: none; }
 
         <div class="login-actions">
           <label class="login-remember">
-            <input type="checkbox" id="l-remember" checked>
+            <input type="checkbox">
             <span>Lembrar de mim</span>
           </label>
           <a href="#" class="login-forgot-link" onclick="forgotPassword(event)">Esqueceu a senha?</a>
@@ -3565,6 +3723,7 @@ input:focus:not(:focus-visible) { outline: none; }
         </div>
         <table>
           <thead><tr>
+            <th></th>
             <th>Ref.</th><th>Fornecedor</th><th>Origem</th><th>Produtos</th>
             <th>Custo Total</th><th>Data Encomenda</th><th>Prev. Chegada</th><th>Status</th><th>Acções</th>
           </tr></thead>
@@ -4785,7 +4944,7 @@ input:focus:not(:focus-visible) { outline: none; }
 <div class="modal-overlay" id="modal-importacao">
   <div class="modal">
     <div class="modal-header">
-      <h3>Registar Importação / Encomenda</h3>
+      <h3 id="modal-importacao-title">Registar Importação / Encomenda</h3>
       <button class="modal-close" onclick="closeModal('modal-importacao')">✕</button>
     </div>
     <div class="modal-body">
@@ -4799,20 +4958,41 @@ input:focus:not(:focus-visible) { outline: none; }
           <input type="text" id="i-produtos" placeholder="Ex: 10x Samsung A55, 5x HP Laptop 15">
         </div>
         <div class="form-group">
+          <label>Quantidade de Unidades</label>
+          <input type="number" id="i-qtd" placeholder="Ex: 26" min="0" value="1">
+        </div>
+        <div class="form-group">
+          <label>Nº de Rastreio / Referência</label>
+          <input type="text" id="i-rastreio" placeholder="Ex: 1Z999AA10123456784">
+        </div>
+        <div class="form-group">
           <label>Valor dos Produtos (USD)</label>
-          <input type="number" id="i-valor" placeholder="0" min="0">
+          <input type="number" id="i-valor" placeholder="0" min="0" oninput="_calcCustoUnitario()">
         </div>
         <div class="form-group">
           <label>Custo de Frete (USD)</label>
-          <input type="number" id="i-frete" placeholder="0" min="0" value="0">
+          <input type="number" id="i-frete" placeholder="0" min="0" value="0" oninput="_calcCustoUnitario()">
         </div>
         <div class="form-group">
           <label>Taxa Alfandegária (Kz)</label>
-          <input type="number" id="i-alfandega" placeholder="0" min="0" value="0">
+          <input type="number" id="i-alfandega" placeholder="0" min="0" value="0" oninput="_calcCustoUnitario()">
         </div>
         <div class="form-group">
           <label>Taxa de Câmbio (USD → Kz)</label>
-          <input type="number" id="i-cambio" placeholder="970" min="0">
+          <input type="number" id="i-cambio" placeholder="970" min="0" oninput="_calcCustoUnitario()">
+        </div>
+        <!-- Indicador de custo por unidade — actualizado em tempo real -->
+        <div class="form-group full" id="i-custo-unit-wrap" style="display:none">
+          <div style="background:var(--surface2);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <div>
+              <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);font-weight:700">Custo por Unidade (estimado)</div>
+              <div id="i-custo-unit-val" style="font-family:var(--font-mono);font-size:1rem;font-weight:700;color:var(--success);margin-top:2px">—</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:.62rem;color:var(--text-muted)">Custo total</div>
+              <div id="i-custo-total-val" style="font-family:var(--font-mono);font-size:.82rem;font-weight:600;color:var(--text-dim)">—</div>
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <label>Data da Encomenda</label>
@@ -4831,15 +5011,42 @@ input:focus:not(:focus-visible) { outline: none; }
             <option value="Chegou">Chegou</option>
           </select>
         </div>
+        <div class="form-group">
+          <label>Mercado</label>
+          <select id="i-mercado">
+            <option value="Sumbe">Sumbe</option>
+            <option value="Benguela">Benguela</option>
+            <option value="Ambos">Ambos</option>
+          </select>
+        </div>
+        <!-- Data de chegada real — activa quando status = Chegou -->
+        <div class="form-group" id="i-chegada-wrap" style="display:none">
+          <label>Data de Chegada Real</label>
+          <input type="date" id="i-data-chegada">
+        </div>
         <div class="form-group full">
           <label>Observações</label>
-          <textarea id="i-obs" rows="2" placeholder="Número de rastreio, notas adicionais..."></textarea>
+          <textarea id="i-obs" rows="2" placeholder="Notas adicionais..."></textarea>
+        </div>
+        <!-- Anotações de seguimento — só em modo edição -->
+        <div class="form-group full" id="i-notas-wrap" style="display:none">
+          <label>Adicionar Anotação de Seguimento</label>
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <textarea id="i-nota-nova" rows="2" placeholder="Ex: 26 Mai — desalfandegado, aguardar transporte para Sumbe..."
+              style="flex:1;resize:vertical"></textarea>
+            <button type="button" class="btn btn-ghost btn-sm"
+              onclick="_addNotaImport()"
+              style="margin-top:2px;min-height:44px;white-space:nowrap">
+              + Adicionar
+            </button>
+          </div>
+          <div id="i-notas-list" style="margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
         </div>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-importacao')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveImportacao()">Registar Importação</button>
+      <button class="btn btn-primary" id="btn-save-importacao" onclick="saveImportacao()">Registar Importação</button>
     </div>
   </div>
 </div>
@@ -5284,8 +5491,9 @@ function _syncMercadoFilter() {
 
 // ─── MODAL ───
 let carrinho = [];
-let editingProduto = null;
-let editingCliente = null;
+let editingProduto   = null;
+let editingCliente   = null;
+let editingImportacao = null;
 
 function openModal(id) {
   document.getElementById(id).classList.add('open');
@@ -5304,8 +5512,9 @@ function openModal(id) {
   }
   // Restaurar rascunho — só para criação (não edição)
   if (_DRAFT_FIELDS[id]) {
-    const isEditing = (id === 'modal-produto' && editingProduto)
-                   || (id === 'modal-cliente' && editingCliente);
+    const isEditing = (id === 'modal-produto'    && editingProduto)
+                   || (id === 'modal-cliente'    && editingCliente)
+                   || (id === 'modal-importacao' && editingImportacao);
     if (!isEditing) {
       setTimeout(() => _restoreDraft(id), 80);
     }
@@ -5314,8 +5523,18 @@ function openModal(id) {
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
   if(id==='modal-venda')   { carrinho=[]; renderCarrinho(); const _gc=document.getElementById('v-garantia-toggle');if(_gc){_gc.checked=false;document.getElementById('garantia-fields')?.classList.remove('open');document.getElementById('v-garantia-prazo').value='';document.getElementById('v-garantia-desc').value='';} }
-  if(id==='modal-produto') { editingProduto=null; clearProdutoForm(); document.getElementById('modal-produto-title').textContent='Novo Produto'; }
-  if(id==='modal-cliente') { editingCliente=null; document.getElementById('modal-cliente-title').textContent='Novo Cliente'; }
+  if(id==='modal-produto')    { editingProduto=null; clearProdutoForm(); document.getElementById('modal-produto-title').textContent='Novo Produto'; }
+  if(id==='modal-cliente')    { editingCliente=null; document.getElementById('modal-cliente-title').textContent='Novo Cliente'; }
+  if(id==='modal-importacao') {
+    editingImportacao=null;
+    document.getElementById('modal-importacao-title').textContent='Registar Importação / Encomenda';
+    document.getElementById('btn-save-importacao').textContent='Registar Importação';
+    const notasWrap=document.getElementById('i-notas-wrap');
+    if(notasWrap) notasWrap.style.display='none';
+    const chegadaWrap=document.getElementById('i-chegada-wrap');
+    if(chegadaWrap) chegadaWrap.style.display='none';
+    document.getElementById('i-status').onchange=null;
+  }
   // Esconder badge de rascunho (o draft permanece em sessionStorage para restauro futuro)
   _hideDraftBadge(id);
 }
@@ -7824,32 +8043,145 @@ async function deleteFornecedor(id){
 // ═══════════════════════════════════════════════════════════════════
 function renderImportacoes(_paged=false){
   if(!_paged) PG.imp=1;
-  const imp=CACHE.importacoes.sort((a,b)=>b.data_encomenda?.localeCompare(a.data_encomenda));
+  const filtroMerc = getFilterMercado();
+  let imp=CACHE.importacoes.sort((a,b)=>b.data_encomenda?.localeCompare(a.data_encomenda));
+  if(filtroMerc !== 'todos') imp = imp.filter(i => !i.mercado || i.mercado === filtroMerc || i.mercado === 'Ambos');
   const total=imp.length;
   const tbody=document.getElementById('tbody-imp');
   _showEmpty('empty-imp', !imp.length, false);
   tbody.innerHTML=_slice(imp,'imp').map((i,idx)=>{
-    const _offset=(PG.imp-1)*PAGE_SIZE; // para manter numeração correcta
+    const _offset=(PG.imp-1)*PAGE_SIZE;
     const custUSD=(parseFloat(i.valor_produtos)||0)+(parseFloat(i.frete)||0);
     const custKz=custUSD*(parseFloat(i.cambio)||970)+(parseFloat(i.alfandega)||0);
+    const prodCustKz=(parseFloat(i.valor_produtos)||0)*(parseFloat(i.cambio)||970);
+    const freteCustKz=(parseFloat(i.frete)||0)*(parseFloat(i.cambio)||970);
+    const alfandegaKz=parseFloat(i.alfandega)||0;
+    const qtd = parseInt(i.quantidade)||0;
+    const custUnit = qtd > 1 ? Math.round(custKz / qtd) : 0;
     const statusColor={'Chegou':'badge-success','Em trânsito':'badge-info','Encomendado':'badge-warning','Alfândega':'badge-danger'}[i.status]||'badge-neutral';
-    return `<tr>
-      <td class="mono text-muted">#${String(_offset+idx+1).padStart(3,'0')}</td>
-      <td><strong>${esc(nomeFornecedor(i.fornecedor_id))}</strong></td>
-      <td><span class="badge badge-info">${esc(CACHE.fornecedores.find(f=>f.id===i.fornecedor_id)?.pais||'—')}</span></td>
-      <td>${esc(i.produtos||'—')}</td>
-      <td class="mono">${fmtN(Math.round(custKz))} Kz<br><span class="text-xs text-muted">${fmtN(custUSD)} USD</span></td>
-      <td class="mono">${esc(i.data_encomenda||'—')}</td>
-      <td class="mono">${esc(i.data_previsao||'—')}</td>
-      <td><span class="badge ${statusColor}">${esc(i.status||'—')}</span></td>
-      <td style="display:flex;gap:4px">
-        <button class="btn btn-ghost btn-sm" onclick="updateImportStatus('${esc(i.id)}')">⟳</button>
+    const notas = Array.isArray(i.notas) ? i.notas : (i.notas ? JSON.parse(i.notas) : []);
+    const detailId = `imp-detail-${esc(i.id)}`;
+    const expandId = `imp-expand-${esc(i.id)}`;
+
+    // Alerta de atraso
+    const hoje = today();
+    const atrasada = i.status !== 'Chegou' && i.data_previsao && i.data_previsao < hoje;
+    const diasAtraso = atrasada ? Math.floor((new Date(hoje) - new Date(i.data_previsao)) / 86400000) : 0;
+    const atrasoBadge = atrasada
+      ? `<span class="badge-atraso">⚠ ${diasAtraso}d atraso</span>` : '';
+
+    // Stepper de status para o detail
+    const steps = ['Encomendado','Em trânsito','Alfândega','Chegou'];
+    const stepIcons = ['📦','✈️','🏛️','✅'];
+    const curIdx = steps.indexOf(i.status);
+    const stepperHtml = `<div class="imp-status-stepper">
+      ${steps.map((s,si) => {
+        const cls = si < curIdx ? 'done' : si === curIdx ? 'current' : '';
+        return `<div class="imp-step ${cls}">
+          <div class="imp-step-dot">${si < curIdx ? '✓' : stepIcons[si]}</div>
+          <div class="imp-step-label">${s}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+    // Custo por unidade no detail
+    const unitBlock = qtd > 1 ? `
+      <div class="imp-cost-block" style="border-color:rgba(16,185,129,.25)">
+        <div class="label">Custo / Unidade</div>
+        <div class="value" style="color:var(--success)">${fmtN(custUnit)} Kz</div>
+        <div class="sub">${qtd} unidades</div>
+      </div>` : '';
+
+    const dataRow = `<tr class="imp-main-row${atrasada?' imp-atrasada':''}" style="cursor:pointer" onclick="_toggleImpDetail('${esc(i.id)}')">
+      <td style="width:32px;padding:8px 4px 8px 12px">
+        <button class="imp-expand-btn" id="${expandId}" onclick="event.stopPropagation();_toggleImpDetail('${esc(i.id)}')" title="Ver detalhes">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+      </td>
+      <td class="mono text-muted" data-label="">#${String(_offset+idx+1).padStart(3,'0')}</td>
+      <td data-label="Fornecedor"><strong>${esc(nomeFornecedor(i.fornecedor_id))}</strong></td>
+      <td data-label="Origem"><span class="badge badge-info">${esc(CACHE.fornecedores.find(f=>f.id===i.fornecedor_id)?.pais||'—')}</span></td>
+      <td data-label="Produtos">
+        ${esc(i.produtos||'—')}
+        ${qtd > 1 ? `<br><span class="text-xs text-muted">${qtd} unidades</span>` : ''}
+        ${i.rastreio ? `<br><span class="text-xs" style="color:var(--accent2);font-family:var(--font-mono)">#${esc(i.rastreio)}</span>` : ''}
+      </td>
+      <td class="mono" data-label="Custo">
+        ${fmtN(Math.round(custKz))} Kz<br>
+        <span class="text-xs text-muted">${fmtN(custUSD)} USD</span>
+        ${custUnit > 0 ? `<br><span class="imp-custo-unit-badge">${fmtN(custUnit)} Kz/un</span>` : ''}
+      </td>
+      <td class="mono" data-label="Encomenda">${esc(i.data_encomenda||'—')}</td>
+      <td class="mono" data-label="Prev.Chegada">
+        ${i.data_chegada
+          ? `<span class="text-success">${esc(i.data_chegada)}</span><br><span class="text-xs text-muted">Chegou</span>`
+          : esc(i.data_previsao||'—')}
+        ${atrasoBadge}
+      </td>
+      <td data-label="Status">
+        <span class="badge ${statusColor}">${esc(i.status||'—')}</span>
+        ${notas.length?`<br><span class="text-xs text-muted" style="margin-top:2px;display:inline-block">${notas.length} nota${notas.length>1?'s':''}</span>`:''}
+      </td>
+      <td onclick="event.stopPropagation()" style="display:flex;gap:4px">
+        <button class="btn btn-ghost btn-sm" onclick="editImportacao('${esc(i.id)}')" title="Editar">✏️</button>
+        <button class="btn btn-ghost btn-sm" onclick="updateImportStatus('${esc(i.id)}')" title="Avançar status">⟳</button>
         <button class="btn btn-danger btn-sm" onclick="deleteImportacao('${esc(i.id)}')">🗑</button>
       </td>
     </tr>`;
+
+    const notasHtml = notas.length
+      ? `<div class="imp-notas-timeline">${notas.slice().reverse().map(n=>`
+          <div class="imp-nota-item">
+            <div class="imp-nota-dot"></div>
+            <div><div class="imp-nota-date">${esc(n.data||'')}</div><div class="imp-nota-text">${esc(n.texto||'')}</div></div>
+          </div>`).join('')}</div>` : '';
+
+    const detailRow = `<tr class="imp-detail-row" id="${detailId}" style="display:none">
+      <td colspan="10">
+        <div class="imp-detail-inner">
+          ${stepperHtml}
+          <div class="imp-cost-block">
+            <div class="label">Produtos (USD → Kz)</div>
+            <div class="value">${fmtN(Math.round(prodCustKz))} Kz</div>
+            <div class="sub">${fmtN(parseFloat(i.valor_produtos)||0)} USD × ${fmtN(parseFloat(i.cambio)||970)}</div>
+          </div>
+          <div class="imp-cost-block">
+            <div class="label">Frete + Alfândega</div>
+            <div class="value">${fmtN(Math.round(freteCustKz+alfandegaKz))} Kz</div>
+            <div class="sub">Frete ${fmtN(Math.round(freteCustKz))} + Alf. ${fmtN(alfandegaKz)}</div>
+          </div>
+          <div class="imp-cost-block" style="border-color:rgba(37,99,235,.3)">
+            <div class="label">Custo Total</div>
+            <div class="value" style="color:var(--accent2)">${fmtN(Math.round(custKz))} Kz</div>
+            <div class="sub">${fmtN(custUSD)} USD total</div>
+          </div>
+          ${unitBlock}
+          ${i.rastreio ? `<div class="imp-cost-block">
+            <div class="label">Nº de Rastreio</div>
+            <div class="value" style="font-family:var(--font-mono);font-size:.82rem">${esc(i.rastreio)}</div>
+          </div>` : ''}
+          ${i.obs?`<div class="imp-cost-block" style="grid-column:1/-1">
+            <div class="label">Observações</div>
+            <div class="value" style="font-family:var(--font-body);font-size:.82rem;font-weight:400;color:var(--text-dim)">${esc(i.obs)}</div>
+          </div>`:''}
+          ${notasHtml}
+        </div>
+      </td>
+    </tr>`;
+    return dataRow + detailRow;
   }).join('');
   _renderPG('pg-imp',total,'imp',()=>renderImportacoes(true));
 }
+
+function _toggleImpDetail(id) {
+  const detailRow = document.getElementById(`imp-detail-${id}`);
+  const btn       = document.getElementById(`imp-expand-${id}`);
+  if (!detailRow) return;
+  const isOpen = detailRow.style.display !== 'none';
+  detailRow.style.display = isOpen ? 'none' : '';
+  btn?.classList.toggle('open', !isOpen);
+}
+
 async function updateImportStatus(id){
   const statuses=['Encomendado','Em trânsito','Alfândega','Chegou'];
   const i=CACHE.importacoes.find(x=>x.id===id);if(!i)return;
@@ -7865,33 +8197,163 @@ async function updateImportStatus(id){
     }catch(e){showToast('Erro: '+e.message,'error');}finally{_rU();}
   }, 'Actualizar status');
 }
+
+function editImportacao(id) {
+  const i = CACHE.importacoes.find(x => x.id === id);
+  if (!i) return;
+
+  editingImportacao = id;
+  _hideDraftBadge('modal-importacao');
+
+  document.getElementById('modal-importacao-title').textContent = 'Editar Importação';
+  document.getElementById('btn-save-importacao').textContent = 'Guardar Alterações';
+
+  populateImportacaoSelects();
+  setTimeout(() => {
+    document.getElementById('i-forn').value = i.fornecedor_id || '';
+  }, 80);
+  document.getElementById('i-produtos').value      = i.produtos       || '';
+  document.getElementById('i-qtd').value           = i.quantidade     || 1;
+  document.getElementById('i-rastreio').value      = i.rastreio       || '';
+  document.getElementById('i-valor').value         = i.valor_produtos || 0;
+  document.getElementById('i-frete').value         = i.frete          || 0;
+  document.getElementById('i-alfandega').value     = i.alfandega      || 0;
+  document.getElementById('i-cambio').value        = i.cambio         || 970;
+  document.getElementById('i-data-enc').value      = i.data_encomenda || '';
+  document.getElementById('i-data-prev').value     = i.data_previsao  || '';
+  document.getElementById('i-status').value        = i.status         || 'Encomendado';
+  document.getElementById('i-mercado').value       = i.mercado        || 'Sumbe';
+  document.getElementById('i-obs').value           = i.obs            || '';
+
+  const chegadaWrap = document.getElementById('i-chegada-wrap');
+  if (chegadaWrap) chegadaWrap.style.display = i.status === 'Chegou' ? '' : 'none';
+  document.getElementById('i-data-chegada').value  = i.data_chegada   || '';
+
+  const notasWrap = document.getElementById('i-notas-wrap');
+  if (notasWrap) notasWrap.style.display = '';
+  _renderNotasList(i);
+
+  document.getElementById('i-status').onchange = _onImportStatusChange;
+
+  // Calcular custo/unidade com os dados já preenchidos
+  setTimeout(_calcCustoUnitario, 100);
+
+  openModal('modal-importacao');
+}
+
+function _onImportStatusChange() {
+  const val = document.getElementById('i-status').value;
+  const wrap = document.getElementById('i-chegada-wrap');
+  if (!wrap) return;
+  wrap.style.display = val === 'Chegou' ? '' : 'none';
+  if (val === 'Chegou' && !document.getElementById('i-data-chegada').value) {
+    document.getElementById('i-data-chegada').value = today();
+  }
+}
+
+/** Calcula e mostra o custo por unidade em tempo real no modal de importação. */
+function _calcCustoUnitario() {
+  const valor    = parseFloat(document.getElementById('i-valor')?.value) || 0;
+  const frete    = parseFloat(document.getElementById('i-frete')?.value) || 0;
+  const alfandega= parseFloat(document.getElementById('i-alfandega')?.value) || 0;
+  const cambio   = parseFloat(document.getElementById('i-cambio')?.value) || 970;
+  const qtd      = parseInt(document.getElementById('i-qtd')?.value) || 0;
+
+  const totalKz = (valor + frete) * cambio + alfandega;
+  const wrap    = document.getElementById('i-custo-unit-wrap');
+  if (!wrap) return;
+
+  if (qtd < 2 || totalKz <= 0) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+
+  const unitKz = Math.round(totalKz / qtd);
+  const unitEl = document.getElementById('i-custo-unit-val');
+  const totalEl= document.getElementById('i-custo-total-val');
+  if (unitEl)  unitEl.textContent  = `${fmtN(unitKz)} Kz`;
+  if (totalEl) totalEl.textContent = `${fmtN(Math.round(totalKz))} Kz total`;
+}
+
+function _renderNotasList(imp) {
+  const list = document.getElementById('i-notas-list');
+  if (!list) return;
+  const notas = Array.isArray(imp.notas) ? imp.notas : (imp.notas ? JSON.parse(imp.notas) : []);
+  if (!notas.length) { list.innerHTML = '<p class="text-xs text-muted" style="padding:4px 0">Nenhuma anotação ainda.</p>'; return; }
+  list.innerHTML = notas.slice().reverse().map((n,idx) => `
+    <div class="imp-nota-item" style="padding:6px 8px;background:var(--surface2);border-radius:6px;border:none;margin-top:0">
+      <div class="imp-nota-dot"></div>
+      <div style="flex:1">
+        <div class="imp-nota-date">${esc(n.data||'')}</div>
+        <div class="imp-nota-text">${esc(n.texto||'')}</div>
+      </div>
+    </div>`).join('');
+}
+
+function _addNotaImport() {
+  if (!editingImportacao) return;
+  const textarea = document.getElementById('i-nota-nova');
+  const texto = textarea?.value.trim();
+  if (!texto) return showToast('Escreve o texto da anotação.', 'warning');
+  const i = CACHE.importacoes.find(x => x.id === editingImportacao);
+  if (!i) return;
+  const notas = Array.isArray(i.notas) ? [...i.notas] : (i.notas ? JSON.parse(i.notas) : []);
+  notas.push({ data: today(), texto });
+  i.notas = notas; // actualizar cache para pré-visualização
+  textarea.value = '';
+  _renderNotasList(i);
+  showToast('Anotação adicionada — será guardada ao clicar "Guardar Alterações".', 'info', 3000);
+}
+
 async function saveImportacao(){
-  const _btnImp = document.querySelector('#modal-importacao .btn-primary');
-  const _restoreImp = btnLoading(_btnImp, 'A registar...');
+  const _btnImp = document.getElementById('btn-save-importacao');
+  const _restoreImp = btnLoading(_btnImp, editingImportacao ? 'A guardar...' : 'A registar...');
   try{
-    const novo=await sbInsert('importacoes',{
-      fornecedor_id:document.getElementById('i-forn').value||null,
-      produtos:document.getElementById('i-produtos').value,
-      valor_produtos:parseFloat(document.getElementById('i-valor').value)||0,
-      frete:parseFloat(document.getElementById('i-frete').value)||0,
-      alfandega:parseFloat(document.getElementById('i-alfandega').value)||0,
-      cambio:parseFloat(document.getElementById('i-cambio').value)||970,
-      data_encomenda:document.getElementById('i-data-enc').value,
-      data_previsao:document.getElementById('i-data-prev').value,
-      status:document.getElementById('i-status').value,
-      obs:document.getElementById('i-obs').value
-    });
-    CACHE.importacoes.unshift(novo);
-    clearDraft('modal-importacao');
-    stampCache('importacoes');
-    closeModal('modal-importacao');renderImportacoes();
-    showToast('Importação registada com sucesso.','success');
+    const dados = {
+      fornecedor_id:  document.getElementById('i-forn').value||null,
+      produtos:       document.getElementById('i-produtos').value,
+      quantidade:     parseInt(document.getElementById('i-qtd').value)||1,
+      rastreio:       document.getElementById('i-rastreio').value.trim()||null,
+      valor_produtos: parseFloat(document.getElementById('i-valor').value)||0,
+      frete:          parseFloat(document.getElementById('i-frete').value)||0,
+      alfandega:      parseFloat(document.getElementById('i-alfandega').value)||0,
+      cambio:         parseFloat(document.getElementById('i-cambio').value)||970,
+      data_encomenda: document.getElementById('i-data-enc').value,
+      data_previsao:  document.getElementById('i-data-prev').value,
+      status:         document.getElementById('i-status').value,
+      mercado:        document.getElementById('i-mercado').value||'Sumbe',
+      obs:            document.getElementById('i-obs').value,
+    };
+    if (dados.status === 'Chegou') {
+      dados.data_chegada = document.getElementById('i-data-chegada').value || today();
+    }
+    if (editingImportacao) {
+      const cached = CACHE.importacoes.find(x => x.id === editingImportacao);
+      if (cached?.notas) dados.notas = cached.notas;
+    }
+
+    if (editingImportacao) {
+      await sbUpdate('importacoes', editingImportacao, dados);
+      const idx = CACHE.importacoes.findIndex(x => x.id === editingImportacao);
+      if (idx >= 0) CACHE.importacoes[idx] = { ...CACHE.importacoes[idx], ...dados };
+      stampCache('importacoes');
+      clearDraft('modal-importacao');
+      closeModal('modal-importacao'); renderImportacoes();
+      showToast('Importação actualizada com sucesso.','success');
+    } else {
+      const novo = await sbInsert('importacoes', dados);
+      CACHE.importacoes.unshift(novo);
+      stampCache('importacoes');
+      clearDraft('modal-importacao');
+      closeModal('modal-importacao'); renderImportacoes();
+      showToast('Importação registada com sucesso.','success');
+    }
   }catch(e){showToast('Erro: '+e.message,'error');}finally{_restoreImp();}
 }
+
 async function deleteImportacao(id){
   showConfirm('Esta importação será eliminada permanentemente. Continuar?', async()=>{
     await sbDelete('importacoes',id);
     CACHE.importacoes=CACHE.importacoes.filter(x=>x.id!==id);
+    stampCache('importacoes');
     renderImportacoes();
     showToast('Importação eliminada.','success');
   });
@@ -7952,19 +8414,17 @@ let CURRENT_ROLE = null;
 
 const _KNOWN_ROLE_KEY = 'gumba_known_role';
 
-// sessionStorage em vez de localStorage: o role não sobrevive ao fecho do browser,
-// eliminando o risco de um utilizador diferente herdar o role numa sessão nova.
-/** Lê o último role confirmado da sessão actual (rede de segurança). */
+/** Lê o último role confirmado do localStorage (rede de segurança). */
 function _getKnownRole() {
-  try { return sessionStorage.getItem(_KNOWN_ROLE_KEY); } catch(_) { return null; }
+  try { return localStorage.getItem(_KNOWN_ROLE_KEY); } catch(_) { return null; }
 }
 /** Persiste um role confirmado — só chamado após uma query bem-sucedida. */
 function _setKnownRole(role) {
-  try { if (role) sessionStorage.setItem(_KNOWN_ROLE_KEY, role); } catch(_) {}
+  try { if (role) localStorage.setItem(_KNOWN_ROLE_KEY, role); } catch(_) {}
 }
 /** Limpa o role conhecido — chamado no logout. */
 function _clearKnownRole() {
-  try { sessionStorage.removeItem(_KNOWN_ROLE_KEY); } catch(_) {}
+  try { localStorage.removeItem(_KNOWN_ROLE_KEY); } catch(_) {}
 }
 
 /**
@@ -8140,102 +8600,24 @@ function handleDeadSession(mensagem) {
   if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
 }
 
-// ─── REMEMBER ME ──────────────────────────────────────────────────
-// Quando desmarcado, a sessão do Supabase é removida do localStorage
-// ao fechar o browser, impedindo que seja restaurada na próxima visita.
-let _rememberMe = true;
-window.addEventListener('beforeunload', () => {
-  if (!_rememberMe) {
-    try { localStorage.removeItem('gumba-auth'); } catch(_) {}
-  }
-});
-
-// ─── BRUTE-FORCE PROTECTION ───────────────────────────────────────
-const _LOGIN_MAX_ATTEMPTS = 5;
-const _LOGIN_LOCKOUT_MS   = 5 * 60 * 1000; // 5 minutos
-const _LOGIN_BACKOFF_MS   = [0, 2000, 5000, 10000, 15000]; // delay por tentativa (0-indexed)
-let _loginAttempts  = 0;
-let _loginLockedUntil = 0;
-
-function _loginRemainingLockout() {
-  const remaining = _loginLockedUntil - Date.now();
-  return remaining > 0 ? remaining : 0;
-}
-
-function _startLockoutCountdown(btn, err) {
-  const tick = () => {
-    const ms = _loginRemainingLockout();
-    if (ms <= 0) {
-      _loginAttempts = 0;
-      _loginLockedUntil = 0;
-      btn.disabled = false;
-      btn.textContent = 'Entrar';
-      err.textContent = 'Pode tentar novamente.';
-      err.style.display = 'block';
-      return;
-    }
-    const s = Math.ceil(ms / 1000);
-    btn.textContent = `Bloqueado (${s}s)`;
-    setTimeout(tick, 1000);
-  };
-  tick();
-}
-
 async function doLogin(){
   const email=document.getElementById('l-email').value.trim();
   const pass=document.getElementById('l-pass').value;
   const btn=document.getElementById('login-btn');
   const err=document.getElementById('login-error');
   err.style.display='none';
-
-  // Verificar bloqueio activo
-  const lockRemaining = _loginRemainingLockout();
-  if (lockRemaining > 0) {
-    const s = Math.ceil(lockRemaining / 1000);
-    err.textContent = `Conta temporariamente bloqueada. Tente daqui a ${s} segundo${s !== 1 ? 's' : ''}.`;
-    err.style.display = 'block';
-    return;
-  }
-
   if(!email||!pass){err.textContent='Preencha email e password.';err.style.display='block';return;}
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){err.textContent='Introduza um endereço de e-mail válido.';err.style.display='block';return;}
-  if(pass.length < 6){err.textContent='A password deve ter pelo menos 6 caracteres.';err.style.display='block';return;}
   btn.disabled=true;btn.textContent='A entrar...';
-
-  // Backoff progressivo antes de enviar o pedido
-  const backoff = _LOGIN_BACKOFF_MS[Math.min(_loginAttempts, _LOGIN_BACKOFF_MS.length - 1)];
-  if (backoff > 0) {
-    await new Promise(r => setTimeout(r, backoff));
-  }
-
   try{
     const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
     if(error)throw error;
-    _loginAttempts = 0; // autenticação bem-sucedida — repor contador
-    _loginLockedUntil = 0;
-    _rememberMe = document.getElementById('l-remember')?.checked ?? true;
     CURRENT_USER=data.user;
-    _deadSessionHandled = false;
+    _deadSessionHandled = false; // nova sessão válida — repor o guard
     await loadApp();
   }catch(e){
-    _loginAttempts++;
-    const attemptsLeft = _LOGIN_MAX_ATTEMPTS - _loginAttempts;
-
-    if (_loginAttempts >= _LOGIN_MAX_ATTEMPTS) {
-      _loginLockedUntil = Date.now() + _LOGIN_LOCKOUT_MS;
-      btn.disabled = true;
-      err.textContent = 'Demasiadas tentativas falhadas. Conta bloqueada por 5 minutos.';
-      err.style.display = 'block';
-      _startLockoutCountdown(btn, err);
-    } else {
-      const aviso = attemptsLeft === 1
-        ? ' Última tentativa antes do bloqueio.'
-        : ` Restam ${attemptsLeft} tentativas.`;
-      err.textContent = 'Email ou password incorrectos.' + aviso;
-      err.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'Entrar';
-    }
+    err.textContent='Email ou password incorrectos.';
+    err.style.display='block';
+    btn.disabled=false;btn.textContent='Entrar';
   }
 }
 
@@ -8365,7 +8747,6 @@ async function doLogout(){
   CURRENT_USER=null;CURRENT_ROLE=null;
   _clearKnownRole();              // limpar role conhecido — novo login não herda
   _deadSessionHandled = false;    // repor o guard de sessão morta
-  _rememberMe = true;             // repor para o próximo utilizador
   Object.keys(CACHE).forEach(k=>CACHE[k]=[]);
   document.getElementById('sidebar').style.display='none';
   document.getElementById('main').style.display='none';
@@ -9577,17 +9958,13 @@ async function confirmarPagamentoVenda() {
 }
 
 
-function showLogin(mensagem){
+function showLogin(){
   const ls=document.getElementById('loading-screen');
   const li=document.getElementById('login-screen');
   if(ls)ls.style.display='none';
   if(li){
     li.style.display='flex';
     requestAnimationFrame(()=>requestAnimationFrame(()=>li.classList.add('visible')));
-  }
-  if(mensagem){
-    const err=document.getElementById('login-error');
-    if(err){ err.textContent=mensagem; err.style.display='block'; }
   }
 }
 
@@ -9603,11 +9980,8 @@ function togglePass(){
 }
 
 // ─── RECUPERAÇÃO DE PASSWORD ───
-let _forgotInFlight = false;
 async function forgotPassword(e){
   e.preventDefault();
-  if(_forgotInFlight) return;
-  const link=e.currentTarget;
   const email=document.getElementById('l-email').value.trim();
   const err=document.getElementById('login-error');
   err.className='login-error';
@@ -9615,22 +9989,18 @@ async function forgotPassword(e){
     err.textContent='Introduza o seu e-mail para recuperar a password.';
     err.style.display='block';return;
   }
-  _forgotInFlight = true;
-  link.textContent='A enviar...';
-  link.style.pointerEvents='none';
   err.style.display='none';
-  // Resposta neutra independente do resultado — impede enumeração de e-mails.
-  // Um atacante não consegue distinguir se o e-mail existe ou não no sistema.
   try{
-    await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
-  }catch(_){}
-  err.className='login-success-msg';
-  err.textContent='✓ Se este endereço estiver registado, receberá um link de recuperação.';
-  err.style.display='block';
-  link.textContent='Esqueceu a senha?';
-  link.style.pointerEvents='';
-  // Cooldown de 60s antes de permitir novo envio
-  setTimeout(()=>{ _forgotInFlight = false; }, 60000);
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
+    if(error)throw error;
+    err.className='login-success-msg';
+    err.textContent='✓ Link de recuperação enviado. Verifique o seu e-mail.';
+    err.style.display='block';
+  }catch(e){
+    err.className='login-error';
+    err.textContent='Erro ao enviar e-mail de recuperação. Tente novamente.';
+    err.style.display='block';
+  }
 }
 
 
@@ -9688,7 +10058,7 @@ const _DRAFT_FIELDS = {
   'modal-produto':    ['p-nome','p-cat','p-origem','p-custo','p-venda','p-stock','p-minimo','p-obs','p-forn'],
   'modal-cliente':    ['c-nome','c-nif','c-tel','c-local','c-prof','c-credito','c-origem','c-obs','c-referido-search'],
   'modal-fornecedor': ['f-nome','f-pais','f-contacto','f-produtos','f-prazo','f-moeda','f-obs'],
-  'modal-importacao': ['i-forn','i-produtos','i-valor','i-frete','i-alfandega','i-cambio','i-data-enc','i-data-prev','i-status'],
+  'modal-importacao': ['i-forn','i-produtos','i-valor','i-frete','i-alfandega','i-cambio','i-data-enc','i-data-prev','i-status','i-data-chegada','i-obs'],
   'modal-cobranca':   ['cb-cliente','cb-ref','cb-total','cb-nprest','cb-entrada','cb-mercado','cb-obs'],
 };
 
@@ -10363,9 +10733,8 @@ async function init(){
   if(ls)ls.style.display='flex';
   if(li)li.style.display='none';
 
-  // Timeout de segurança — se demorar +4s, mostra login com aviso de ligação lenta
-  const _msgTimeout = 'A ligação está lenta. Verifique a sua rede e tente entrar novamente.';
-  const timeout = setTimeout(()=>showLogin(_msgTimeout), 4000);
+  // Timeout de segurança — se demorar +4s, mostra login
+  const timeout = setTimeout(showLogin, 4000);
 
   try{
     const sessionResult = await Promise.race([
@@ -10382,8 +10751,7 @@ async function init(){
     }
   }catch(e){
     clearTimeout(timeout);
-    const msg = e?.message === 'timeout' ? _msgTimeout : 'Não foi possível estabelecer ligação. Tente novamente.';
-    showLogin(msg);
+    showLogin();
   }
 }
 init();
@@ -10394,6 +10762,8 @@ init();
 //  e a app continuava a correr com um cliente Supabase morto.
 // ═══════════════════════════════════════════════════════════════════
 sb.auth.onAuthStateChange((event, session) => {
+  console.info('[Auth] Evento:', event);
+
   switch (event) {
     case 'SIGNED_OUT':
       // Sessão terminada — aqui ou noutro dispositivo. Teardown limpo.
@@ -10406,7 +10776,8 @@ sb.auth.onAuthStateChange((event, session) => {
       // Token renovado com sucesso — a sessão está saudável.
       if (session) {
         CURRENT_USER = session.user;
-        _deadSessionHandled = false; // sessão viva — repor o guard;
+        _deadSessionHandled = false; // sessão viva — repor o guard
+        console.info('[Auth] Token renovado — sessão saudável');
       }
       break;
 
